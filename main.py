@@ -262,7 +262,7 @@ with pestana_reuniones:
     with col_cfg2:
         semana_destino_txt = st.selectbox("¿A qué semana deseas asignarle esta programación?", ["Semana 1", "Semana 2", "Semana 3", "Semana 4", "Semana 5 (Si aplica)", "Semana 6 (Si aplica)"])
 
-        with st.form("form_pegar_texto_plano"):
+    with st.form("form_pegar_texto_plano"):
         st.markdown("⚠️ **Nota:** Asegúrate de que las dos primeras líneas del texto que pegues abajo sean la **Fecha** y la **Lectura Bíblica**.")
         texto_plano_pegar = st.text_area("Pega aquí el texto completo copiado de JW.org:", height=250, placeholder="Escribe o pega aquí el texto...")
         btn_procesar_humano = st.form_submit_button("⚡ Procesar y Cargar Semana Inmediatamente")
