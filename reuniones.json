@@ -1,0 +1,96 @@
+{
+    "AGOSTO": {
+        "Semana 1": {
+            "fecha_cabecera": "3-9 de agosto",
+            "lectura_cabecera": "Reuni\u00f3n Semanal",
+            "materias": {
+                "1": {
+                    "titulo": "\u00a1Qu\u00e9 importante es tener buenos pastores!",
+                    "minutos": "10",
+                    "referencia": ""
+                },
+                "2": {
+                    "titulo": "Busquemos perlas escondidas",
+                    "minutos": "10",
+                    "referencia": ""
+                },
+                "3": {
+                    "titulo": "Lectura de la Biblia",
+                    "minutos": "4",
+                    "referencia": "Jer 23:25-36 (th lecci\u00f3n 11)."
+                },
+                "4": {
+                    "titulo": "Empiece conversaciones",
+                    "minutos": "4",
+                    "referencia": "DE CASA EN CASA. Presente y analice un video del kit de ense\u00f1anza, pero no lo ponga (lmd lecci\u00f3n 3 punto 4)."
+                },
+                "5": {
+                    "titulo": "Haga revisitas",
+                    "minutos": "4",
+                    "referencia": "DE CASA EN CASA. Ofrezca una revista sobre el tema del que hablaron en la visita anterior (lmd lecci\u00f3n 9 punto 5)."
+                },
+                "6": {
+                    "titulo": "Discurso",
+                    "minutos": "4",
+                    "referencia": "lmd ap\u00e9ndice A punto 19. T\u00edtulo: Jes\u00fas es el Hijo de Dios (th lecci\u00f3n 15)."
+                },
+                "7": {
+                    "titulo": "Del pasado al presente: El Cuerpo Gobernante promueve la unidad (parte 1)",
+                    "minutos": "15",
+                    "referencia": "An\u00e1lisis con el auditorio."
+                },
+                "8": {
+                    "titulo": "Estudio b\u00edblico de la congregaci\u00f3n",
+                    "minutos": "30",
+                    "referencia": "wcg cap. 2"
+                }
+            }
+        },
+        "Semana 2": {
+            "fecha_cabecera": "10-16 de agosto",
+            "lectura_cabecera": "Reuni\u00f3n Semanal",
+            "materias": {
+                "1": {
+                    "titulo": "\u00bfQu\u00e9 hace que los \u201chigos\u201d sean buenos o malos?",
+                    "minutos": "10",
+                    "referencia": ""
+                },
+                "2": {
+                    "titulo": "Busquemos perlas escondidas",
+                    "minutos": "10",
+                    "referencia": ""
+                },
+                "3": {
+                    "titulo": "Lectura de la Biblia",
+                    "minutos": "4",
+                    "referencia": "Jer 24:1-10 (th lecci\u00f3n 5)."
+                },
+                "4": {
+                    "titulo": "Empiece conversaciones",
+                    "minutos": "4",
+                    "referencia": "DE CASA EN CASA. Comience con un tema de actualidad, pero luego cambie a otro que pudiera ser m\u00e1s interesante para la persona (lmd lecci\u00f3n 2 punto 5)."
+                },
+                "5": {
+                    "titulo": "Haga revisitas",
+                    "minutos": "4",
+                    "referencia": "PREDICACI\u00d3N INFORMAL. Utilice una de las verdades del ap\u00e9ndice A del folleto Una obra de amor (lmd lecci\u00f3n 9 punto 5)."
+                },
+                "6": {
+                    "titulo": "Haga disc\u00edpulos",
+                    "minutos": "4",
+                    "referencia": "Anime a un estudiante de la Biblia que est\u00e1 luchando para dejar una adicci\u00f3n (lmd lecci\u00f3n 12 punto 4)."
+                },
+                "7": {
+                    "titulo": "Necesidades de la congregaci\u00f3n",
+                    "minutos": "15",
+                    "referencia": ""
+                },
+                "8": {
+                    "titulo": "Estudio b\u00edblico de la congregaci\u00f3n",
+                    "minutos": "30",
+                    "referencia": "wcg cap. 3."
+                }
+            }
+        }
+    }
+}
