@@ -274,9 +274,14 @@ with pestana_reuniones:
         if btn_procesar_humano:
             if texto_plano_pegar:
                 f_cab, l_cab, materias_detectadas = procesar_texto_plano_reunion(texto_plano_pegar)
-                
+
+                # Línea de seguridad inteligente: crea el mes si no existe en la nube
+                if mes_destino_txt not in datos_reuniones:
+                    datos_reuniones[mes_destino_txt] = {}
+
                 # Armamos la estructura en caliente dentro del mes elegido
                 datos_reuniones[mes_destino_txt][semana_destino_txt] = {
+
                     "fecha_cabecera": fecha_cab_manual if fecha_cab_manual else f_cab,
                     "lectura_cabecera": l_cab,
                     "materias": materias_detectadas,
