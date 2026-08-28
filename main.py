@@ -12,6 +12,7 @@ FICHERO_HERMANOS = "hermanos.json"
 # Carga y guardado seguro de datos de la congregacion en la nube
 def cargar_datos():
     if not os.path.exists(FICHERO_HERMANOS):
+        # Base de datos limpia de control inicial
         hermanos_base = [
             {"nombre": "Luis", "apellido": "Torres", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
             {"nombre": "Sergio", "apellido": "Coordinador", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
@@ -21,11 +22,19 @@ def cargar_datos():
             json.dump(hermanos_base, f, ensure_ascii=False, indent=4)
             
     if not os.path.exists(FICHERO_REUNIONES):
-        reuniones_base = {
-            "SEPTIEMBRE": {
-                "Semana 1 (Jeremías 22-23)": {"fecha_cabecera": "7-13 de septiembre", "lectura_cabecera": "JEREMÍAS 22, 23", "materias": {"1": {"titulo": "Discurso", "minutos": "10"}, "2": {"titulo": "Perlas", "minutos": "10"}, "3": {"titulo": "Lectura", "minutos": "4", "referencia": "Jer. 22:1-9"}, "4": {"titulo": "Conversación", "minutos": "3", "seccion": "Maestros"}, "5": {"titulo": "Revisita", "minutos": "4", "seccion": "Maestros"}, "6": {"titulo": "Discípulos", "minutos": "5", "seccion": "Maestros"}, "7": {"titulo": "Necesidades", "minutos": "15", "seccion": "Vida"}, "8": {"titulo": "Estudio Bíblico", "minutos": "30", "seccion": "Vida", "referencia": "rr cap. 1"}}, "asignados": {}}
+        # CALENDARIO DINÁMICO ANUAL: Inicializa el año de Septiembre a Agosto con soporte nativo de semanas ilimitadas
+        meses_ano_teocratico = ["SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO"]
+        reuniones_base = {}
+        
+        for m in meses_ano_teocratico:
+            # Inicializamos cada mes de forma limpia; las semanas (sean 4, 5 o 6) se crean dinámicamente al pegar la Guía
+            reuniones_base[m] = {
+                "Semana 1": {"fecha_cabecera": f"Semana 1 de {m.capitalize()}", "lectura_cabecera": "Lectura Base", "materias": {"1": {"titulo": "Discurso", "minutos": "10"}, "2": {"titulo": "Perlas", "minutos": "10"}, "3": {"titulo": "Lectura", "minutos": "4"}}, "asignados": {}},
+                "Semana 2": {"fecha_cabecera": f"Semana 2 de {m.capitalize()}", "lectura_cabecera": "Lectura Base", "materias": {"1": {"titulo": "Discurso", "minutos": "10"}, "2": {"titulo": "Perlas", "minutos": "10"}, "3": {"titulo": "Lectura", "minutos": "4"}}, "asignados": {}},
+                "Semana 3": {"fecha_cabecera": f"Semana 3 de {m.capitalize()}", "lectura_cabecera": "Lectura Base", "materias": {"1": {"titulo": "Discurso", "minutos": "10"}, "2": {"titulo": "Perlas", "minutos": "10"}, "3": {"titulo": "Lectura", "minutos": "4"}}, "asignados": {}},
+                "Semana 4": {"fecha_cabecera": f"Semana 4 de {m.capitalize()}", "lectura_cabecera": "Lectura Base", "materias": {"1": {"titulo": "Discurso", "minutos": "10"}, "2": {"titulo": "Perlas", "minutos": "10"}, "3": {"titulo": "Lectura", "minutos": "4"}}, "asignados": {}},
+                "Semana 5 (Si aplica)": {"fecha_cabecera": f"Quinta Semana de {m.capitalize()}", "lectura_cabecera": "Lectura Base", "materias": {"1": {"titulo": "Discurso", "minutos": "10"}, "2": {"titulo": "Perlas", "minutos": "10"}, "3": {"titulo": "Lectura", "minutos": "4"}}, "asignados": {}}
             }
-        }
         with open(FICHERO_REUNIONES, "w", encoding="utf-8") as f:
             json.dump(reuniones_base, f, ensure_ascii=False, indent=4)
 
@@ -44,7 +53,7 @@ def guardar_reuniones(datos):
 
 lista_hermanos, datos_reuniones = cargar_datos()
 
-# --- MENÚ SUPERIOR DE PESTAÑAS WEB (NUEVA INTERFAZ) ---
+# --- MENÚ SUPERIOR DE PESTAÑAS WEB ---
 pestana_asignaciones, pestana_hermanos, pestana_reuniones = st.tabs([
     "📋 Mesa de Asignaciones", 
     "👥 Gestión de Hermanos (Nómina)", 
@@ -56,7 +65,11 @@ pestana_asignaciones, pestana_hermanos, pestana_reuniones = st.tabs([
 with pestana_asignaciones:
     col_mes, col_sem = st.columns(2)
     with col_mes:
-        mes_seleccionado = st.selectbox("Seleccione el Mes:", list(datos_reuniones.keys()), key="sel_mes_web")
+        orden_meses = ["SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO"]
+        meses_existentes = [m for m in orden_meses if m in datos_reuniones.keys()]
+        if not meses_existentes: meses_existentes = list(datos_reuniones.keys())
+        mes_seleccionado = st.selectbox("Seleccione el Mes:", meses_existentes, key="sel_mes_web")
+
     with col_sem:
         semana_seleccionada = st.selectbox("Seleccione la Semana:", list(datos_reuniones[mes_seleccionado].keys()), key="sel_sem_web")
 
@@ -101,7 +114,7 @@ with pestana_asignaciones:
         
         for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
             m = materias[k]
-            tipo_seccion = m.get("seccion", "Tesaros")
+            tipo_seccion = m.get("seccion", "Tesoros")
             
             if tipo_seccion == "Maestros":
                 emoji, color_sub = "🌾", "Seamos Mejores Maestros"
@@ -148,13 +161,11 @@ with pestana_asignaciones:
         with open(nombre_archivo_pdf, "rb") as pdf_file:
             pdf_bytes = pdf_file.read()
         st.download_button(label="🟣 Descargar Folleto Oficial en PDF", data=pdf_bytes, file_name=nombre_archivo_pdf, mime="application/pdf", key="down_pdf_web")
-
 # =========================================================================
-# PESTAÑA 2: GESTIÓN DE HERMANOS (AGREGAR, QUITAR, SEXO Y LISTA)
+# PESTAÑA 2: GESTIÓN DE HERMANOS (NÓMINA CON FILTRO DE GÉNERO Y APTITUD)
 # =========================================================================
 with pestana_hermanos:
     st.header("👥 Control de la Nómina de la Congregación")
-    
     col_add, col_del = st.columns(2)
     
     with col_add:
@@ -188,8 +199,6 @@ with pestana_hermanos:
 
     st.markdown("---")
     st.subheader("📜 Listado Completo de Hermanos Registrados")
-    
-    # Renderizamos la lista en una cuadricula limpia para auditoria visual
     tabla_visual = []
     for h in lista_hermanos:
         tabla_visual.append({
@@ -200,28 +209,29 @@ with pestana_hermanos:
     st.table(tabla_visual)
 
 # =========================================================================
-# PESTAÑA 3: CONFIGURAR REUNIÓN (PEGAR NUEVOS DATOS DEL MES)
+# PESTAÑA 3: CONFIGURAR REUNIÓN (PEGAR NUEVOS MESES O COMPILACIONES DE 5/6 SEMANAS)
 # =========================================================================
 with pestana_reuniones:
     st.header("📖 Importar y Pegar Estructuras de Reunión")
-    st.markdown("Utiliza esta pestaña para expandir los meses o inyectar nuevas semanas directamente en formato de texto plano.")
+    st.markdown("Utiliza esta pestaña para expandir la Guía de Actividades o inyectar bloques con meses que traigan 5 o 6 semanas consecutivas.")
     
     with st.form("form_pegar_json"):
         st.subheader("📋 Inyectar Bloque Completo de Reuniones (Formato JSON)")
         texto_json_pegar = st.text_area("Pega aquí el código de materias del mes o semana:", height=300, 
-            placeholder='{\n  "OCTUBRE": {\n    "Semana 1": {\n      "fecha_cabecera": "5-11 de octubre",\n      "lectura_cabecera": "...",\n      "materias": {},\n      "asignados": {}\n    }\n  }\n}')
+            placeholder='{\n  "OCTUBRE": {\n    "Semana 5": {\n      "fecha_cabecera": "...",\n      "lectura_cabecera": "...",\n      "materias": {},\n      "asignados": {}\n    }\n  }\n}')
         btn_inyectar = st.form_submit_button("⚡ Fusionar y Cargar Reuniones")
         
         if btn_inyectar:
             try:
                 datos_nuevos_inyectados = json.loads(texto_json_pegar)
                 for mes, semanas in datos_nuevos_inyectados.items():
-                    if mes not in datos_reuniones:
-                        datos_reuniones[mes] = {}
+                    mes_upper = mes.upper()
+                    if mes_upper not in datos_reuniones:
+                        datos_reuniones[mes_upper] = {}
                     for sem, cuerpo in semanas.items():
-                        datos_reuniones[mes][sem] = cuerpo
+                        datos_reuniones[mes_upper][sem] = cuerpo
                 guardar_reuniones(datos_reuniones)
-                st.success("¡Estructura de reuniones integrada e inyectada con éxito total!")
+                st.success("¡Estructura anual dinámicamente actualizada con éxito total!")
                 st.rerun()
             except Exception as error_json:
                 st.error(f"Error en el formato del texto pegado: {error_json}")
