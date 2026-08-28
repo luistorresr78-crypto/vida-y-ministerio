@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import os
+import re
 import reglas
 
 # Configuracion adaptativa de la pagina web para celulares, iPads y laptops
@@ -12,7 +13,6 @@ FICHERO_HERMANOS = "hermanos.json"
 # Carga y guardado seguro de datos de la congregacion en la nube
 def cargar_datos():
     if not os.path.exists(FICHERO_HERMANOS):
-        # Base de datos limpia de control inicial
         hermanos_base = [
             {"nombre": "Luis", "apellido": "Torres", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
             {"nombre": "Sergio", "apellido": "Coordinador", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
@@ -22,18 +22,11 @@ def cargar_datos():
             json.dump(hermanos_base, f, ensure_ascii=False, indent=4)
             
     if not os.path.exists(FICHERO_REUNIONES):
-        # CALENDARIO DINÁMICO ANUAL: Inicializa el año de Septiembre a Agosto con soporte nativo de semanas ilimitadas
-        meses_ano_teocratico = ["SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO"]
+        orden_meses = ["SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO"]
         reuniones_base = {}
-        
-        for m in meses_ano_teocratico:
-            # Inicializamos cada mes de forma limpia; las semanas (sean 4, 5 o 6) se crean dinámicamente al pegar la Guía
+        for m in orden_meses:
             reuniones_base[m] = {
-                "Semana 1": {"fecha_cabecera": f"Semana 1 de {m.capitalize()}", "lectura_cabecera": "Lectura Base", "materias": {"1": {"titulo": "Discurso", "minutos": "10"}, "2": {"titulo": "Perlas", "minutos": "10"}, "3": {"titulo": "Lectura", "minutos": "4"}}, "asignados": {}},
-                "Semana 2": {"fecha_cabecera": f"Semana 2 de {m.capitalize()}", "lectura_cabecera": "Lectura Base", "materias": {"1": {"titulo": "Discurso", "minutos": "10"}, "2": {"titulo": "Perlas", "minutos": "10"}, "3": {"titulo": "Lectura", "minutos": "4"}}, "asignados": {}},
-                "Semana 3": {"fecha_cabecera": f"Semana 3 de {m.capitalize()}", "lectura_cabecera": "Lectura Base", "materias": {"1": {"titulo": "Discurso", "minutos": "10"}, "2": {"titulo": "Perlas", "minutos": "10"}, "3": {"titulo": "Lectura", "minutos": "4"}}, "asignados": {}},
-                "Semana 4": {"fecha_cabecera": f"Semana 4 de {m.capitalize()}", "lectura_cabecera": "Lectura Base", "materias": {"1": {"titulo": "Discurso", "minutos": "10"}, "2": {"titulo": "Perlas", "minutos": "10"}, "3": {"titulo": "Lectura", "minutos": "4"}}, "asignados": {}},
-                "Semana 5 (Si aplica)": {"fecha_cabecera": f"Quinta Semana de {m.capitalize()}", "lectura_cabecera": "Lectura Base", "materias": {"1": {"titulo": "Discurso", "minutos": "10"}, "2": {"titulo": "Perlas", "minutos": "10"}, "3": {"titulo": "Lectura", "minutos": "4"}}, "asignados": {}}
+                "Semana 1": {"fecha_cabecera": f"Semana 1 de {m.capitalize()}", "lectura_cabecera": "Lectura Base", "materias": {"1": {"titulo": "Discurso", "minutos": "10", "seccion": "Tesoros"}, "2": {"titulo": "Perlas", "minutos": "10", "seccion": "Tesoros"}, "3": {"titulo": "Lectura", "minutos": "4", "seccion": "Tesoros"}}, "asignados": {}}
             }
         with open(FICHERO_REUNIONES, "w", encoding="utf-8") as f:
             json.dump(reuniones_base, f, ensure_ascii=False, indent=4)
@@ -42,22 +35,74 @@ def cargar_datos():
     with open(FICHERO_REUNIONES, "r", encoding="utf-8") as f: reuns = json.load(f)
     return hnos, reuns
 
-# Funciones maestras para guardar cambios en caliente en el servidor
 def guardar_hermanos(lista):
-    with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
-        json.dump(lista, f, ensure_ascii=False, indent=4)
+    with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f: json.dump(lista, f, ensure_ascii=False, indent=4)
 
 def guardar_reuniones(datos):
-    with open(FICHERO_REUNIONES, "w", encoding="utf-8") as f:
-        json.dump(datos, f, ensure_ascii=False, indent=4)
+    with open(FICHERO_REUNIONES, "w", encoding="utf-8") as f: json.dump(datos, f, ensure_ascii=False, indent=4)
 
 lista_hermanos, datos_reuniones = cargar_datos()
+
+# --- PROCESADOR INTELIGENTE DE TEXTO HUMANO (MESA ASIGNACIÓN) ---
+def procesar_texto_plano_reunion(texto_usuario):
+    materias_detectadas = {}
+    lineas = texto_usuario.split("\n")
+    
+    # Valores por defecto de fabrica para la cabecera
+    fecha_cab = "Fecha de la Reunión"
+    lectura_cab = "Lectura de la Semana"
+    
+    # Intentamos jalar la lectura de las primeras lineas si vienen en mayusculas
+    for l in lineas[:4]:
+        if any(b in l.upper() for b in ["GÉNESIS", "ÉXODO", "JEREMÍAS", "MATEO", "JUAN", "HEBREOS", "APOCALIPSIS", "SALMOS"]):
+            lectura_cab = l.strip()
+            break
+
+    # Buscador automatico de puntos numerados (ej: "1. Discurso", "8. Estudio")
+    for linea in lineas:
+        linea_limpia = linea.strip()
+        match_punto = re.match(r"^([1-8])\.\s*(.*)", linea_limpia)
+        
+        if match_punto:
+            num_punto = match_punto.group(1)
+            contenido = match_punto.group(2)
+            
+            # Detecta de forma automatica los minutos entre parentesis
+            match_mins = re.search(r"\(\s*(\d+)\s*min", contenido)
+            minutos = match_mins.group(1) if match_mins else "5"
+            
+            # Limpiamos el titulo quitando los minutos
+            titulo_limpio = re.sub(r"\(\s*\d+\s*min.*?\)", "", contenido).strip()
+            
+            # Clasificacion automatica teocratica por numero de punto
+            if num_punto in ["1", "2", "3"]:
+                seccion_real = "Tesoros"
+            elif num_punto in ["4", "5", "6"]:
+                seccion_real = "Maestros"
+            else:
+                seccion_real = "Vida"
+                
+            materias_detectadas[num_punto] = {
+                "titulo": titulo_limpio,
+                "minutos": minutos,
+                "seccion": seccion_real
+            }
+            
+    # Si el usuario no pego puntos validos, cargamos un molde de proteccion
+    if not materias_detectadas:
+        materias_detectadas = {
+            "1": {"titulo": "Discurso", "minutos": "10", "seccion": "Tesoros"},
+            "2": {"titulo": "Perlas", "minutos": "10", "seccion": "Tesoros"},
+            "3": {"titulo": "Lectura", "minutos": "4", "seccion": "Tesoros"}
+        }
+        
+    return fecha_cab, lectura_cab, materias_detectadas
 
 # --- MENÚ SUPERIOR DE PESTAÑAS WEB ---
 pestana_asignaciones, pestana_hermanos, pestana_reuniones = st.tabs([
     "📋 Mesa de Asignaciones", 
     "👥 Gestión de Hermanos (Nómina)", 
-    "📖 Configurar Reunión (Pegar Datos)"
+    "📝 Pegar Programa de la Reunión"
 ])
 # =========================================================================
 # PESTAÑA 1: MESA DE ASIGNACIONES SEMANALES
@@ -77,8 +122,8 @@ with pestana_asignaciones:
     materias = semana_data.get("materias", {})
     asignados_actuales = semana_data.get("asignados", {})
 
-    st.subheader(f"📅 Programación: {semana_data.get('fecha_cabecera', semana_seleccionada)}")
-    st.info(f"📖 Lectura semanal: **{semana_data.get('lectura_cabecera', '')}**")
+    st.subheader(f"📅 Programación: {semana_data.get('fecha_cabecera', 'Semana Activa')}")
+    st.info(f"📖 Lectura semanal: **{semana_data.get('lectura_cabecera', 'No especificada')}**")
 
     with st.sidebar:
         st.header("⚙️ Control de Operación")
@@ -149,7 +194,7 @@ with pestana_asignaciones:
 
     if boton_guardar:
         datos_reuniones[mes_seleccionado][semana_seleccionada]["ultima_firma"] = f"Guardado por: {coordinador_activo}"
-        datos_reuniones[mes_seleccionado][semana_seleccionada]["asignados"] = nuevos_asignados
+        datos_reuniones[mes_seleccionado][semana_seleccionada]["asignados"] = nuevos_assignados if 'nuevos_assignados' in locals() else nuevos_asignados
         guardar_reuniones(datos_reuniones)
         st.success(f"¡Asignaciones guardadas con éxito por {coordinador_activo}!")
 
@@ -209,29 +254,36 @@ with pestana_hermanos:
     st.table(tabla_visual)
 
 # =========================================================================
-# PESTAÑA 3: CONFIGURAR REUNIÓN (PEGAR NUEVOS MESES O COMPILACIONES DE 5/6 SEMANAS)
+# PESTAÑA 3: NUEVO COPIADOR INTELIGENTE DE TEXTO HUMANO (ADIÓS JSON CANSADO)
 # =========================================================================
 with pestana_reuniones:
-    st.header("📖 Importar y Pegar Estructuras de Reunión")
-    st.markdown("Utiliza esta pestaña para expandir la Guía de Actividades o inyectar bloques con meses que traigan 5 o 6 semanas consecutivas.")
+    st.header("📝 Pegar Programa de la Reunión (Copiador Humano)")
+    st.markdown("Ya no necesitas código técnico JSON. Copia la Guía de Actividades oficial de la semana desde **JW.org**, pégala aquí abajo en español común y el programa extraerá los puntos de forma inteligente.")
     
-    with st.form("form_pegar_json"):
-        st.subheader("📋 Inyectar Bloque Completo de Reuniones (Formato JSON)")
-        texto_json_pegar = st.text_area("Pega aquí el código de materias del mes o semana:", height=300, 
-            placeholder='{\n  "OCTUBRE": {\n    "Semana 5": {\n      "fecha_cabecera": "...",\n      "lectura_cabecera": "...",\n      "materias": {},\n      "asignados": {}\n    }\n  }\n}')
-        btn_inyectar = st.form_submit_button("⚡ Fusionar y Cargar Reuniones")
+    col_cfg1, col_cfg2 = st.columns(2)
+    with col_cfg1:
+        mes_destino_txt = st.selectbox("¿A qué mes pertenece esta lectura?", ["SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO"])
+    with col_cfg2:
+        semana_destino_txt = st.selectbox("¿A qué semana deseas asignarle esta programación?", ["Semana 1", "Semana 2", "Semana 3", "Semana 4", "Semana 5 (Si aplica)", "Semana 6 (Si aplica)"])
+
+    with st.form("form_pegar_texto_plano"):
+        fecha_cab_manual = st.text_input("Rango de Fecha Oficial (Ej: 7-13 de septiembre):")
+        texto_plano_pegar = st.text_area("Pega aquí el texto completo copiado de JW.org:", height=250, placeholder="Escribe o pega aquí el texto...")
+        btn_procesar_humano = st.form_submit_button("⚡ Procesar y Cargar Semana Inmediatamente")
         
-        if btn_inyectar:
-            try:
-                datos_nuevos_inyectados = json.loads(texto_json_pegar)
-                for mes, semanas in datos_nuevos_inyectados.items():
-                    mes_upper = mes.upper()
-                    if mes_upper not in datos_reuniones:
-                        datos_reuniones[mes_upper] = {}
-                    for sem, cuerpo in semanas.items():
-                        datos_reuniones[mes_upper][sem] = cuerpo
+        if btn_procesar_humano:
+            if texto_plano_pegar:
+                f_cab, l_cab, materias_detectadas = procesar_texto_plano_reunion(texto_plano_pegar)
+                
+                # Armamos la estructura en caliente dentro del mes elegido
+                datos_reuniones[mes_destino_txt][semana_destino_txt] = {
+                    "fecha_cabecera": fecha_cab_manual if fecha_cab_manual else f_cab,
+                    "lectura_cabecera": l_cab,
+                    "materias": materias_detectadas,
+                    "asignados": {}
+                }
                 guardar_reuniones(datos_reuniones)
-                st.success("¡Estructura anual dinámicamente actualizada con éxito total!")
+                st.success(f"¡Éxito rotundo! {semana_destino_txt} de {mes_destino_txt} cargada y procesada de forma automática sin JSON.")
                 st.rerun()
-            except Exception as error_json:
-                st.error(f"Error en el formato del texto pegado: {error_json}")
+            else:
+                st.error("El cuadro de texto está vacío.")
