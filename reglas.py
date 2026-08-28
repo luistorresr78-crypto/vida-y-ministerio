@@ -139,10 +139,10 @@ def generar_pdf_estilo_oficial(mes_activo, semana_activa, materias, asignados):
     
     presi = asignados.get("presidente") or "Por asignar"
     cab_der = [[Paragraph("<b>Presidente</b>", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    t_presi = Table(cab_der, colWidths=[60, 140])
+    t_presi = Table(cab_der, colWidths=[90, 110])
     t_presi.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LINEBELOW', (1,0), (1,0), 0.5, colors.black)]))
     
-    t_principal = Table([[cab_izq, t_presi]], colWidths=[340, 200])
+    t_principal = Table([[cab_izq, t_presi]], colWidths=[320, 220])
     t_principal.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'TOP')]))
     elementos.append(t_principal)
     elementos.append(Spacer(1, 10))
