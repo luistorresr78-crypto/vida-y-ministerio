@@ -50,7 +50,7 @@ st.markdown("---")
 # Panel lateral izquierdo: Configuracion de operacion y Firmas
 with st.sidebar:
     st.header("⚙️ Mesa de Control")
-    coordinador_activo = st.selectbox("¿Quién está asignando hoy?", ["Luis", "Carlos", "Juan"])
+    coordinador_activo = st.selectbox("¿Quién está asignando hoy?", ["Sergio", "Jonathan", "Luis"])
     
     # SOLUCIÓN PUNTO 2: Panel Web interactivo de Reemplazos de Emergencia
     st.subheader("♻️ Registro de Reemplazos")
@@ -152,7 +152,8 @@ with st.form("formulario_asignaciones"):
 # Lógica de guardado en caliente del JSON en el servidor en la nube
 if boton_guardar:
     # Registramos la firma de quién guardó el cambio (Punto 2)
-    datos_reuniones[mes_activo if 'mes_activo' in locals() else mes_seleccionado][semana_seleccionada]["ultima_firma"] = f"Guardado por: {coordinador_activa if 'coordinador_activa' in locals() else coordinador_activo}"
+    datos_reuniones[mes_seleccionado][semana_seleccionada]["ultima_firma"] = f"Guardado por: {coordinador_activo}"
+
     datos_reuniones[mes_seleccionado][semana_seleccionada]["asignados"] = nuevos_asignados
     
     with open(FICHERO_REUNIONES, "w", encoding="utf-8") as f:
