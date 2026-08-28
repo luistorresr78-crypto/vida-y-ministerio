@@ -267,26 +267,27 @@ with pestana_reuniones:
         semana_destino_txt = st.selectbox("¿A qué semana deseas asignarle esta programación?", ["Semana 1", "Semana 2", "Semana 3", "Semana 4", "Semana 5 (Si aplica)", "Semana 6 (Si aplica)"])
 
     with st.form("form_pegar_texto_plano"):
-        fecha_cab_manual = st.text_input("Rango de Fecha Oficial (Ej: 7-13 de septiembre):")
-        texto_plano_pegar = st.text_area("Pega aquí el texto completo copiado de JW.org:", height=250, placeholder="Escribe o pega aquí el texto...")
-        btn_procesar_humano = st.form_submit_button("⚡ Procesar y Cargar Semana Inmediatamente")
-        
-        if btn_procesar_humano:
-            if texto_plano_pegar:
-                f_cab, l_cab, materias_detectadas = procesar_texto_plano_reunion(texto_plano_pegar)
+     fecha_cab_manual = st.text_input("Rango de Fecha Oficial (Ej: 7-13 de septiembre):")
+     lectura_cab_manual = st.text_input("Lectura Bíblica de la Semana (Ej: JEREMÍAS 22, 23):")
+     texto_plano_pegar = st.text_area("Pega aquí el texto completo copiado de JW.org:", height=250, placeholder="Escribe o pega aquí el texto...")
+     btn_procesar_humano = st.form_submit_button("⚡ Procesar y Cargar Semana Inmediatamente")
 
-                # Línea de seguridad inteligente: crea el mes si no existe en la nube
-                if mes_destino_txt not in datos_reuniones:
-                    datos_reuniones[mes_destino_txt] = {}
+     if btn_procesar_humano:
+         if texto_plano_pegar:
+             f_cab, l_cab, materias_detectadas = procesar_texto_plano_reunion(texto_plano_pegar)
 
-                # Armamos la estructura en caliente dentro del mes elegido
-                datos_reuniones[mes_destino_txt][semana_destino_txt] = {
+             # Línea de seguridad inteligente: crea el mes si no existe en la nube
+             if mes_destino_txt not in datos_reuniones:
+                 datos_reuniones[mes_destino_txt] = {}
 
-                    "fecha_cabecera": fecha_cab_manual if fecha_cab_manual else f_cab,
-                    "lectura_cabecera": l_cab,
-                    "materias": materias_detectadas,
-                    "asignados": {}
-                }
+             # Armamos la estructura en caliente dentro del mes elegido con los datos manuales prioritarios
+             datos_reuniones[mes_destino_txt][semana_destino_txt] = {
+                 "fecha_cabecera": fecha_cab_manual if fecha_cab_manual else f_cab,
+                 "lectura_cabecera": lectura_cab_manual if lectura_cab_manual else l_cab,
+                 "materias": materias_detectadas,
+                 "asignados": {}
+             }
+
                 guardar_reuniones(datos_reuniones)
                 st.success(f"¡Éxito rotundo! {semana_destino_txt} de {mes_destino_txt} cargada y procesada de forma automática sin JSON.")
                 st.rerun()
