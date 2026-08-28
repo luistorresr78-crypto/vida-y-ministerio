@@ -43,55 +43,46 @@ def guardar_reuniones(datos):
 
 lista_hermanos, datos_reuniones = cargar_datos()
 
-# --- PROCESADOR INTELIGENTE DE TEXTO HUMANO (MESA ASIGNACIÓN) ---
+# --- PROCESADOR EXTRACTOR INDESTRUCTIBLE DE TEXTO DE JW.ORG ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
-    # Filtramos lineas vacias para agarrar el texto real de JW.org
+    # Filtramos líneas vacías y limpiamos espacios molestos
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    # Toma la primera línea como fecha y la segunda como lectura bíblica
+    # Lógica de asignación forzada por posición de renglón
     fecha_cab = lineas[0] if len(lineas) > 0 else "Fecha de la Reunión"
     lectura_cab = lineas[1] if len(lineas) > 1 else "Lectura de la Semana"
 
-
-    # Buscador automatico de puntos numerados (ej: "1. Discurso", "8. Estudio")
     for linea in lineas:
-        linea_limpia = linea.strip()
-        match_punto = re.match(r"^([1-8])\.\s*(.*)", linea_limpia)
-        
+        # Busca cualquier renglón que inicie con un número del 1 al 8 seguido de un punto
+        match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
         if match_punto:
             num_punto = match_punto.group(1)
             contenido = match_punto.group(2)
             
-            # Detecta de forma automatica los minutos entre parentesis
+            # Extrae dinámicamente los minutos reales entre parentesis
             match_mins = re.search(r"\(\s*(\d+)\s*min", contenido)
             minutos = match_mins.group(1) if match_mins else "5"
             
-            # Limpiamos el titulo quitando los minutos
-            titulo_limpio = re.sub(r"\(\s*\d+\s*min.*?\)", "", contenido).strip()
+            # Mantiene el título completo conservando las referencias largas e información de JW.org
+            titulo_completo = contenido.strip()
             
-            # Clasificacion automatica teocratica por numero de punto
-            if num_punto in ["1", "2", "3"]:
-                seccion_real = "Tesoros"
-            elif num_punto in ["4", "5", "6"]:
-                seccion_real = "Maestros"
-            else:
-                seccion_real = "Vida"
+            if num_punto in ["1", "2", "3"]: seccion_real = "Tesoros"
+            elif num_punto in ["4", "5", "6"]: seccion_real = "Maestros"
+            else: seccion_real = "Vida"
                 
             materias_detectadas[num_punto] = {
-                "titulo": titulo_limpio,
+                "titulo": titulo_completo,
                 "minutos": minutos,
                 "seccion": seccion_real
             }
             
-    # Si el usuario no pego puntos validos, cargamos un molde de proteccion
     if not materias_detectadas:
         materias_detectadas = {
             "1": {"titulo": "Discurso", "minutos": "10", "seccion": "Tesoros"},
             "2": {"titulo": "Perlas", "minutos": "10", "seccion": "Tesoros"},
             "3": {"titulo": "Lectura", "minutos": "4", "seccion": "Tesoros"}
         }
-        
     return fecha_cab, lectura_cab, materias_detectadas
 
 # --- MENÚ SUPERIOR DE PESTAÑAS WEB ---
@@ -190,7 +181,7 @@ with pestana_asignaciones:
 
     if boton_guardar:
         datos_reuniones[mes_seleccionado][semana_seleccionada]["ultima_firma"] = f"Guardado por: {coordinador_activo}"
-        datos_reuniones[mes_seleccionado][semana_seleccionada]["asignados"] = nuevos_assignados if 'nuevos_assignados' in locals() else nuevos_asignados
+        datos_reuniones[mes_seleccionado][semana_seleccionada]["asignados"] = nuevos_asignados
         guardar_reuniones(datos_reuniones)
         st.success(f"¡Asignaciones guardadas con éxito por {coordinador_activo}!")
 
@@ -250,11 +241,11 @@ with pestana_hermanos:
     st.table(tabla_visual)
 
 # =========================================================================
-# PESTAÑA 3: NUEVO COPIADOR INTELIGENTE DE TEXTO HUMANO (ADIÓS JSON CANSADO)
+# PESTAÑA 3: NUEVO COPIADOR ADAPTATIVO (EXTRACTOR AUTOMÁTICO DE CABECERA)
 # =========================================================================
 with pestana_reuniones:
     st.header("📝 Pegar Programa de la Reunión (Copiador Humano)")
-    st.markdown("Ya no necesitas código técnico JSON. Copia la Guía de Actividades oficial de la semana desde **JW.org**, pégala aquí abajo en español común y el programa extraerá los puntos de forma inteligente.")
+    st.markdown("Copia la Guía de Actividades semanal desde **JW.org**, pégala aquí abajo en español común y el programa extraerá la fecha, la lectura bíblica y las referencias completas de forma automática.")
     
     col_cfg1, col_cfg2 = st.columns(2)
     with col_cfg1:
@@ -271,19 +262,19 @@ with pestana_reuniones:
             if texto_plano_pegar:
                 f_cab, l_cab, materias_detectadas = procesar_texto_plano_reunion(texto_plano_pegar)
                 
+                # Línea de seguridad inteligente: crea el mes si no existe en la nube
                 if mes_destino_txt not in datos_reuniones:
                     datos_reuniones[mes_destino_txt] = {}
                     
+                # Armamos la estructura en caliente dentro del mes elegido
                 datos_reuniones[mes_destino_txt][semana_destino_txt] = {
                     "fecha_cabecera": f_cab,
                     "lectura_cabecera": l_cab,
                     "materias": materias_detectadas,
                     "asignados": {}
                 }
-
-
-            guardar_reuniones(datos_reuniones)
-            st.success(f"¡Éxito rotundo! {semana_destino_txt} de {mes_destino_txt} cargada y procesada de forma automática sin JSON.")
-            st.rerun()
-        else:
-            st.error("El cuadro de texto está vacío.")
+                guardar_reuniones(datos_reuniones)
+                st.success(f"¡Éxito rotundo! {semana_destino_txt} de {mes_destino_txt} cargada y procesada con fecha y lectura automática.")
+                st.rerun()
+            else:
+                st.error("El cuadro de texto está vacío.")
