@@ -46,17 +46,13 @@ lista_hermanos, datos_reuniones = cargar_datos()
 # --- PROCESADOR INTELIGENTE DE TEXTO HUMANO (MESA ASIGNACIÓN) ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
-    lineas = texto_usuario.split("\n")
+    # Filtramos lineas vacias para agarrar el texto real de JW.org
+    lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    # Valores por defecto de fabrica para la cabecera
-    fecha_cab = "Fecha de la Reunión"
-    lectura_cab = "Lectura de la Semana"
-    
-    # Intentamos jalar la lectura de las primeras lineas si vienen en mayusculas
-    for l in lineas[:4]:
-        if any(b in l.upper() for b in ["GÉNESIS", "ÉXODO", "JEREMÍAS", "MATEO", "JUAN", "HEBREOS", "APOCALIPSIS", "SALMOS"]):
-            lectura_cab = l.strip()
-            break
+    # Toma la primera línea como fecha y la segunda como lectura bíblica
+    fecha_cab = lineas[0] if len(lineas) > 0 else "Fecha de la Reunión"
+    lectura_cab = lineas[1] if len(lineas) > 1 else "Lectura de la Semana"
+
 
     # Buscador automatico de puntos numerados (ej: "1. Discurso", "8. Estudio")
     for linea in lineas:
@@ -266,27 +262,25 @@ with pestana_reuniones:
     with col_cfg2:
         semana_destino_txt = st.selectbox("¿A qué semana deseas asignarle esta programación?", ["Semana 1", "Semana 2", "Semana 3", "Semana 4", "Semana 5 (Si aplica)", "Semana 6 (Si aplica)"])
 
-    with st.form("form_pegar_texto_plano"):
-     fecha_cab_manual = st.text_input("Rango de Fecha Oficial (Ej: 7-13 de septiembre):")
-     lectura_cab_manual = st.text_input("Lectura Bíblica de la Semana (Ej: JEREMÍAS 22, 23):")
-     texto_plano_pegar = st.text_area("Pega aquí el texto completo copiado de JW.org:", height=250, placeholder="Escribe o pega aquí el texto...")
-     btn_procesar_humano = st.form_submit_button("⚡ Procesar y Cargar Semana Inmediatamente")
+        with st.form("form_pegar_texto_plano"):
+        st.markdown("⚠️ **Nota:** Asegúrate de que las dos primeras líneas del texto que pegues abajo sean la **Fecha** y la **Lectura Bíblica**.")
+        texto_plano_pegar = st.text_area("Pega aquí el texto completo copiado de JW.org:", height=250, placeholder="Escribe o pega aquí el texto...")
+        btn_procesar_humano = st.form_submit_button("⚡ Procesar y Cargar Semana Inmediatamente")
+        
+        if btn_procesar_humano:
+            if texto_plano_pegar:
+                f_cab, l_cab, materias_detectadas = procesar_texto_plano_reunion(texto_plano_pegar)
+                
+                if mes_destino_txt not in datos_reuniones:
+                    datos_reuniones[mes_destino_txt] = {}
+                    
+                datos_reuniones[mes_destino_txt][semana_destino_txt] = {
+                    "fecha_cabecera": f_cab,
+                    "lectura_cabecera": l_cab,
+                    "materias": materias_detectadas,
+                    "asignados": {}
+                }
 
-     if btn_procesar_humano:
-         if texto_plano_pegar:
-             f_cab, l_cab, materias_detectadas = procesar_texto_plano_reunion(texto_plano_pegar)
-
-             # Línea de seguridad inteligente: crea el mes si no existe en la nube
-             if mes_destino_txt not in datos_reuniones:
-                 datos_reuniones[mes_destino_txt] = {}
-
-             # Armamos la estructura en caliente dentro del mes elegido con los datos manuales prioritarios
-             datos_reuniones[mes_destino_txt][semana_destino_txt] = {
-                 "fecha_cabecera": fecha_cab_manual if fecha_cab_manual else f_cab,
-                 "lectura_cabecera": lectura_cab_manual if lectura_cab_manual else l_cab,
-                 "materias": materias_detectadas,
-                 "asignados": {}
-             }
 
              guardar_reuniones(datos_reuniones)
              st.success(f"¡Éxito rotundo! {semana_destino_txt} de {mes_destino_txt} cargada y procesada de forma automática sin JSON.")
