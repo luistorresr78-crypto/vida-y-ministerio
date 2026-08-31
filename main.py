@@ -4,10 +4,12 @@ import os
 import re
 import reglas
 
+# Configuracion adaptativa de la pagina web para celulares, iPads y laptops
 st.set_page_config(page_title="Mesa de Asignaciones Teocraticas", page_icon="📝", layout="wide")
 
 FICHERO_HERMANOS = "hermanos.json"
 
+# Carga segura de la nomina de hermanos en la nube con ORDEN ALFABÉTICO AUTOMÁTICO
 def cargar_hermanos_iniciales():
     if not os.path.exists(FICHERO_HERMANOS):
         hermanos_base = [
@@ -17,22 +19,28 @@ def cargar_hermanos_iniciales():
         ]
         with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
             json.dump(hermanos_base, f, ensure_ascii=False, indent=4)
+            
     with open(FICHERO_HERMANOS, "r", encoding="utf-8") as f:
-        return json.load(f)
+        lista_raw = json.load(f)
+        # ORDENAR DE LA A A LA Z: Primero compara por Apellido, y si son iguales, por Nombre
+        lista_ordenada = sorted(lista_raw, key=lambda x: (x.get("apellido", "").lower(), x.get("nombre", "").lower()))
+        return lista_ordenada
 
 lista_hermanos = cargar_hermanos_iniciales()
 
 def guardar_hermanos(lista):
+    # Antes de escribir en el disco duro de internet, nos aseguramos de que vaya alfabeticamente ordenado
+    lista_ordenada = sorted(lista, key=lambda x: (x.get("apellido", "").lower(), x.get("nombre", "").lower()))
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
-        json.dump(lista, f, ensure_ascii=False, indent=4)
+        json.dump(lista_ordenada, f, ensure_ascii=False, indent=4)
 
-# MOTOR INTELIGENTE CORREGIDO PARA JW.ORG (SOPORTA "MINS.")
+# --- PROCESADOR EXTRACTOR EN CALIENTE DE JW.ORG ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas[1] if len(lineas) > 1 else "JEREMÍAS 32, 33"
+    fecha_cab = lineas[0] if len(lineas) > 0 else "Fecha de la Reunión"
+    lectura_cab = lineas[1] if len(lineas) > 1 else "Lectura de la Semana"
 
     for linea in lineas:
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
@@ -40,10 +48,8 @@ def procesar_texto_plano_reunion(texto_usuario):
             num_punto = match_punto.group(1)
             contenido = match_punto.group(2)
             
-            # Captura dinámicamente tanto "min." como "mins."
             match_mins = re.search(r"\(\s*(\d+)\s*min", contenido, re.IGNORECASE)
             minutos = match_mins.group(1) if match_mins else "5"
-            
             titulo_completo = contenido.strip()
             
             if num_punto in ["1", "2", "3"]: seccion_real = "Tesoros"
@@ -64,13 +70,18 @@ def procesar_texto_plano_reunion(texto_usuario):
         }
     return fecha_cab, lectura_cab, materias_detectadas
 
+# --- MENÚ SUPERIOR DE PESTAÑAS WEB ---
 pestana_programa, pestana_hermanos = st.tabs([
     "🚀 Fabricador en Caliente de Folletos", 
     "👥 Gestión de Hermanos (Nómina)"
 ])
-
+# =========================================================================
+# PESTAÑA 1: FABRICADOR EN CALIENTE DE FOLLETOS (TODO EN UNA PANTALLA)
+# =========================================================================
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
+    st.markdown("Copia la Guía de Actividades completa desde **JW.org**, pégala abajo y el sistema extraerá en tiempo real la fecha, la lectura bíblica y los minutos exactos de cada punto.")
+
     texto_jw_entrada = st.text_area(
         "Pega aquí el texto completo copiado de JW.org:", 
         height=200, 
@@ -85,7 +96,7 @@ with pestana_programa:
     st.info(f"📖 Lectura Bíblica Detectada: **{l_cab}**")
 
     with st.sidebar:
-        st.header("⚙️ Control")
+        st.header("⚙️ Control de Operación")
         coordinador_activo = st.selectbox("¿Quién asigna hoy?", ["Sergio", "Jonathan", "Luis"], key="coord_live")
 
     with st.form("formulario_live"):
@@ -93,6 +104,7 @@ with pestana_programa:
         col_p1, col_p2 = st.columns(2)
         with col_p1:
             opciones_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia")
+            # El orden alfabético ya viene inyectado automáticamente desde lista_hermanos
             presidente = st.selectbox("Presidente", [h["nombre"] for h in opciones_presi])
         with col_p2:
             opciones_ora = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Oración")
@@ -126,7 +138,6 @@ with pestana_programa:
         boton_armar = st.form_submit_button("⚙️ Procesar Datos para Descarga (Paso 1)")
 
     st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
-    # Enviamos los datos reales extraídos en caliente a reglas.py
     reglas.generar_pdf_estilo_oficial(l_cab, f_cab, materias_dinamicas, asignados_en_vivo)
     nombre_archivo_pdf = f"Reunion_{l_cab.replace(' ', '_')}_{f_cab.replace(' ', '_')}.pdf"
 
@@ -134,27 +145,58 @@ with pestana_programa:
         with open(nombre_archivo_pdf, "rb") as pdf_file:
             pdf_bytes = pdf_file.read()
         st.download_button(label="🟣 Descargar Folleto Oficial en PDF", data=pdf_bytes, file_name=f"Reunion_{f_cab.replace(' ', '_')}.pdf", mime="application/pdf")
-
+# =========================================================================
+# PESTAÑA 2: GESTIÓN DE HERMANOS (NÓMINA CON FILTRO ALFABÉTICO COMPLETO)
+# =========================================================================
 with pestana_hermanos:
-    st.header("👥 Nómina de la Congregación")
+    st.header("👥 Control de la Nómina de la Congregación")
     col_add, col_del = st.columns(2)
+    
     with col_add:
-        with st.form("form_alta"):
+        st.subheader("➕ Agregar Nuevo Hermano/a")
+        with st.form("form_alta_hermano_live"):
             nuevo_nom = st.text_input("Nombre:")
             nuevo_ape = st.text_input("Apellido:")
             nuevo_sexo = st.selectbox("Sexo:", ["Varón", "Mujer"])
-            nuevas_apt = st.multiselect("Aptitudes:", ["Tesoros", "Lectura", "Seamos Mejores Maestros", "Presidencia", "Oración", "Vida Cristiana"])
-            if st.form_submit_button("Añadir Publicador"):
-                if nuevo_nom:
+            nuevas_apt = st.multiselect("Asignar Aptitudes/Secciones:", ["Tesoros", "Lectura", "Seamos Mejores Maestros", "Presidencia", "Oración", "Vida Cristiana"])
+            btn_dar_alta = st.form_submit_button("Añadir Publicador")
+            
+            if btn_dar_alta:
+                if nuevo_nom and nuevo_ape:
+                    # Agregamos el nuevo registro a la lista actual
                     lista_hermanos.append({"nombre": nuevo_nom, "apellido": nuevo_ape, "sexo": nuevo_sexo, "aptitudes": nuevas_apt})
+                    # Guardar ordena automaticamente de la A a la Z antes de escribir en el búnker
                     guardar_hermanos(lista_hermanos)
-                    st.success("¡Hermano añadido con éxito!")
+                    st.success(f"¡{nuevo_nom} {nuevo_ape} ha sido añadido con éxito!")
                     st.rerun()
+                else:
+                    st.error("Por favor ingresa Nombre y Apellido.")
+
     with col_del:
-        hermano_a_eliminar = st.selectbox("Baja:", [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos])
-        if st.button("Eliminar Permanente", type="primary"):
-            lista_hermanos = [h for h in lista_hermanos if f"{h['nombre']} {h['apellido']}" != hermano_a_eliminar]
+        st.subheader("❌ Dar de Baja Publicador")
+        # El selector de bajas ahora extrae los nombres en riguroso orden alfabetico de la A a la Z
+        nombres_baja = [f"{h['apellido']}, {h['nombre']}" for h in lista_hermanos]
+        hermano_a_eliminar = st.selectbox("Seleccione quién se muda o da de baja (Ordenado por Apellido):", nombres_baja, key="baja_sel_live")
+        
+        if st.button("Confirmar Eliminación Permanente", type="primary", key="btn_baja_live"):
+            # Reconvertimos el formato visual para buscar y eliminar de forma segura
+            lista_hermanos = [h for h in lista_hermanos if f"{h['apellido']}, {h['nombre']}" != hermano_a_eliminar]
             guardar_hermanos(lista_hermanos)
-            st.warning("Eliminado.")
+            st.warning(f"¡{hermano_a_eliminar} ha sido eliminado de la base de datos!")
             st.rerun()
-    st.table([{"Nombre": f"{h['nombre']} {h['apellido']}", "Sexo": h.get("sexo","Varón"), "Aptitudes": ", ".join(h.get("aptitudes",[]))} for h in lista_hermanos])
+
+    st.markdown("---")
+    st.subheader("📜 Listado Oficial de la Congregación (Orden Alfabético de la A a la Z)")
+    
+    # Construimos la cuadrícula limpia de auditoría visual perfectamente ordenada
+    tabla_visual = []
+    for h in lista_hermanos:
+        tabla_visual.append({
+            "Apellido": h.get("apellido", "").upper(),
+            "Nombre": h.get("nombre", ""),
+            "Sexo": h.get("sexo", "Varón"),
+            "Aptitudes Registradas": ", ".join(h.get("aptitudes", []))
+        })
+    
+    # Renderiza la tabla limpia en la pantalla azul
+    st.table(tabla_visual)
