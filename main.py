@@ -9,27 +9,28 @@ st.set_page_config(page_title="Mesa de Asignaciones Teocraticas", page_icon="�
 
 FICHERO_HERMANOS = "hermanos.json"
 
-# Carga segura con ordenamiento inteligente invisible por Apellido
+# Carga segura con NUEVO ORDENAMIENTO ALFABÉTICO POR NOMBRE
 def cargar_hermanos_iniciales():
     if not os.path.exists(FICHERO_HERMANOS):
         hermanos_base = [
+            {"nombre": "Jonathan", "apellido": "Coordinador", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
             {"nombre": "Luis", "apellido": "Torres", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
-            {"nombre": "Sergio", "apellido": "Coordinador", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
-            {"nombre": "Jonathan", "apellido": "Coordinador", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]}
+            {"nombre": "Sergio", "apellido": "Coordinador", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]}
         ]
         with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
             json.dump(hermanos_base, f, ensure_ascii=False, indent=4)
             
     with open(FICHERO_HERMANOS, "r", encoding="utf-8") as f:
         lista_raw = json.load(f)
-        # Ordena internamente por Apellido, pero en pantalla mostraremos primero el Nombre
-        lista_ordenada = sorted(lista_raw, key=lambda x: (x.get("apellido", "").lower(), x.get("nombre", "").lower()))
+        # ORDENAR DE LA A A LA Z POR NOMBRE: Compara primero por el campo "nombre"
+        lista_ordenada = sorted(lista_raw, key=lambda x: (x.get("nombre", "").lower(), x.get("apellido", "").lower()))
         return lista_ordenada
 
 lista_hermanos = cargar_hermanos_iniciales()
 
 def guardar_hermanos(lista):
-    lista_ordenada = sorted(lista, key=lambda x: (x.get("apellido", "").lower(), x.get("nombre", "").lower()))
+    # Asegura el orden estricto por Nombre antes de escribir en el búnker de internet
+    lista_ordenada = sorted(lista, key=lambda x: (x.get("nombre", "").lower(), x.get("apellido", "").lower()))
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista_ordenada, f, ensure_ascii=False, indent=4)
 
@@ -75,7 +76,7 @@ pestana_programa, pestana_hermanos = st.tabs([
     "👥 Gestión de Hermanos (Nómina)"
 ])
 # =========================================================================
-# PESTAÑA 1: FABRICADOR EN CALIENTE DE FOLLETOS (TODO EN UNA PANTALLA)
+# PESTAÑA 1: FABRICADOR EN CALIENTE DE FOLLETOS (ORDENADO POR NOMBRE)
 # =========================================================================
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
@@ -103,6 +104,7 @@ with pestana_programa:
         col_p1, col_p2 = st.columns(2)
         with col_p1:
             opciones_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia")
+            # Los nombres ya se extraen en orden de la A a la Z por su primer nombre
             presidente = st.selectbox("Presidente", [h["nombre"] for h in opciones_presi])
         with col_p2:
             opciones_ora = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Oración")
@@ -144,7 +146,7 @@ with pestana_programa:
             pdf_bytes = pdf_file.read()
         st.download_button(label="🟣 Descargar Folleto Oficial en PDF", data=pdf_bytes, file_name=f"Reunion_{f_cab.replace(' ', '_')}.pdf", mime="application/pdf")
 # =========================================================================
-# PESTAÑA 2: GESTIÓN DE HERMANOS (NÓMINA CON FORMATO NATURAL DE LECTURA)
+# PESTAÑA 2: GESTIÓN DE HERMANOS (NÓMINA CON FILTRO POR NOMBRE DE LA A A LA Z)
 # =========================================================================
 with pestana_hermanos:
     st.header("👥 Control de la Nómina de la Congregación")
@@ -170,9 +172,9 @@ with pestana_hermanos:
 
     with col_del:
         st.subheader("❌ Dar de Baja Publicador")
-        # El menú de bajas muestra primero el Nombre y después el Apellido para una lectura cómoda
+        # El menú de bajas ahora muestra los nombres en estricto orden alfabético por Nombre
         nombres_baja = [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos]
-        hermano_a_eliminar = st.selectbox("Seleccione quién se muda o da de baja:", nombres_baja, key="baja_sel_live")
+        hermano_a_eliminar = st.selectbox("Seleccione quién se muda o da de baja (Ordenado por Nombre):", nombres_baja, key="baja_sel_live")
         
         if st.button("Confirmar Eliminación Permanente", type="primary", key="btn_baja_live"):
             lista_hermanos = [h for h in lista_hermanos if f"{h['nombre']} {h['apellido']}" != hermano_a_eliminar]
@@ -181,9 +183,9 @@ with pestana_hermanos:
             st.rerun()
 
     st.markdown("---")
-    st.subheader("📜 Listado Oficial de la Congregación (Nombre Primero - Ordenado de la A a la Z por Apellido)")
+    st.subheader("📜 Listado Oficial de la Congregación (Ordenado de la A a la Z por Nombre)")
     
-    # Reordenamos las columnas visuales para que se lea primero el Nombre y luego el Apellido
+    # Construimos la cuadrícula visual de auditoría en perfecto orden por Nombre de pila
     tabla_visual = []
     for h in lista_hermanos:
         tabla_visual.append({
@@ -193,5 +195,5 @@ with pestana_hermanos:
             "Aptitudes Registradas": ", ".join(h.get("aptitudes", []))
         })
     
-    # Renderiza la tabla limpia con el orden estético natural
+    # Renderiza la tabla limpia con el nuevo criterio alfabético
     st.table(tabla_visual)
