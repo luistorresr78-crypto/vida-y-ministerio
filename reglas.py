@@ -7,7 +7,6 @@ import os
 FICHERO_HERMANOS = "hermanos.json"
 
 def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtro):
-    # Saneamiento inteligente: Si la tómbola pide "Tesoros de la Biblia", buscamos "Tesoros" que es la aptitud real del JSON
     filtro_real = "Tesoros" if "Tesoros" in aptitud_filtro else aptitud_filtro
     candidatos = [h for h in lista_hermanos if filtro_real in h.get("aptitudes", [])]
     
@@ -19,10 +18,8 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
         candidatos_validos = []
         for h in candidatos:
             nombre_h = f"{h['nombre']} {h['apellido']}"
-            if nombre_h == titular_limpio: 
-                continue
-            if sexo_tit == "Mujer" and h["sexo"] == "Mujer":
-                candidatos_validos.append(h)
+            if nombre_h == titular_limpio: continue
+            if sexo_tit == "Mujer" and h["sexo"] == "Mujer": candidatos_validos.append(h)
             elif sexo_tit == "Varón":
                 if h["sexo"] == "Varón" or (h["sexo"] == "Mujer" and h["apellido"].lower() == apellido_tit.lower()):
                     candidatos_validos.append(h)
@@ -34,8 +31,8 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
     return lista_listas
 
 def generar_pdf_estilo_oficial(lectura_cabecera, fecha_cabecera, materias, asignados):
+    # Forzamos un nombre único y limpio compatible con la descarga directa
     nombre_pdf = "Reunion_PROCESADO_WEB.pdf"
-    # Ajustamos los márgenes verticales a 45 puntos para maximizar el uso del papel Carta/A4
     doc = SimpleDocTemplate(nombre_pdf, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=45, bottomMargin=45)
     
     est_fecha = ParagraphStyle('EF', fontName='Helvetica-Bold', fontSize=12, textColor=colors.HexColor("#4A5568"))
@@ -64,7 +61,7 @@ def generar_pdf_estilo_oficial(lectura_cabecera, fecha_cabecera, materias, asign
     t_principal = Table([[cab_izq, t_presi]], colWidths=[290, 250])
     t_principal.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'TOP')]))
     elementos.append(t_principal)
-    elementos.append(Spacer(1, 15)) # Espaciado expandido
+    elementos.append(Spacer(1, 15))
     
     ora_ini = asignados.get("oracion_inicial") or "Por asignar"
     datos_cancion_1 = [
@@ -73,7 +70,7 @@ def generar_pdf_estilo_oficial(lectura_cabecera, fecha_cabecera, materias, asign
     t_c1 = Table(datos_cancion_1, colWidths=[180, 180, 180])
     t_c1.setStyle(TableStyle([('LINEABOVE', (0,0), (-1,-1), 1, colors.black), ('LINEBELOW', (0,0), (-1,-1), 1, colors.black), ('PADDING', (0,0), (-1,-1), 6), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
     elementos.append(t_c1)
-    elementos.append(Spacer(1, 20)) # Espaciado expandido
+    elementos.append(Spacer(1, 20))
     
     # === SECCIÓN 1: TESOROS DE LA BIBLIA ===
     t_tit_tesoros = Table([[Paragraph("<b>TESOROS DE LA BIBLIA</b>", est_letra_blanca)]], colWidths=[540])
@@ -91,10 +88,9 @@ def generar_pdf_estilo_oficial(lectura_cabecera, fecha_cabecera, materias, asign
             filas_t.append([Paragraph(txt_punto, est_blu), Paragraph(titular, est_hnos), ""])
     if filas_t:
         t_filas_t = Table(filas_t, colWidths=[340, 200, 0])
-        # Incrementamos el PADDING vertical a 10 puntos para estirar las filas uniformemente hacia abajo
         t_filas_t.setStyle(TableStyle([('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E1")), ('PADDING', (0,0), (-1,-1), 10), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
         elementos.append(t_filas_t)
-    elementos.append(Spacer(1, 25)) # Espaciado expandido entre secciones
+    elementos.append(Spacer(1, 25))
     
     # === SECCIÓN 2: SEAMOS MEJORES MAESTROS ===
     t_tit_maestros = Table([[Paragraph("<b>SEAMOS MEJORES MAESTROS</b>", est_letra_blanca)]], colWidths=[540])
@@ -105,18 +101,17 @@ def generar_pdf_estilo_oficial(lectura_cabecera, fecha_cabecera, materias, asign
     
     filas_m = []
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
-        if k in ["4", "5", "6", "7"] and materias[k].get("seccion") == "Maestros":
-            m = materias[k]
-            txt_punto = f"<b>{k}. {m.get('titulo','')}</b>"
-            titular = asignados.get(f"p{k}_t") or ""
-            ayudante = asignados.get(f"p{k}_a") or ""
-            filas_m.append([Paragraph(txt_punto, est_ora), Paragraph(titular, est_hnos), Paragraph(ayudante, est_hnos)])
+        if m_obj := materias.get(k):
+            if k in ["4", "5", "6", "7"] and m_obj.get("seccion") == "Maestros":
+                txt_punto = f"<b>{k}. {m_obj.get('titulo','')}</b>"
+                titular = asignados.get(f"p{k}_t") or ""
+                ayudante = asignados.get(f"p{k}_a") or ""
+                filas_m.append([Paragraph(txt_punto, est_ora), Paragraph(titular, est_hnos), Paragraph(ayudante, est_hnos)])
     if filas_m:
         t_filas_m = Table(filas_m, colWidths=[340, 100, 100])
-        # Padding vertical de 10 puntos para estirar la sección de Maestros
         t_filas_m.setStyle(TableStyle([('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E1")), ('PADDING', (0,0), (-1,-1), 10), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
         elementos.append(t_filas_m)
-    elementos.append(Spacer(1, 25)) # Espaciado expandido entre secciones
+    elementos.append(Spacer(1, 25))
     
     # === SECCIÓN 3: NUESTRA VIDA CRISTIANA ===
     t_tit_vida = Table([[Paragraph("<b>NUESTRA VIDA CRISTIANA</b>", est_letra_blanca)]], colWidths=[540])
@@ -131,14 +126,13 @@ def generar_pdf_estilo_oficial(lectura_cabecera, fecha_cabecera, materias, asign
     
     filas_v = []
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
-        if k.isdigit() and int(k) >= 7 and materias[k].get("seccion") == "Vida":
-            m = materias[k]
-            txt_punto = f"<b>{k}. {m.get('titulo','')}</b>"
-            titular = asignados.get(f"p{k}_t") or ""
-            filas_v.append([Paragraph(txt_punto, est_red), Paragraph(titular, est_hnos), ""])
+        if m_obj := materias.get(k):
+            if k.isdigit() and int(k) >= 7 and m_obj.get("seccion") == "Vida":
+                txt_punto = f"<b>{k}. {m_obj.get('titulo','')}</b>"
+                titular = asignados.get(f"p{k}_t") or ""
+                filas_v.append([Paragraph(txt_punto, est_red), Paragraph(titular, est_hnos), ""])
     if filas_v:
         t_filas_v = Table(filas_v, colWidths=[340, 200, 0])
-        # Padding vertical de 10 puntos para estirar la sección de Vida Cristiana
         t_filas_v.setStyle(TableStyle([('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E1")), ('PADDING', (0,0), (-1,-1), 10), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
         elementos.append(t_filas_v)
     elementos.append(Spacer(1, 20))
