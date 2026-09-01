@@ -9,11 +9,11 @@ st.set_page_config(page_title="Mesa de Asignaciones Teocraticas", page_icon="�
 
 FICHERO_HERMANOS = "hermanos.json"
 
-# Carga segura con formateo Tipo Título (Title Case) automático
+# Carga segura con ordenamiento alfabético Tipo Título por Nombre
 def cargar_hermanos_iniciales():
     if not os.path.exists(FICHERO_HERMANOS):
         hermanos_base = [
-            {"nombre": "Jonathan", "apellido": "Coordinador", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
+            {"nombre": "Jonathan", "apellido": "Coordinador", "sexo": "Varón", "aptitudes": ["Tesaros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
             {"nombre": "Luis", "apellido": "Torres", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
             {"nombre": "Sergio", "apellido": "Coordinador", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]}
         ]
@@ -22,8 +22,6 @@ def cargar_hermanos_iniciales():
             
     with open(FICHERO_HERMANOS, "r", encoding="utf-8") as f:
         lista_raw = json.load(f)
-        
-        # Sanea y estandariza los datos existentes a Tipo Título (Ej: Luis Torres)
         lista_saneada = []
         for h in lista_raw:
             lista_saneada.append({
@@ -32,7 +30,6 @@ def cargar_hermanos_iniciales():
                 "sexo": h.get("sexo", "Varón"),
                 "aptitudes": h.get("aptitudes", [])
             })
-            
         lista_ordenada = sorted(lista_saneada, key=lambda x: (x.get("nombre", "").lower(), x.get("apellido", "").lower()))
         return lista_ordenada
 
@@ -51,13 +48,13 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista_ordenada, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR EXTRACTOR EN CALIENTE DE JW.ORG ---
+# --- PROCESADOR EXTRACTOR EN CALIENTE INDESTRUCTIBLE DE JW.ORG ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    fecha_cab = lineas if len(lineas) > 0 else "Fecha de la Reunión"
-    lectura_cab = lineas if len(lineas) > 1 else "Lectura de la Semana"
+    fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas[1] if len(lineas) > 1 else "JEREMÍAS 32, 33"
 
     for linea in lineas:
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
@@ -75,15 +72,15 @@ def procesar_texto_plano_reunion(texto_usuario):
                 
             materias_detectadas[num_punto] = {
                 "titulo": titulo_completo,
-                "minutos": minutes if 'minutes' in locals() else minutos,
+                "minutos": minutos,
                 "seccion": seccion_real
             }
             
     if not materias_detectadas:
         materias_detectadas = {
-            "1": {"titulo": "Discurso (10 mins.)", "minutos": "10", "seccion": "Tesoros"},
-            "2": {"titulo": "Perlas (10 mins.)", "minutos": "10", "seccion": "Tesoros"},
-            "3": {"titulo": "Lectura de la Biblia (4 mins.)", "minutos": "4", "seccion": "Tesoros"}
+            "1": {"titulo": "1. Discurso (10 mins.)", "minutos": "10", "seccion": "Tesoros"},
+            "2": {"titulo": "2. Perlas de la Biblia (10 mins.)", "minutos": "10", "seccion": "Tesoros"},
+            "3": {"titulo": "3. Lectura de la Biblia (4 mins.)", "minutos": "4", "seccion": "Tesoros"}
         }
     return fecha_cab, lectura_cab, materias_detectadas
 
@@ -93,12 +90,13 @@ pestana_programa, pestana_hermanos = st.tabs([
     "👥 Gestión de Hermanos (Nómina)"
 ])
 # =========================================================================
-# PESTAÑA 1: FABRICADOR EN CALIENTE DE FOLLETOS (FORMATO TIPO TÍTULO)
+# PESTAÑA 1: FABRICADOR EN CALIENTE DE FOLLETOS (CORREGIDO INDESTRUCTIBLE)
 # =========================================================================
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
     st.markdown("Copia la Guía de Actividades completa desde **JW.org**, pégala abajo y el sistema extraerá en tiempo real la fecha, la lectura bíblica y los minutos exactos de cada punto.")
 
+    # Entrada de texto abierta para jalar los datos de internet
     texto_jw_entrada = st.text_area(
         "Pega aquí el texto completo copiado de JW.org:", 
         height=200, 
@@ -109,27 +107,28 @@ with pestana_programa:
     f_cab, l_cab, materias_dinamicas = procesar_texto_plano_reunion(texto_jw_entrada)
 
     st.markdown("---")
-    st.subheader(f"📅 Vista Previa: {f_cab}")
+    st.subheader(f"📅 Vista Previa de la Semana: {f_cab}")
     st.info(f"📖 Lectura Bíblica Detectada: **{l_cab}**")
 
     with st.sidebar:
         st.header("⚙️ Control de Operación")
         coordinador_activo = st.selectbox("¿Quién asigna hoy?", ["Sergio", "Jonathan", "Luis"], key="coord_live")
 
-    with st.form("formulario_live"):
+    # Formulario protegido: Las tómbolas se dibujan dinámicamente según el texto pegado
+    with st.form("formulario_live_seguro"):
         st.markdown("### 🎚️ Asignar Privilegios para el Folleto")
         col_p1, col_p2 = st.columns(2)
         with col_p1:
             opciones_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia")
-            # Los nombres ya se muestran formateados limpiamente como Tipo Título
-            presidente = st.selectbox("Presidente", [h["nombre"] for h in opciones_presi])
+            presidente = st.selectbox("Presidente", [h["nombre"] for h in opciones_presi], key="sel_presi_v")
         with col_p2:
             opciones_ora = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Oración")
-            oracion_inicial = st.selectbox("Oración Inicial", [h["nombre"] for h in opciones_ora])
+            oracion_inicial = st.selectbox("Oración Inicial", [h["nombre"] for h in opciones_ora], key="sel_ora_v")
 
         st.markdown("---")
         asignados_en_vivo = {"presidente": presidente, "oracion_inicial": oracion_inicial}
         
+        # Este bucle dibuja dinámicamente los puntos que extrae de la caja de texto
         for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
             m = materias_dinamicas[k]
             tipo_seccion = m.get("seccion", "Tesoros")
@@ -142,28 +141,48 @@ with pestana_programa:
                 
             c1, c2 = st.columns(2)
             with c1:
-                titular = st.selectbox(f"Asignado punto {k}", nombres_materia, key=f"t_{k}")
+                titular = st.selectbox(f"Asignado punto {k}", nombres_materia, key=f"t_{k}_live")
                 asignados_en_vivo[f"p{k}_t"] = titular
             with c2:
                 if tipo_seccion == "Maestros":
                     opciones_ayudante = reglas.filtrar_ayudantes_inteligente(titular, lista_hermanos, "Seamos Mejores Maestros")
                     nombres_ayudante = [h["nombre"] for h in opciones_ayudante]
                     if "" not in nombres_ayudante: nombres_ayudante.insert(0, "")
-                    ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"a_{k}")
+                    ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"a_{k}_live")
                     asignados_en_vivo[f"p{k}_a"] = ayudante
 
-        boton_armar = st.form_submit_button("⚙️ Procesar Datos para Descarga (Paso 1)")
+        st.markdown("---")
+        # El botón de procesar ahora valida y empaqueta la información de forma segura
+        boton_armar = st.form_submit_button("⚙️ Procesar Datos para Descarga")
 
+    # Guardamos los datos de descarga en un contenedor de memoria interna
+    if boton_armar:
+        reglas.generar_pdf_estilo_oficial(l_cab, f_cab, materias_dinamicas, asignados_en_vivo)
+        st.session_state["pdf_listo"] = True
+        st.session_state["f_cab_guardada"] = f_cab
+        st.session_state["l_cab_guardada"] = l_cab
+        st.success("¡Folleto procesado con éxito total! El botón de descarga de abajo se ha habilitado.")
     st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
-    reglas.generar_pdf_estilo_oficial(l_cab, f_cab, materias_dinamicas, asignados_en_vivo)
-    nombre_archivo_pdf = f"Reunion_{l_cab.replace(' ', '_')}_{f_cab.replace(' ', '_')}.pdf"
+    # El botón morado solo se dibuja en la pantalla si el usuario ya presionó el botón de procesar arriba
+    if st.session_state.get("pdf_listo", False):
+        nombre_archivo_pdf = "Reunion_PROCESADO_WEB.pdf"
+        f_cab_g = st.session_state.get("f_cab_guardada", "Semana")
+        
+        if os.path.exists(nombre_archivo_pdf):
+            with open(nombre_archivo_pdf, "rb") as pdf_file:
+                pdf_bytes = pdf_file.read()
+            st.download_button(
+                label="🟣 Descargar Folleto Oficial en PDF", 
+                data=pdf_bytes, 
+                file_name=f"Reunion_{f_cab_g.replace(' ', '_')}.pdf", 
+                mime="application/pdf",
+                key="btn_descarga_final_live"
+            )
+    else:
+        st.info("💡 Por favor, rellena las tómbolas de arriba y haz clic en el botón '⚙️ Procesar Datos para Descarga' para activar el botón morado.")
 
-    if os.path.exists(nombre_archivo_pdf):
-        with open(nombre_archivo_pdf, "rb") as pdf_file:
-            pdf_bytes = pdf_file.read()
-        st.download_button(label="🟣 Descargar Folleto Oficial en PDF", data=pdf_bytes, file_name=f"Reunion_{f_cab.replace(' ', '_')}.pdf", mime="application/pdf")
 # =========================================================================
-# PESTAÑA 2: GESTIÓN DE HERMANOS (NÓMINA EN FORMATO TIPO TÍTULO)
+# PESTAÑA 2: GESTIÓN DE HERMANOS (NÓMINA EN FORMATO TIPO TÍTULO POR NOMBRE)
 # =========================================================================
 with pestana_hermanos:
     st.header("👥 Control de la Nómina de la Congregación")
@@ -180,7 +199,6 @@ with pestana_hermanos:
             
             if btn_dar_alta:
                 if nuevo_nom and nuevo_ape:
-                    # Al guardar, aplicamos .title() para estandarizar de inmediato la primera letra en mayúscula
                     lista_hermanos.append({
                         "nombre": nuevo_nom.strip().title(), 
                         "apellido": nuevo_ape.strip().title(), 
@@ -195,7 +213,6 @@ with pestana_hermanos:
 
     with col_del:
         st.subheader("❌ Dar de Baja Publicador")
-        # El menú de bajas muestra los nombres ya estandarizados en Tipo Título
         nombres_baja = [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos]
         hermano_a_eliminar = st.selectbox("Seleccione quién se muda o da de baja:", nombres_baja, key="baja_sel_live")
         
@@ -206,9 +223,8 @@ with pestana_hermanos:
             st.rerun()
 
     st.markdown("---")
-    st.subheader("📜 Listado Oficial de la Congregación (Formato Tipo Título - De la A a la Z por Nombre)")
+    st.subheader("📜 Listado Oficial de la Congregación (Tipo Título - De la A a la Z por Nombre)")
     
-    # Construimos la cuadrícula visual de auditoría con formato limpio de letras
     tabla_visual = []
     for h in lista_hermanos:
         tabla_visual.append({
@@ -217,6 +233,4 @@ with pestana_hermanos:
             "Sexo": h.get("sexo", "Varón"),
             "Aptitudes Registradas": ", ".join(h.get("aptitudes", []))
         })
-    
-    # Renderiza la tabla limpia en la pantalla azul
     st.table(tabla_visual)
