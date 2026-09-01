@@ -5,9 +5,14 @@ import re
 import requests
 import reglas
 
-# --- CONEXIÓN DIRECTA A LA NUBE BLINDADA ---
-URL_BASE = f"{reglas.SUPABASE_URL}/rest/v1"
-HDRS = reglas.SUPABASE_HEADERS
+# --- CONEXIÓN DIRECTA CORREGIDA ---
+URL_BASE = "https://supabase.co"
+HDRS = {
+    "apikey": "sb_publishable_GpDoDvr1ejZChSiAThb4uQ_-60A9S08",
+    "Authorization": "Bearer sb_publishable_GpDoDvr1ejZChSiAThb4uQ_-60A9S08",
+    "Content-Type": "application/json",
+    "Prefer": "return=representation"
+}
 
 ORDEN_MESES = ["SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO"]
 SEMANAS_POSIBLES = ["Semana 1", "Semana 2", "Semana 3", "Semana 4", "Semana 5", "Semana 6"]
@@ -39,8 +44,11 @@ def cargar_reuniones_cloud():
                 s = r.get("semana")
                 if m not in dicc_reuns: dicc_reuns[m] = {}
                 dicc_reuns[m][s] = {
-                    "fecha_cabecera": r.get("fecha_cabecera"), "lectura_cabecera": r.get("lectura_cabecera"),
-                    "materias": r.get("materias", {}), "asignados": r.get("asignados", {}), "ultima_firma": r.get("ultima_firma", "")
+                    "fecha_cabecera": r.get("fecha_cabecera"),
+                    "lectura_cabecera": r.get("lectura_cabecera"),
+                    "materias": r.get("materias", {}),
+                    "asignados": r.get("asignados", {}),
+                    "ultima_firma": r.get("ultima_firma", "")
                 }
             return dicc_reuns
     except Exception: pass
@@ -69,9 +77,11 @@ def procesar_texto_plano_reunion(texto_usuario):
             contenido = match_punto.group(2)
             match_mins = re.search(r"\(\s*(\d+)\s*min", contenido, re.IGNORECASE)
             minutos = match_mins.group(1) if match_mins else "5"
-            if num_punto in ["1", "2", "3"]: seccion_real = "T导 T" if "T导 T" in locals() else "Tesoros"
+            
+            if num_punto in ["1", "2", "3"]: seccion_real = "Tesoros"
             elif num_punto in ["4", "5", "6"]: seccion_real = "Maestros"
             else: seccion_real = "Vida"
+            
             materias_detectadas[num_punto] = {"titulo": contenido.strip(), "minutos": minutos, "seccion": seccion_real}
             
     if not materias_detectadas:
@@ -157,7 +167,7 @@ with p_asignaciones:
             c1, c2 = st.columns(2)
             with c1:
                 t_sel = st.selectbox(f"Titular {k}", op_alert, index=idx_t, key=f"t_{k}")
-                t_limpio = t_sel.split(" (⚠️")[0] if t_sel else ""
+                t_limpio = t_sel.split(" (⚠️") if t_sel else ""
                 nuevos_asignados[f"p{k}_t"] = t_limpio
             with c2:
                 if tipo_seccion == "Maestros":
@@ -169,7 +179,7 @@ with p_asignaciones:
                         for idx_i, item_t in enumerate(op_ayu_al):
                             if item_t.startswith(curr_a): idx_a = idx_i; break
                     a_sel = st.selectbox(f"Ayudante {k}", op_ayu_al, index=idx_a, key=f"a_{k}")
-                    nuevos_asignados[f"p{k}_a"] = a_sel.split(" (⚠️")[0] if a_sel else ""
+                    nuevos_asignados[f"p{k}_a"] = a_sel.split(" (⚠️") if a_sel else ""
 
         if st.form_submit_button("💾 Guardar Asignaciones"):
             payload = {"mes": mes_seleccionado, "semana": semana_seleccionada, "fecha_cabecera": semana_data.get("fecha_cabecera"), "lectura_cabecera": semana_data.get("lectura_cabecera"), "materias": materias, "asignados": nuevos_asignados, "ultima_firma": f"Modificado por: {coordinador_activo}"}
@@ -222,6 +232,7 @@ with p_reuniones:
         if st.form_submit_button("⚡ Procesar y Cargar Semana Inmediatamente"):
             if t_pegar:
                 f, l, mats = procesar_texto_plano_reunion(t_pegar)
-                requests.post(f"{URL_BASE}/reuniones", headers={**HDRS, "Prefer": "resolution=merge-duplicates"}, json={"mes": m_dest, "semana": s_dest, "fecha_cabecera": f, "lectura_cabecera": l, "materias": mats, "asignados": {}, "ultima_firma": "Cargado desde JW.org"})
+                payload_reun = {"mes": m_dest, "semana": s_dest, "fecha_cabecera": f, "lectura_cabecera": l, "materias": mats, "asignados": {}, "ultima_firma": "Cargado desde JW.org"}
+                requests.post(f"{URL_BASE}/reuniones", headers={**HDRS, "Prefer": "resolution=merge-duplicates"}, json=payload_reun)
                 st.success("¡Cargado con éxito en internet!")
                 st.rerun()
