@@ -67,8 +67,8 @@ lista_reemplazos = cargar_reemplazos_cloud()
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
-    fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas[1] if len(lineas) > 1 else "JEREMÍAS 32, 33"
+    fecha_cab = lineas if len(lineas) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas if len(lineas) > 1 else "JEREMÍAS 32, 33"
 
     for linea in lineas:
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
@@ -231,8 +231,12 @@ with p_reuniones:
         t_pegar = st.text_area("Pega el texto completo de JW.org aquí:")
         if st.form_submit_button("⚡ Procesar y Cargar Semana Inmediatamente"):
             if t_pegar:
+                # 1. ORDEN DE DESTRUCCIÓN: Remueve cualquier residuo de duplicado en la nube
+                requests.delete(f"{URL_BASE}/reuniones?mes=eq.{m_dest}&semana=eq.{s_dest}", headers=HDRS)
+                
+                # 2. PROCESADO E INYECCIÓN LIMPIA
                 f, l, mats = procesar_texto_plano_reunion(t_pegar)
                 payload_reun = {"mes": m_dest, "semana": s_dest, "fecha_cabecera": f, "lectura_cabecera": l, "materias": mats, "asignados": {}, "ultima_firma": "Cargado desde JW.org"}
-                requests.post(f"{URL_BASE}/reuniones", headers={**HDRS, "Prefer": "resolution=merge-duplicates"}, json=payload_reun)
-                st.success("¡Cargado con éxito en internet!")
+                requests.post(f"{URL_BASE}/reuniones", headers=HDRS, json=payload_reun)
+                st.success("¡Cargado con éxito absoluto en internet!")
                 st.rerun()
