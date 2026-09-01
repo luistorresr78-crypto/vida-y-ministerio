@@ -5,9 +5,14 @@ import re
 import requests
 import reglas
 
-# --- CONEXIÓN DIRECTA CORREGIDA Y UNIFICADA ---
+# --- CONEXIÓN DIRECTA INTEGRADA EN EL ARCHIVO ---
 URL_BASE = "https://supabase.co"
-HEADERS_NUBE = reglas.SUPABASE_HEADERS
+HEADERS_NUBE = {
+    "apikey": "sb_publishable_GpDoDvr1ejZChSiAThb4uQ_-60A9S08",
+    "Authorization": "Bearer sb_publishable_GpDoDvr1ejZChSiAThb4uQ_-60A9S08",
+    "Content-Type": "application/json",
+    "Prefer": "return=representation"
+}
 
 ORDEN_MESES = ["SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO"]
 SEMANAS_POSIBLES = ["Semana 1", "Semana 2", "Semana 3", "Semana 4", "Semana 5", "Semana 6"]
@@ -156,7 +161,7 @@ with p_asignaciones:
             m = materias[k]
             tipo_seccion = m.get("seccion", "Tesoros")
             color_sub = "Seamos Mejores Maestros" if tipo_seccion == "Maestros" else ("Vida Cristiana" if tipo_seccion == "Vida" else "Tesoros de la Biblia")
-            st.markdown(f"**{m.get('titulo', '')}**")
+            st.markdown(f"**{k}. {m.get('titulo', '')}**")
             op_m = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, color_sub)
             
             op_alert = []
@@ -182,7 +187,6 @@ with p_asignaciones:
                     op_ayu = reglas.filtrar_ayudantes_inteligente(t_limpio, lista_hermanos, "Seamos Mejores Maestros")
                     op_ayu_al = [f"{h['nombre']} (⚠️ REPETIDO x{conteo_mes[h['nombre']]} )" if h['nombre'] in conteo_mes else h['nombre'] for h in op_ayu]
                     if "" not in op_ayu_al: op_ayu_al.insert(0, "")
-                    
                     idx_a = 0
                     curr_ayu = asignados_actuales.get(f"p{k}_a", "")
                     if isinstance(curr_ayu, list) and curr_ayu: curr_ayu = curr_ayu
@@ -245,6 +249,6 @@ with p_reuniones:
                 requests.delete(f"{URL_BASE}/reuniones?mes=eq.{m_dest}&semana=eq.{s_dest}", headers=HEADERS_NUBE)
                 f, l, mats = procesar_texto_plano_reunion(t_pegar)
                 payload_reun = {"mes": m_dest, "semana": s_dest, "fecha_cabecera": f, "lectura_cabecera": l, "materias": mats, "asignados": {}, "ultima_firma": "Cargado desde JW.org"}
-                requests.post(f"{URL_BASE}/reuniones", headers=HEADERS_NUBE, json=payload_reun)
+                requests.post(f"{URL_BASE}/reuniones", headers={**HEADERS_NUBE, "Prefer": "resolution=merge-duplicates"}, json=payload_reun)
                 st.success("¡Cargado con éxito absoluto en internet!")
                 st.rerun()
