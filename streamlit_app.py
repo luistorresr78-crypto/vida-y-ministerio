@@ -5,16 +5,21 @@ import re
 import requests
 import reglas
 
-# --- CONEXIÓN DIRECTA INTEGRADA EN EL ARCHIVO ---
-URL_BASE = "https://supabase.co"
-HEADERS_NUBE = reglas.SUPABASE_HEADERS
+# --- CONEXIÓN DIRECTA SOLDADA A LOS SECRETS DE LA NUBE ---
+URL_BASE = st.secrets["SUPABASE_URL"]
+HEADERS_NUBE = {
+    "apikey": st.secrets["SUPABASE_KEY"],
+    "Authorization": f"Bearer {st.secrets['SUPABASE_KEY']}",
+    "Content-Type": "application/json",
+    "Prefer": "return=representation"
+}
 
 ORDEN_MESES = ["SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO"]
 SEMANAS_POSIBLES = ["Semana 1", "Semana 2", "Semana 3", "Semana 4", "Semana 5", "Semana 6"]
 
 def cargar_hermanos_cloud():
     try:
-        res = requests.get(f"{URL_BASE}/hermanos", headers=HEADERS_NUBE, timeout=10)
+        res = requests.get(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, timeout=10)
         if res.status_code == 200:
             lista = []
             for h in res.json():
@@ -31,7 +36,7 @@ def cargar_hermanos_cloud():
 
 def cargar_reuniones_cloud():
     try:
-        res = requests.get(f"{URL_BASE}/reuniones", headers=HEADERS_NUBE, timeout=10)
+        res = requests.get(f"{URL_BASE}/rest/v1/reuniones", headers=HEADERS_NUBE, timeout=10)
         if res.status_code == 200:
             dicc_reuns = {}
             for r in res.json():
@@ -48,7 +53,7 @@ def cargar_reuniones_cloud():
 
 def cargar_reemplazos_cloud():
     try:
-        res = requests.get(f"{URL_BASE}/reemplazos", headers=HEADERS_NUBE, timeout=10)
+        res = requests.get(f"{URL_BASE}/rest/v1/reemplazos", headers=HEADERS_NUBE, timeout=10)
         if res.status_code == 200: return res.json()
     except Exception: pass
     return []
@@ -60,8 +65,8 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n")]
     lineas_limpias = [l for l in lineas if l]
-    fecha_cab = lineas_limpias if len(lineas_limpias) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas_limpias if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
+    fecha_cab = lineas_limpias[0] if len(lineas_limpias) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas_limpias[1] if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
 
     for i, linea in enumerate(lineas_limpias):
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
@@ -121,7 +126,7 @@ with p_asignaciones:
         h_sus = st.text_input("Suplente:")
         if st.button("Guardar Reemplazo"):
             if h_aus and h_sus:
-                requests.post(f"{URL_BASE}/reemplazos", headers=HEADERS_NUBE, json={"hermano_ausente": h_aus.strip().title(), "hermano_sustituto": h_sus.strip().title()})
+                requests.post(f"{URL_BASE}/rest/v1/reemplazos", headers=HEADERS_NUBE, json={"hermano_ausente": h_aus.strip().title(), "hermano_sustituto": h_sus.strip().title()})
                 st.success("¡Registrado!")
                 st.rerun()
 
@@ -140,14 +145,14 @@ with p_asignaciones:
             op_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia")
             nom_presi = [h["nombre"] for h in op_presi]
             val_presi_curr = asignados_actuales.get("presidente", "")
-            if isinstance(val_presi_curr, list) and val_presi_curr: val_presi_curr = val_presi_curr
+            if isinstance(val_presi_curr, list) and val_presi_curr: val_presi_curr = val_presi_curr[0]
             idx_presi = nom_presi.index(val_presi_curr) if val_presi_curr in nom_presi else 0
             presidente = st.selectbox("Presidente", nom_presi, index=idx_presi)
         with c_p2:
             op_ora = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Oración")
             nom_ora = [h["nombre"] for h in op_ora]
             val_ora_curr = asignados_actuales.get("oracion_inicial", "")
-            if isinstance(val_ora_curr, list) and val_ora_curr: val_ora_curr = val_ora_curr
+            if isinstance(val_ora_curr, list) and val_ora_curr: val_ora_curr = val_ora_curr[0]
             idx_ora = nom_ora.index(val_ora_curr) if val_ora_curr in nom_ora else 0
             oracion_inicial = st.selectbox("Oración Inicial", nom_ora, index=idx_ora)
 
@@ -193,7 +198,7 @@ with p_asignaciones:
 
         if st.form_submit_button("💾 Guardar Asignaciones"):
             payload = {"mes": mes_seleccionado, "semana": semana_seleccionada, "fecha_cabecera": semana_data.get("fecha_cabecera"), "lectura_cabecera": semana_data.get("lectura_cabecera"), "materias": materias, "asignados": nuevos_asignados, "ultima_firma": f"Modificado por: {coordinador_activo}"}
-            requests.post(f"{URL_BASE}/reuniones", headers={**HEADERS_NUBE, "Prefer": "resolution=merge-duplicates"}, json=payload)
+            requests.post(f"{URL_BASE}/rest/v1/reuniones", headers={**HEADERS_NUBE, "Prefer": "resolution=merge-duplicates"}, json=payload)
             st.success("¡Guardado!")
             st.rerun()
 
@@ -218,18 +223,27 @@ with p_hermanos:
             ap = st.multiselect("Aptitudes:", ["Tesoros", "Lectura", "Seamos Mejores Maestros", "Presidencia", "Oración", "Vida Cristiana"])
             if st.form_submit_button("Añadir Publicador"):
                 if n and a:
-                    requests.post(f"{URL_BASE}/hermanos", headers=HEADERS_NUBE, json={"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": ap})
+                    requests.post(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, json={"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": ap})
                     st.success("¡Añadido con éxito total!")
+                    # INYECCIÓN DEL REFRESCADO INMEDIATO FRONTAL
+                    st.session_state["lista_hermanos"] = cargar_hermanos_cloud()
                     st.rerun()
     with c_d:
         hermano_a_eliminar = st.selectbox("Dar de baja:", [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos])
         if st.button("Confirmar Eliminación", type="primary"):
             t = next((h for h in lista_hermanos if f"{h['nombre']} {h['apellido']}" == hermano_a_eliminar), None)
             if t and t.get("id"):
-                requests.delete(f"{URL_BASE}/hermanos?id=eq.{t['id']}", headers=HEADERS_NUBE)
+                requests.delete(f"{URL_BASE}/rest/v1/hermanos?id=eq.{t['id']}", headers=HEADERS_NUBE)
                 st.warning("Eliminado.")
+                st.session_state["lista_hermanos"] = cargar_hermanos_cloud()
                 st.rerun()
-    st.table([{"Nombre": h.get("nombre"), "Apellido": h.get("apellido"), "Sexo": h.get("sexo"), "Aptitudes": ", ".join(h.get("aptitudes", [])) if isinstance(h.get("aptitudes"), list) else str(h.get("aptitudes"))} for h in lista_hermanos])
+                
+    # Pintamos la tabla leyendo directamente la nomina fresca de internet
+    nomina_fresca = cargar_hermanos_cloud()
+    if nomina_fresca:
+        st.table([{"Nombre": h.get("nombre"), "Apellido": h.get("apellido"), "Sexo": h.get("sexo"), "Aptitudes": ", ".join(h.get("aptitudes", [])) if isinstance(h.get("aptitudes"), list) else str(h.get("aptitudes"))} for h in nomina_fresca])
+    else:
+        st.info("La nómina está vacía en internet. Ingrese el primer publicador arriba.")
 
 with p_reuniones:
     st.header("📝 Pegar Programa de la Reunión")
@@ -241,9 +255,9 @@ with p_reuniones:
         t_pegar = st.text_area("Pega el texto completo de JW.org aquí:")
         if st.form_submit_button("⚡ Procesar y Cargar Semana Inmediatamente"):
             if t_pegar:
-                requests.delete(f"{URL_BASE}/reuniones?mes=eq.{m_dest}&semana=eq.{s_dest}", headers=HEADERS_NUBE)
+                requests.delete(f"{URL_BASE}/rest/v1/reuniones?mes=eq.{m_dest}&semana=eq.{s_dest}", headers=HEADERS_NUBE)
                 f, l, mats = procesar_texto_plano_reunion(t_pegar)
                 payload_reun = {"mes": m_dest, "semana": s_dest, "fecha_cabecera": f, "lectura_cabecera": l, "materias": mats, "asignados": {}, "ultima_firma": "Cargado desde JW.org"}
-                requests.post(f"{URL_BASE}/reuniones", headers={**HEADERS_NUBE, "Prefer": "resolution=merge-duplicates"}, json=payload_reun)
+                requests.post(f"{URL_BASE}/rest/v1/reuniones", headers={**HEADERS_NUBE, "Prefer": "resolution=merge-duplicates"}, json=payload_reun)
                 st.success("¡Cargado con éxito absoluto en internet!")
                 st.rerun()
