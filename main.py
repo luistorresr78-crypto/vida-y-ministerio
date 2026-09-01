@@ -9,7 +9,6 @@ import reglas
 SUPABASE_URL = "https://supabase.co"
 SUPABASE_KEY = "sb_publishable_GpDoDvr1ejZChSiAThb4uQ_-60A9S08"
 
-# Cabeceras de seguridad estandarizadas exigidas por el servidor de Amazon
 SUPABASE_HEADERS = {
     "apikey": SUPABASE_KEY,
     "Authorization": f"Bearer {SUPABASE_KEY}",
@@ -17,7 +16,10 @@ SUPABASE_HEADERS = {
     "Prefer": "return=representation"
 }
 
-# 1. CARGA DE LA NÓMINA DESDE LA NUBE (ORDENADO DE LA A A LA Z POR NOMBRE)
+ORDEN_MESES = ["SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO"]
+SEMANAS_POSIBLES = ["Semana 1", "Semana 2", "Semana 3", "Semana 4", "Semana 5", "Semana 6"]
+
+# 1. CARGA DE LA NÓMINA DESDE LA NUBE (ORDEN ALFABÉTICO POR NOMBRE)
 def cargar_hermanos_cloud():
     try:
         url = f"{SUPABASE_URL}/rest/v1/hermanos"
@@ -69,7 +71,6 @@ def cargar_reemplazos_cloud():
     except Exception: pass
     return []
 
-# Inicialización activa de las variables conectadas a internet
 lista_hermanos = cargar_hermanos_cloud()
 datos_reuniones = cargar_reuniones_cloud()
 lista_reemplazos = cargar_reemplazos_cloud()
@@ -96,11 +97,7 @@ def procesar_texto_plano_reunion(texto_usuario):
             elif num_punto in ["4", "5", "6"]: seccion_real = "Maestros"
             else: seccion_real = "Vida"
                 
-            materias_detectadas[num_punto] = {
-                "titulo": titulo_completo,
-                "minutos": minutos,
-                "seccion": seccion_real
-            }
+            materias_detectadas[num_punto] = {"titulo": titulo_completo, "minutos": minutos, "seccion": seccion_real}
             
     if not materias_detectadas:
         materias_detectadas = {
@@ -112,27 +109,27 @@ def procesar_texto_plano_reunion(texto_usuario):
 
 # --- MENÚ SUPERIOR DE PESTAÑAS WEB ---
 pestana_asignaciones, pestana_hermanos, pestana_reuniones = st.tabs([
-    "📋 Mesa de Asignaciones", 
-    "👥 Gestión de Hermanos (Nómina)", 
-    "📝 Pegar Programa de la Reunión"
+    "📋 Mesa de Asignaciones", "👥 Gestión de Hermanos (Nómina)", "📝 Pegar Programa de la Reunión"
 ])
 # =========================================================================
-# PESTAÑA 1: MESA DE ASIGNACIONES (HISTORIAL, REEMPLAZOS Y ALERTAS EN LA NUBE)
+# PESTAÑA 1: MESA DE ASIGNACIONES (HISTORIAL, REEMPLAZOS Y ALERTAS)
 # =========================================================================
 with pestana_asignaciones:
     col_mes, col_sem = st.columns(2)
     with col_mes:
-        orden_meses = ["SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO"]
-        mes_seleccionado = st.selectbox("Seleccione el Mes (Historial Continuo):", orden_meses, key="sel_mes_v2")
+        mes_seleccionado = st.selectbox("Seleccione el Mes (Historial Continuo):", ORDEN_MESES, key="sel_mes_v2")
     with col_sem:
-        semanas_posibles = ["Semana 1", "Semana 2", "Semana 3", "Semana 4", "Semana 5", "Semana 6"]
-        semana_seleccionada = st.selectbox("Seleccione la Semana:", semanas_posibles, key="sel_sem_v2")
+        semana_seleccionada = st.selectbox("Seleccione la Semana:", SEMANAS_POSIBLES, key="sel_sem_v2")
 
     if mes_seleccionado not in datos_reuniones: datos_reuniones[mes_seleccionado] = {}
     if semana_seleccionada not in datos_reuniones[mes_seleccionado]:
         datos_reuniones[mes_seleccionado][semana_seleccionada] = {
             "fecha_cabecera": f"Semana de {mes_seleccionado.capitalize()}", "lectura_cabecera": "Lectura Oficial por Cargar",
-            "materias": {"1": {"titulo": "1. Discurso (10 mins.)", "minutos": "10", "seccion": "Tesoros"}, "2": {"titulo": "2. Perlas de la Biblia (10 mins.)", "minutos": "10", "seccion": "Tesoros"}, "3": {"titulo": "3. Lectura de la Biblia (4 mins.)", "minutos": "4", "seccion": "Tesoros"}},
+            "materias": {
+                "1": {"titulo": "1. Discurso (10 mins.)", "minutos": "10", "seccion": "Tesoros"}, 
+                "2": {"titulo": "2. Perlas de la Biblia (10 mins.)", "minutos": "10", "seccion": "Tesoros"}, 
+                "3": {"titulo": "3. Lectura de la Biblia (4 mins.)", "minutos": "4", "seccion": "Tesoros"}
+            },
             "asignados": {}, "ultima_firma": ""
         }
 
@@ -171,7 +168,7 @@ with pestana_asignaciones:
                 if nom_val and nom_val != "Por asignar": conteo_mes[nom_val] = conteo_mes.get(nom_val, 0) + 1
 
     with st.form("formulario_mesa_v2"):
-        st.markdown("### 🎚️ Asignar Privilegios de la Semana")
+        st.markdown("### 🎎️ Asignar Privilegios de la Semana")
         col_p1, col_p2 = st.columns(2)
         with col_p1:
             opciones_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia")
@@ -185,7 +182,7 @@ with pestana_asignaciones:
             oracion_inicial = st.selectbox("Oración Inicial", nom_ora, index=idx_ora)
 
         st.markdown("---")
-        nuevos_asignados = {"presidente": president if 'president' in locals() else presidente, "oracion_inicial": oracion_inicial}
+        nuevos_asignados = {"presidente": presidente, "oracion_inicial": oracion_inicial}
         
         for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
             m = materias[k]
@@ -238,7 +235,7 @@ with pestana_asignaciones:
     if boton_guardar:
         firma_texto = f"Modificado por: {coordinador_activo}"
         payload_reun = {"mes": mes_seleccionado, "semana": semana_seleccionada, "fecha_cabecera": semana_data.get("fecha_cabecera"), "lectura_cabecera": semana_data.get("lectura_cabecera"), "materias": materias, "asignados": nuevos_asignados, "ultima_firma": firma_texto}
-        url_reun = f"{SUPABASE_URL}/rest/v1/reuniones"
+        url_reun = f"{SUPABASE_URL}/rest/v1/reurniones" if "reurniones" in locals() else f"{SUPABASE_URL}/rest/v1/reuniones"
         requests.post(url_reun, headers={**SUPABASE_HEADERS, "Prefer": "resolution=merge-duplicates"}, json=payload_reun)
         st.success(f"¡Cambios guardados permanentemente por {coordinador_activo}!")
         st.rerun()
@@ -272,18 +269,12 @@ with pestana_hermanos:
             
             if btn_dar_alta:
                 if nuevo_nom and nuevo_ape:
-                    payload = {
-                        "nombre": nuevo_nom.strip().title(), 
-                        "apellido": nuevo_ape.strip().title(), 
-                        "sexo": nuevo_sexo, 
-                        "aptitudes": nuevas_apt
-                    }
+                    payload = {"nombre": nuevo_nom.strip().title(), "apellido": nuevo_ape.strip().title(), "sexo": nuevo_sexo, "aptitudes": nuevas_apt}
                     url_alta = f"{SUPABASE_URL}/rest/v1/hermanos"
                     requests.post(url_alta, headers=SUPABASE_HEADERS, json=payload)
                     st.success(f"¡{nuevo_nom.strip().title()} ha sido añadido a la nube de por vida!")
                     st.rerun()
-                else:
-                    st.error("Por favor ingresa Nombre y Apellido.")
+                else: st.error("Por favor ingresa Nombre y Apellido.")
 
     with col_del:
         st.subheader("❌ Dar de Baja Publicador")
@@ -302,12 +293,7 @@ with pestana_hermanos:
     st.subheader("📜 Listado Oficial de la Congregación (Nube - Orden Alfabético por Nombre)")
     tabla_visual = []
     for h in lista_hermanos:
-        tabla_visual.append({
-            "Nombre": h.get("nombre", ""),
-            "Apellido": h.get("apellido", ""),
-            "Sexo": h.get("sexo", "Varón"),
-            "Aptitudes Registradas": ", ".join(h.get("aptitudes", []))
-        })
+        tabla_visual.append({"Nombre": h.get("nombre", ""), "Apellido": h.get("apellido", ""), "Sexo": h.get("sexo", "Varón"), "Aptitudes Registradas": ", ".join(h.get("aptitudes", []))})
     st.table(tabla_visual)
 
 # =========================================================================
@@ -319,9 +305,9 @@ with pestana_reuniones:
     
     col_cfg1, col_cfg2 = st.columns(2)
     with col_cfg1:
-        mes_destino_txt = st.selectbox("¿A qué mes pertenece esta lectura?", orden_meses, key="mes_p3")
+        mes_destino_txt = st.selectbox("¿A qué mes pertenece esta lectura?", ORDEN_MESES, key="mes_p3")
     with col_cfg2:
-        semana_destino_txt = st.selectbox("¿A qué semana deseas asignarle esta programación?", semanas_posibles, key="sem_p3")
+        semana_destino_txt = st.selectbox("¿A qué semana deseas asignarle esta programación?", SEMANAS_POSIBLES, key="sem_p3")
 
     with st.form("form_pegar_texto_plano"):
         st.markdown("⚠️ **Nota:** Asegúrate de que las dos primeras líneas del texto que pegues abajo sean la **Fecha** y la **Lectura Bíblica**.")
@@ -333,17 +319,13 @@ with pestana_reuniones:
                 f_cab, l_cab, materias_detectadas = procesar_texto_plano_reunion(texto_plano_pegar)
                 
                 payload_reun = {
-                    "mes": mes_destino_txt,
-                    "semana": semana_destino_txt,
-                    "fecha_cabecera": f_cab,
-                    "lectura_cabecera": l_cab,
-                    "materias": materias_detectadas,
-                    "asignados": {},
+                    "mes": mes_destino_txt, "semana": semana_destino_txt,
+                    "fecha_cabecera": f_cab, "lectura_cabecera": l_cab,
+                    "materias": materias_detectadas, "asignados": {},
                     "ultima_firma": "Cargado automáticamente desde JW.org"
                 }
                 url_reun_p3 = f"{SUPABASE_URL}/rest/v1/reuniones"
                 requests.post(url_reun_p3, headers={**SUPABASE_HEADERS, "Prefer": "resolution=merge-duplicates"}, json=payload_reun)
                 st.success(f"¡Éxito rotundo! {semana_destino_txt} de {mes_destino_txt} cargada con fecha y lectura automática en internet.")
                 st.rerun()
-            else:
-                st.error("El cuadro de texto está vacío.")
+            else: st.error("El cuadro de texto está vacío.")
