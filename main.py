@@ -23,18 +23,12 @@ def cargar_hermanos_cloud():
         if res.status_code == 200:
             lista = []
             for h in res.json():
-                # Adaptador tolerante por si en la base de datos viene como texto o lista
-                apt_crudas = h.get("aptitudes", [])
-                if isinstance(apt_crudas, str): apt_lista = [a.strip() for a in apt_crudas.split(",") if a.strip()]
-                elif isinstance(apt_crudas, list): apt_lista = apt_crudas
-                else: apt_lista = []
-                
                 lista.append({
                     "id": h.get("id"),
                     "nombre": h.get("nombre", "").strip().title(),
                     "apellido": h.get("apellido", "").strip().title(),
                     "sexo": h.get("sexo", "Varón"),
-                    "aptitudes": apt_lista
+                    "aptitudes": h.get("aptitudes", [])
                 })
             return sorted(lista, key=lambda x: (x.get("nombre", "").lower(), x.get("apellido", "").lower()))
     except Exception: pass
@@ -71,8 +65,8 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n")]
     lineas_limpias = [l for l in lineas if l]
-    fecha_cab = lineas_limpias if len(lineas_limpias) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas_limpias if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
+    fecha_cab = lineas_limpias[0] if len(lineas_limpias) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas_limpias[1] if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
 
     for i, linea in enumerate(lineas_limpias):
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
@@ -151,14 +145,14 @@ with p_asignaciones:
             op_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia")
             nom_presi = [h["nombre"] for h in op_presi]
             val_presi_curr = asignados_actuales.get("presidente", "")
-            if isinstance(val_presi_curr, list) and val_presi_curr: val_presi_curr = val_presi_curr
+            if isinstance(val_presi_curr, list) and val_presi_curr: val_presi_curr = val_presi_curr[0]
             idx_presi = nom_presi.index(val_presi_curr) if val_presi_curr in nom_presi else 0
             presidente = st.selectbox("Presidente", nom_presi, index=idx_presi)
         with c_p2:
             op_ora = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Oración")
             nom_ora = [h["nombre"] for h in op_ora]
             val_ora_curr = asignados_actuales.get("oracion_inicial", "")
-            if isinstance(val_ora_curr, list) and val_ora_curr: val_ora_curr = val_ora_curr
+            if isinstance(val_ora_curr, list) and val_ora_curr: val_ora_curr = val_ora_curr[0]
             idx_ora = nom_ora.index(val_ora_curr) if val_ora_curr in nom_ora else 0
             oracion_inicial = st.selectbox("Oración Inicial", nom_ora, index=idx_ora)
 
@@ -227,19 +221,12 @@ with p_hermanos:
             a = st.text_input("Apellido:")
             s = st.selectbox("Sexo:", ["Varón", "Mujer"])
             ap = st.multiselect("Aptitudes:", ["Tesoros", "Lectura", "Seamos Mejores Maestros", "Presidencia", "Oración", "Vida Cristiana"])
-            
             if st.form_submit_button("Añadir Publicador"):
                 if n and a:
-                    # BYPASS MAESTRO: Unifica las etiquetas en una sola cadena de texto plana común
-                    cadena_aptitudes_plana = ", ".join(ap) if ap else ""
-                    
-                    requests.post(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, json={
-                        "nombre": n.strip().title(), 
-                        "apellido": a.strip().title(), 
-                        "sexo": s, 
-                        "aptitudes": [cadena_aptitudes_plana]
-                    })
+                    requests.post(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, json={"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": ap})
                     st.success("¡Añadido con éxito total!")
+                    # INYECCIÓN DEL REFRESCADO INMEDIATO FRONTAL
+                    st.session_state["lista_hermanos"] = cargar_hermanos_cloud()
                     st.rerun()
     with c_d:
         hermano_a_eliminar = st.selectbox("Dar de baja:", [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos])
@@ -248,9 +235,15 @@ with p_hermanos:
             if t and t.get("id"):
                 requests.delete(f"{URL_BASE}/rest/v1/hermanos?id=eq.{t['id']}", headers=HEADERS_NUBE)
                 st.warning("Eliminado.")
+                st.session_state["lista_hermanos"] = cargar_hermanos_cloud()
                 st.rerun()
                 
-    st.table([{"Nombre": h.get("nombre"), "Apellido": h.get("apellido"), "Sexo": h.get("sexo"), "Aptitudes": ", ".join(h.get("aptitudes", [])) if isinstance(h.get("aptitudes"), list) else str(h.get("aptitudes"))} for h in lista_hermanos])
+    # Pintamos la tabla leyendo directamente la nomina fresca de internet
+    nomina_fresca = cargar_hermanos_cloud()
+    if nomina_fresca:
+        st.table([{"Nombre": h.get("nombre"), "Apellido": h.get("apellido"), "Sexo": h.get("sexo"), "Aptitudes": ", ".join(h.get("aptitudes", [])) if isinstance(h.get("aptitudes"), list) else str(h.get("aptitudes"))} for h in nomina_fresca])
+    else:
+        st.info("La nómina está vacía en internet. Ingrese el primer publicador arriba.")
 
 with p_reuniones:
     st.header("📝 Pegar Programa de la Reunión")
