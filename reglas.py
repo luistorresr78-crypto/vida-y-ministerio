@@ -16,7 +16,6 @@ SUPABASE_HEADERS = {
 }
 
 def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtro):
-    # Saneamiento directo tolerante para tómbolas web
     filtro_real = aptitud_filtro
     if "Tesoros" in aptitud_filtro: filtro_real = "Tesoros"
     elif "Maestros" in aptitud_filtro or "Seamos" in aptitud_filtro: filtro_real = "Seamos Mejores Maestros"
@@ -76,10 +75,10 @@ def generar_pdf_estilo_oficial(lectura_cabecera, fecha_cabecera, materias, asign
     
     presi = asignados.get("presidente") or "Por asignar"
     cab_der = [[Paragraph("<b>Presidente</b>", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    t_presi = Table(cab_der, colWidths=)
+    t_presi = Table(cab_der, colWidths=[100, 150])
     t_presi.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LINEBELOW', (1,0), (1,0), 0.5, colors.black)]))
     
-    t_principal = Table([[cab_izq, t_presi]], colWidths=)
+    t_principal = Table([[cab_izq, t_presi]], colWidths=[290, 290])
     t_principal.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'TOP')]))
     elementos.append(t_principal)
     elementos.append(Spacer(1, 15))
@@ -88,12 +87,13 @@ def generar_pdf_estilo_oficial(lectura_cabecera, fecha_cabecera, materias, asign
     datos_cancion_1 = [
         [Paragraph("🎵 <b>Canción 40</b> y oración", est_cab_tit), Paragraph("<b>Palabras de Introducción</b>", est_cab_tit), Paragraph(f"{ora_ini}", est_hnos)]
     ]
-    t_c1 = Table(datos_cancion_1, colWidths=)
+    t_c1 = Table(datos_cancion_1, colWidths=[200, 200, 180])
     t_c1.setStyle(TableStyle([('LINEABOVE', (0,0), (-1,-1), 1, colors.black), ('LINEBELOW', (0,0), (-1,-1), 1, colors.black), ('PADDING', (0,0), (-1,-1), 6), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
     elementos.append(t_c1)
     elementos.append(Spacer(1, 20))
     
-    t_tit_tesoros = Table([[Paragraph("<b>TESOROS DE LA BIBLIA</b>", est_letra_blanca)]], colWidths=)
+    # === SECCIÓN 1: TESOROS DE LA BIBLIA ===
+    t_tit_tesoros = Table([[Paragraph("<b>TESOROS DE LA BIBLIA</b>", est_letra_blanca)]], colWidths=[580])
     t_tit_tesoros.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#3A7885")), ('PADDING', (0,0), (-1,-1), 6)]))
     t_tit_tesoros.hAlign = 'LEFT'
     elementos.append(t_tit_tesoros)
@@ -109,12 +109,12 @@ def generar_pdf_estilo_oficial(lectura_cabecera, fecha_cabecera, materias, asign
             titular = asignados.get(f"p{k}_t") or ""
             filas_t.append([Paragraph(txt_punto, est_blu), Paragraph(titular, est_hnos), ""])
     if filas_t:
-        t_filas_t = Table(filas_t, colWidths=)
+        t_filas_t = Table(filas_t, colWidths=[380, 200, 0])
         t_filas_t.setStyle(TableStyle([('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E1")), ('PADDING', (0,0), (-1,-1), 10), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
         elementos.append(t_filas_t)
     elementos.append(Spacer(1, 25))
-    
-    t_tit_maestros = Table([[Paragraph("<b>SEAMOS MEJORES MAESTROS</b>", est_letra_blanca)]], colWidths=)
+    # === SECCIÓN 2: SEAMOS MEJORES MAESTROS ===
+    t_tit_maestros = Table([[Paragraph("<b>SEAMOS MEJORES MAESTROS</b>", est_letra_blanca)]], colWidths=[540])
     t_tit_maestros.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#D08F00")), ('PADDING', (0,0), (-1,-1), 6)]))
     t_tit_maestros.hAlign = 'LEFT'
     elementos.append(t_tit_maestros)
@@ -131,18 +131,19 @@ def generar_pdf_estilo_oficial(lectura_cabecera, fecha_cabecera, materias, asign
                 ayudante = asignados.get(f"p{k}_a") or ""
                 filas_m.append([Paragraph(txt_punto, est_ora), Paragraph(titular, est_hnos), Paragraph(ayudante, est_hnos)])
     if filas_m:
-        t_filas_m = Table(filas_m, colWidths=)
+        t_filas_m = Table(filas_m, colWidths=[340, 100, 100])
         t_filas_m.setStyle(TableStyle([('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E1")), ('PADDING', (0,0), (-1,-1), 10), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
         elementos.append(t_filas_m)
     elementos.append(Spacer(1, 25))
     
-    t_tit_vida = Table([[Paragraph("<b>NUESTRA VIDA CRISTIANA</b>", est_letra_blanca)]], colWidths=)
+    # === SECCIÓN 3: NUESTRA VIDA CRISTIANA ===
+    t_tit_vida = Table([[Paragraph("<b>NUESTRA VIDA CRISTIANA</b>", est_letra_blanca)]], colWidths=[540])
     t_tit_vida.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#B32415")), ('PADDING', (0,0), (-1,-1), 6)]))
     t_tit_vida.hAlign = 'LEFT'
     elementos.append(t_tit_vida)
     elementos.append(Spacer(1, 10))
     
-    t_c2 = Table([[Paragraph("🎵 <b>Canción 103</b>", est_cab_tit)]], colWidths=)
+    t_c2 = Table([[Paragraph("🎵 <b>Canción 103</b>", est_cab_tit)]], colWidths=[540])
     t_c2.setStyle(TableStyle([('LINEBELOW', (0,0), (-1,-1), 0.5, colors.black), ('PADDING', (0,0), (-1,-1), 6)]))
     elementos.append(t_c2)
     
@@ -156,12 +157,12 @@ def generar_pdf_estilo_oficial(lectura_cabecera, fecha_cabecera, materias, asign
                 titular = asignados.get(f"p{k}_t") or ""
                 filas_v.append([Paragraph(txt_punto, est_red), Paragraph(titular, est_hnos), ""])
     if filas_v:
-        t_filas_v = Table(filas_v, colWidths=)
+        t_filas_v = Table(filas_v, colWidths=[380, 160, 0])
         t_filas_v.setStyle(TableStyle([('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E1")), ('PADDING', (0,0), (-1,-1), 10), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
         elementos.append(t_filas_v)
     elementos.append(Spacer(1, 20))
     
-    t_c3 = Table([[Paragraph("Palabras de conclusión (3 mins.)", est_cab_tit), Paragraph("🎵 <b>Canción 60</b> y oración", est_cab_tit), Paragraph("", est_hnos)]], colWidths=)
+    t_c3 = Table([[Paragraph("Palabras de conclusión (3 mins.)", est_cab_tit), Paragraph("🎵 <b>Canción 60</b> y oración", est_cab_tit), Paragraph("", est_hnos)]], colWidths=[180, 200, 160])
     t_c3.setStyle(TableStyle([('LINEABOVE', (0,0), (-1,-1), 1, colors.black), ('LINEBELOW', (0,0), (-1,-1), 1, colors.black), ('PADDING', (0,0), (-1,-1), 6), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
     elementos.append(t_c3)
     
