@@ -44,8 +44,11 @@ def cargar_reuniones_cloud():
                 s = r.get("semana")
                 if m not in dicc_reuns: dicc_reuns[m] = {}
                 dicc_reuns[m][s] = {
-                    "fecha_cabecera": r.get("fecha_cabecera"), "lectura_cabecera": r.get("lectura_cabecera"),
-                    "materias": r.get("materias", {}), "asignados": r.get("asignados", {}), "ultima_firma": r.get("ultima_firma", "")
+                    "fecha_cabecera": r.get("fecha_cabecera"),
+                    "lectura_cabecera": r.get("lectura_cabecera"),
+                    "materias": r.get("materias", {}),
+                    "asignados": r.get("asignados", {}),
+                    "ultima_firma": r.get("ultima_firma", "")
                 }
             return dicc_reuns
     except Exception: pass
@@ -69,14 +72,12 @@ def procesar_texto_plano_reunion(texto_usuario):
     fecha_cab = lineas_limpias[0] if len(lineas_limpias) > 0 else "7-13 de septiembre"
     lectura_cab = lineas_limpias[1] if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
 
-    # MOTOR INTELIGENTE: Recorre las lineas y fusiona los renglones de referencias largas
     for i, linea in enumerate(lineas_limpias):
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
         if match_punto:
             num_punto = match_punto.group(1)
             titulo_principal = match_punto.group(2).strip()
             
-            # Si el siguiente renglon contiene los minutos y la referencia, los unimos de golpe
             referencia_abajo = ""
             if i + 1 < len(lineas_limpias):
                 sig_linea = lineas_limpias[i+1]
@@ -173,7 +174,6 @@ with p_asignaciones:
             m = materias[k]
             tipo_seccion = m.get("seccion", "Tesoros")
             color_sub = "Seamos Mejores Maestros" if tipo_seccion == "Maestros" else ("Vida Cristiana" if tipo_seccion == "Vida" else "Tesoros de la Biblia")
-            
             st.markdown(f"**{m.get('titulo', '')}**")
             op_m = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, color_sub)
             
@@ -230,10 +230,18 @@ with p_hermanos:
             a = st.text_input("Apellido:")
             s = st.selectbox("Sexo:", ["Varón", "Mujer"])
             ap = st.multiselect("Aptitudes:", ["Tesoros", "Lectura", "Seamos Mejores Maestros", "Presidencia", "Oración", "Vida Cristiana"])
+            
             if st.form_submit_button("Añadir Publicador"):
                 if n and a:
-                    requests.post(f"{URL_BASE}/hermanos", headers=HDRS, json={"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": ap})
-                    st.success("¡Añadido!")
+                    # MAPEO INTELIGENTE TOLERANTE: Traduce al nombre exacto exigido por la base de datos
+                    aptidades_mapeadas = []
+                    for item in ap:
+                        if "Maestros" in item: aptidades_mapeadas.append("Seamos Mejores Maestros")
+                        elif "Tesoros" in item: aptidades_mapeadas.append("Tesoros")
+                        else: aptidades_mapeadas.append(item)
+                        
+                    requests.post(f"{URL_BASE}/hermanos", headers=HDRS, json={"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": aptidades_mapeadas})
+                    st.success("¡Añadido con éxito total!")
                     st.rerun()
     with c_d:
         hermano_a_eliminar = st.selectbox("Dar de baja:", [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos])
