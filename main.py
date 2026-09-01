@@ -5,21 +5,16 @@ import re
 import requests
 import reglas
 
-# --- CONEXIÓN DIRECTA INDESTRUCTIBLE A TU CUENTA DE SUPABASE ---
+# --- CONEXIÓN DIRECTA ULTRA VELOZ A TU CUENTA DE SUPABASE ---
 URL_BASE = "https://supabase.co"
-HDRS = {
-    "apikey": "sb_publishable_GpDoDvr1ejZChSiAThb4uQ_-60A9S08",
-    "Authorization": "Bearer sb_publishable_GpDoDvr1ejZChSiAThb4uQ_-60A9S08",
-    "Content-Type": "application/json",
-    "Prefer": "return=representation"
-}
+HEADERS_NUBE = reglas.SUPABASE_HEADERS
 
 ORDEN_MESES = ["SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO"]
 SEMANAS_POSIBLES = ["Semana 1", "Semana 2", "Semana 3", "Semana 4", "Semana 5", "Semana 6"]
 
 def cargar_hermanos_cloud():
     try:
-        res = requests.get(f"{URL_BASE}/hermanos", headers=HDRS, timeout=10)
+        res = requests.get(f"{URL_BASE}/hermanos", headers=HEADERS_NUBE, timeout=10)
         if res.status_code == 200:
             lista = []
             for h in res.json():
@@ -36,7 +31,7 @@ def cargar_hermanos_cloud():
 
 def cargar_reuniones_cloud():
     try:
-        res = requests.get(f"{URL_BASE}/reuniones", headers=HDRS, timeout=10)
+        res = requests.get(f"{URL_BASE}/reuniones", headers=HEADERS_NUBE, timeout=10)
         if res.status_code == 200:
             dicc_reuns = {}
             for r in res.json():
@@ -53,7 +48,7 @@ def cargar_reuniones_cloud():
 
 def cargar_reemplazos_cloud():
     try:
-        res = requests.get(f"{URL_BASE}/reemplazos", headers=HDRS, timeout=10)
+        res = requests.get(f"{URL_BASE}/reemplazos", headers=HEADERS_NUBE, timeout=10)
         if res.status_code == 200: return res.json()
     except Exception: pass
     return []
@@ -65,7 +60,6 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n")]
     lineas_limpias = [l for l in lineas if l]
-    
     fecha_cab = lineas_limpias[0] if len(lineas_limpias) > 0 else "7-13 de septiembre"
     lectura_cab = lineas_limpias[1] if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
 
@@ -74,12 +68,10 @@ def procesar_texto_plano_reunion(texto_usuario):
         if match_punto:
             num_punto = match_punto.group(1)
             titulo_principal = match_punto.group(2).strip()
-            
             referencia_abajo = ""
             if i + 1 < len(lineas_limpias):
                 sig_linea = lineas_limpias[i+1]
-                if not re.match(r"^[1-8]\.", sig_linea):
-                    referencia_abajo = " " + sig_linea.strip()
+                if not re.match(r"^[1-8]\.", sig_linea): referencia_abajo = " " + sig_linea.strip()
             
             titulo_completo = f"{titulo_principal}{referencia_abajo}"
             match_mins = re.search(r"\(\s*(\d+)\s*min", titulo_completo, re.IGNORECASE)
@@ -88,20 +80,7 @@ def procesar_texto_plano_reunion(texto_usuario):
             if num_punto in ["1", "2", "3"]: seccion_real = "Tesoros"
             elif num_punto in ["4", "5", "6"]: seccion_real = "Maestros"
             else: seccion_real = "Vida"
-            
             materias_detectadas[num_punto] = {"titulo": titulo_completo, "minutos": minutos, "seccion": seccion_real}
-            
-    if not materias_detectadas:
-        materias_detectadas = {
-            "1": {"titulo": "1. Meditar en las cualidades de Jehová fortalece nuestra fe (10 min.)", "minutos": "10", "seccion": "Tesoros"},
-            "2": {"titulo": "2. Busquemos perlas escondidas (10 min.)", "minutos": "10", "seccion": "Tesoros"},
-            "3": {"titulo": "3. Lectura de la Biblia (4 min.) Jer 32:6-18 (th lección 2).", "minutos": "4", "seccion": "Tesoros"},
-            "4": {"titulo": "4. Empiece conversaciones (3 min.) DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 4 punto 3).", "minutos": "3", "seccion": "Maestros"},
-            "5": {"titulo": "5. Empiece conversaciones (4 min.) PREDICACIÓN INFORMAL. Ofrezca un curso de la Biblia (lmd lección 4 punto 4).", "minutos": "4", "seccion": "Maestros"},
-            "6": {"titulo": "6. Haga revisitas (5 min.) DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 8 punto 3).", "minutos": "5", "seccion": "Maestros"},
-            "7": {"titulo": "7. En esta campaña, ni un golpe al aire (15 min.)", "minutos": "15", "seccion": "Vida"},
-            "8": {"titulo": "8. Estudio bíblico de la congregación (30 min.) wcg cap. 7.", "minutos": "30", "seccion": "Vida"}
-        }
     return fecha_cab, lectura_cab, materias_detectadas
 
 p_asignaciones, p_hermanos, p_reuniones = st.tabs(["📋 Mesa de Asignaciones", "👥 Gestión de Hermanos (Nómina)", "📝 Pegar Programa de la Reunión"])
@@ -142,7 +121,7 @@ with p_asignaciones:
         h_sus = st.text_input("Suplente:")
         if st.button("Guardar Reemplazo"):
             if h_aus and h_sus:
-                requests.post(f"{URL_BASE}/reemplazos", headers=HDRS, json={"hermano_ausente": h_aus.strip().title(), "hermano_sustituto": h_sus.strip().title()})
+                requests.post(f"{URL_BASE}/reemplazos", headers=HEADERS_NUBE, json={"hermano_ausente": h_aus.strip().title(), "hermano_sustituto": h_sus.strip().title()})
                 st.success("¡Registrado!")
                 st.rerun()
 
@@ -151,10 +130,8 @@ with p_asignaciones:
         if sem_k != semana_seleccionada:
             for rol, nom_val in sem_v.get("asignados", {}).items():
                 if nom_val and nom_val != "Por asignar":
-                    # Limpieza segura si viene en forma de lista o texto por reajuste
-                    val_limpio = nom_val if isinstance(nom_val, str) else (nom_val[0] if isinstance(nom_val, list) and nom_val else "")
-                    if val_limpio:
-                        conteo_mes[val_limpio] = conteo_mes.get(val_limpio, 0) + 1
+                    val_limpio = nom_val if isinstance(nom_val, str) else (nom_val if isinstance(nom_val, list) and nom_val else "")
+                    if val_limpio: conteo_mes[val_limpio] = conteo_mes.get(val_limpio, 0) + 1
 
     with st.form("form_mesa"):
         st.markdown("### 🎚️ Asignar Privilegios")
@@ -163,14 +140,14 @@ with p_asignaciones:
             op_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia")
             nom_presi = [h["nombre"] for h in op_presi]
             val_presi_curr = asignados_actuales.get("presidente", "")
-            if isinstance(val_presi_curr, list) and val_presi_curr: val_presi_curr = val_presi_curr[0]
+            if isinstance(val_presi_curr, list) and val_presi_curr: val_presi_curr = val_presi_curr
             idx_presi = nom_presi.index(val_presi_curr) if val_presi_curr in nom_presi else 0
             presidente = st.selectbox("Presidente", nom_presi, index=idx_presi)
         with c_p2:
             op_ora = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Oración")
             nom_ora = [h["nombre"] for h in op_ora]
             val_ora_curr = asignados_actuales.get("oracion_inicial", "")
-            if isinstance(val_ora_curr, list) and val_ora_curr: val_ora_curr = val_ora_curr[0]
+            if isinstance(val_ora_curr, list) and val_ora_curr: val_ora_curr = val_ora_curr
             idx_ora = nom_ora.index(val_ora_curr) if val_ora_curr in nom_ora else 0
             oracion_inicial = st.selectbox("Oración Inicial", nom_ora, index=idx_ora)
 
@@ -198,7 +175,7 @@ with p_asignaciones:
             c1, c2 = st.columns(2)
             with c1:
                 t_sel = st.selectbox(f"Titular {k}", op_alert, index=idx_t, key=f"t_{k}")
-                t_limpio = t_sel.split(" (⚠️")[0] if t_sel else ""
+                t_limpio = t_sel.split(" (⚠️") if t_sel else ""
                 nuevos_asignados[f"p{k}_t"] = t_limpio
             with c2:
                 if tipo_seccion == "Maestros":
@@ -212,13 +189,12 @@ with p_asignaciones:
                     if curr_ayu:
                         for idx_i, item_t in enumerate(op_ayu_al):
                             if item_t.startswith(curr_ayu): idx_a = idx_i; break
-                            
                     a_sel = st.selectbox(f"Ayudante {k}", op_ayu_al, index=idx_a, key=f"a_{k}")
-                    nuevos_asignados[f"p{k}_a"] = a_sel.split(" (⚠️")[0] if a_sel else ""
+                    nuevos_asignados[f"p{k}_a"] = a_sel.split(" (⚠️") if a_sel else ""
 
         if st.form_submit_button("💾 Guardar Asignaciones"):
             payload = {"mes": mes_seleccionado, "semana": semana_seleccionada, "fecha_cabecera": semana_data.get("fecha_cabecera"), "lectura_cabecera": semana_data.get("lectura_cabecera"), "materias": materias, "asignados": nuevos_asignados, "ultima_firma": f"Modificado por: {coordinador_activo}"}
-            requests.post(f"{URL_BASE}/reuniones", headers={**HDRS, "Prefer": "resolution=merge-duplicates"}, json=payload)
+            requests.post(f"{URL_BASE}/reuniones", headers={**HEADERS_NUBE, "Prefer": "resolution=merge-duplicates"}, json=payload)
             st.success("¡Guardado!")
             st.rerun()
 
@@ -241,11 +217,9 @@ with p_hermanos:
             a = st.text_input("Apellido:")
             s = st.selectbox("Sexo:", ["Varón", "Mujer"])
             ap = st.multiselect("Aptitudes:", ["Tesoros", "Lectura", "Seamos Mejores Maestros", "Presidencia", "Oración", "Vida Cristiana"])
-            
             if st.form_submit_button("Añadir Publicador"):
                 if n and a:
-                    # Enviamos las aptitudes directamente limpias a la base de datos
-                    requests.post(f"{URL_BASE}/hermanos", headers=HDRS, json={"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": ap})
+                    requests.post(f"{URL_BASE}/hermanos", headers=HEADERS_NUBE, json={"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": ap})
                     st.success("¡Añadido con éxito total!")
                     st.rerun()
     with c_d:
@@ -253,10 +227,9 @@ with p_hermanos:
         if st.button("Confirmar Eliminación", type="primary"):
             t = next((h for h in lista_hermanos if f"{h['nombre']} {h['apellido']}" == hermano_a_eliminar), None)
             if t and t.get("id"):
-                requests.delete(f"{URL_BASE}/hermanos?id=eq.{t['id']}", headers=HDRS)
+                requests.delete(f"{URL_BASE}/hermanos?id=eq.{t['id']}", headers=HEADERS_NUBE)
                 st.warning("Eliminado.")
                 st.rerun()
-                
     st.table([{"Nombre": h.get("nombre"), "Apellido": h.get("apellido"), "Sexo": h.get("sexo"), "Aptitudes": ", ".join(h.get("aptitudes", [])) if isinstance(h.get("aptitudes"), list) else str(h.get("aptitudes"))} for h in lista_hermanos])
 
 with p_reuniones:
@@ -269,9 +242,9 @@ with p_reuniones:
         t_pegar = st.text_area("Pega el texto completo de JW.org aquí:")
         if st.form_submit_button("⚡ Procesar y Cargar Semana Inmediatamente"):
             if t_pegar:
-                requests.delete(f"{URL_BASE}/reuniones?mes=eq.{m_dest}&semana=eq.{s_dest}", headers=HDRS)
+                requests.delete(f"{URL_BASE}/reuniones?mes=eq.{m_dest}&semana=eq.{s_dest}", headers=HEADERS_NUBE)
                 f, l, mats = procesar_texto_plano_reunion(t_pegar)
                 payload_reun = {"mes": m_dest, "semana": s_dest, "fecha_cabecera": f, "lectura_cabecera": l, "materias": mats, "asignados": {}, "ultima_firma": "Cargado desde JW.org"}
-                requests.post(f"{URL_BASE}/reuniones", headers=HDRS, json=payload_reun)
+                requests.post(f"{URL_BASE}/reuniones", headers=HEADERS_NUBE, json=payload_reun)
                 st.success("¡Cargado con éxito absoluto en internet!")
                 st.rerun()
