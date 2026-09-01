@@ -3,8 +3,17 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib import colors
 import os
+import re
 
-FICHERO_HERMANOS = "hermanos.json"
+# --- CREDENCIALES UNIFICADAS DE LA NUBE ---
+SUPABASE_URL = "https://supabase.co"
+SUPABASE_KEY = "sb_publishable_GpDoDvr1ejZChSiAThb4uQ_-60A9S08"
+SUPABASE_HEADERS = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type": "application/json",
+    "Prefer": "return=representation"
+}
 
 def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtro):
     filtro_real = "Tesoros" if "Tesoros" in aptitud_filtro else aptitud_filtro
@@ -31,7 +40,6 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
     return lista_listas
 
 def generar_pdf_estilo_oficial(lectura_cabecera, fecha_cabecera, materias, asignados):
-    # Forzamos un nombre único y limpio compatible con la descarga directa
     nombre_pdf = "Reunion_PROCESADO_WEB.pdf"
     doc = SimpleDocTemplate(nombre_pdf, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=45, bottomMargin=45)
     
@@ -55,10 +63,10 @@ def generar_pdf_estilo_oficial(lectura_cabecera, fecha_cabecera, materias, asign
     
     presi = asignados.get("presidente") or "Por asignar"
     cab_der = [[Paragraph("<b>Presidente</b>", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    t_presi = Table(cab_der, colWidths=[90, 160])
+    t_presi = Table(cab_der, colWidths=[70, 130])
     t_presi.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LINEBELOW', (1,0), (1,0), 0.5, colors.black)]))
     
-    t_principal = Table([[cab_izq, t_presi]], colWidths=[290, 250])
+    t_principal = Table([[cab_izq, t_presi]], colWidths=[340, 200])
     t_principal.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'TOP')]))
     elementos.append(t_principal)
     elementos.append(Spacer(1, 15))
@@ -87,7 +95,7 @@ def generar_pdf_estilo_oficial(lectura_cabecera, fecha_cabecera, materias, asign
             titular = asignados.get(f"p{k}_t") or ""
             filas_t.append([Paragraph(txt_punto, est_blu), Paragraph(titular, est_hnos), ""])
     if filas_t:
-        t_filas_t = Table(filas_t, colWidths=[340, 200, 0])
+        t_filas_t = Table(filas_t, colWidths=[340, 150, 50])
         t_filas_t.setStyle(TableStyle([('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E1")), ('PADDING', (0,0), (-1,-1), 10), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
         elementos.append(t_filas_t)
     elementos.append(Spacer(1, 25))
@@ -132,7 +140,7 @@ def generar_pdf_estilo_oficial(lectura_cabecera, fecha_cabecera, materias, asign
                 titular = asignados.get(f"p{k}_t") or ""
                 filas_v.append([Paragraph(txt_punto, est_red), Paragraph(titular, est_hnos), ""])
     if filas_v:
-        t_filas_v = Table(filas_v, colWidths=[340, 200, 0])
+        t_filas_v = Table(filas_v, colWidths=[340, 150, 50])
         t_filas_v.setStyle(TableStyle([('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E1")), ('PADDING', (0,0), (-1,-1), 10), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
         elementos.append(t_filas_v)
     elementos.append(Spacer(1, 20))
