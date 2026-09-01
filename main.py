@@ -23,12 +23,18 @@ def cargar_hermanos_cloud():
         if res.status_code == 200:
             lista = []
             for h in res.json():
+                # Adaptador tolerante por si en la base de datos viene como texto o lista
+                apt_crudas = h.get("aptitudes", [])
+                if isinstance(apt_crudas, str): apt_lista = [a.strip() for a in apt_crudas.split(",") if a.strip()]
+                elif isinstance(apt_crudas, list): apt_lista = apt_crudas
+                else: apt_lista = []
+                
                 lista.append({
                     "id": h.get("id"),
                     "nombre": h.get("nombre", "").strip().title(),
                     "apellido": h.get("apellido", "").strip().title(),
                     "sexo": h.get("sexo", "Varón"),
-                    "aptitudes": h.get("aptitudes", [])
+                    "aptitudes": apt_lista
                 })
             return sorted(lista, key=lambda x: (x.get("nombre", "").lower(), x.get("apellido", "").lower()))
     except Exception: pass
@@ -221,10 +227,18 @@ with p_hermanos:
             a = st.text_input("Apellido:")
             s = st.selectbox("Sexo:", ["Varón", "Mujer"])
             ap = st.multiselect("Aptitudes:", ["Tesoros", "Lectura", "Seamos Mejores Maestros", "Presidencia", "Oración", "Vida Cristiana"])
+            
             if st.form_submit_button("Añadir Publicador"):
                 if n and a:
-                    # ORDEN CORRECTA: Envío limpio directo sin la etiqueta conflictiva de duplicados
-                    requests.post(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, json={"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": ap})
+                    # BYPASS MAESTRO: Unifica las etiquetas en una sola cadena de texto plana común
+                    cadena_aptitudes_plana = ", ".join(ap) if ap else ""
+                    
+                    requests.post(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, json={
+                        "nombre": n.strip().title(), 
+                        "apellido": a.strip().title(), 
+                        "sexo": s, 
+                        "aptitudes": [cadena_aptitudes_plana]
+                    })
                     st.success("¡Añadido con éxito total!")
                     st.rerun()
     with c_d:
@@ -235,6 +249,7 @@ with p_hermanos:
                 requests.delete(f"{URL_BASE}/rest/v1/hermanos?id=eq.{t['id']}", headers=HEADERS_NUBE)
                 st.warning("Eliminado.")
                 st.rerun()
+                
     st.table([{"Nombre": h.get("nombre"), "Apellido": h.get("apellido"), "Sexo": h.get("sexo"), "Aptitudes": ", ".join(h.get("aptitudes", [])) if isinstance(h.get("aptitudes"), list) else str(h.get("aptitudes"))} for h in lista_hermanos])
 
 with p_reuniones:
