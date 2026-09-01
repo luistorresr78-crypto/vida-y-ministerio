@@ -5,7 +5,7 @@ import re
 import requests
 import reglas
 
-# --- CONEXIÓN DIRECTA CORREGIDA ---
+# --- CONEXIÓN DIRECTA INDESTRUCTIBLE A TU CUENTA DE SUPABASE ---
 URL_BASE = "https://supabase.co"
 HDRS = {
     "apikey": "sb_publishable_GpDoDvr1ejZChSiAThb4uQ_-60A9S08",
@@ -44,11 +44,8 @@ def cargar_reuniones_cloud():
                 s = r.get("semana")
                 if m not in dicc_reuns: dicc_reuns[m] = {}
                 dicc_reuns[m][s] = {
-                    "fecha_cabecera": r.get("fecha_cabecera"),
-                    "lectura_cabecera": r.get("lectura_cabecera"),
-                    "materias": r.get("materias", {}),
-                    "asignados": r.get("asignados", {}),
-                    "ultima_firma": r.get("ultima_firma", "")
+                    "fecha_cabecera": r.get("fecha_cabecera"), "lectura_cabecera": r.get("lectura_cabecera"),
+                    "materias": r.get("materias", {}), "asignados": r.get("asignados", {}), "ultima_firma": r.get("ultima_firma", "")
                 }
             return dicc_reuns
     except Exception: pass
@@ -153,7 +150,11 @@ with p_asignaciones:
     for sem_k, sem_v in datos_reuniones[mes_seleccionado].items():
         if sem_k != semana_seleccionada:
             for rol, nom_val in sem_v.get("asignados", {}).items():
-                if nom_val and nom_val != "Por asignar": conteo_mes[nom_val] = conteo_mes.get(nom_val, 0) + 1
+                if nom_val and nom_val != "Por asignar":
+                    # Limpieza segura si viene en forma de lista o texto por reajuste
+                    val_limpio = nom_val if isinstance(nom_val, str) else (nom_val[0] if isinstance(nom_val, list) and nom_val else "")
+                    if val_limpio:
+                        conteo_mes[val_limpio] = conteo_mes.get(val_limpio, 0) + 1
 
     with st.form("form_mesa"):
         st.markdown("### 🎚️ Asignar Privilegios")
@@ -161,12 +162,16 @@ with p_asignaciones:
         with c_p1:
             op_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia")
             nom_presi = [h["nombre"] for h in op_presi]
-            idx_presi = nom_presi.index(asignados_actuales.get("presidente")) if asignados_actuales.get("presidente") in nom_presi else 0
+            val_presi_curr = asignados_actuales.get("presidente", "")
+            if isinstance(val_presi_curr, list) and val_presi_curr: val_presi_curr = val_presi_curr[0]
+            idx_presi = nom_presi.index(val_presi_curr) if val_presi_curr in nom_presi else 0
             presidente = st.selectbox("Presidente", nom_presi, index=idx_presi)
         with c_p2:
             op_ora = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Oración")
             nom_ora = [h["nombre"] for h in op_ora]
-            idx_ora = nom_ora.index(asignados_actuales.get("oracion_inicial")) if asignados_actuales.get("oracion_inicial") in nom_ora else 0
+            val_ora_curr = asignados_actuales.get("oracion_inicial", "")
+            if isinstance(val_ora_curr, list) and val_ora_curr: val_ora_curr = val_ora_curr[0]
+            idx_ora = nom_ora.index(val_ora_curr) if val_ora_curr in nom_ora else 0
             oracion_inicial = st.selectbox("Oración Inicial", nom_ora, index=idx_ora)
 
         nuevos_asignados = {"presidente": presidente, "oracion_inicial": oracion_inicial}
@@ -184,26 +189,32 @@ with p_asignaciones:
             if "" not in op_alert: op_alert.insert(0, "")
             
             idx_t = 0
-            if curr := asignados_actuales.get(f"p{k}_t", ""):
+            curr_val = asignados_actuales.get(f"p{k}_t", "")
+            if isinstance(curr_val, list) and curr_val: curr_val = curr_val
+            if curr_val:
                 for idx_i, item_t in enumerate(op_alert):
-                    if item_t.startswith(curr): idx_t = idx_i; break
+                    if item_t.startswith(curr_val): idx_t = idx_i; break
 
             c1, c2 = st.columns(2)
             with c1:
                 t_sel = st.selectbox(f"Titular {k}", op_alert, index=idx_t, key=f"t_{k}")
-                t_limpio = t_sel.split(" (⚠️") if t_sel else ""
+                t_limpio = t_sel.split(" (⚠️")[0] if t_sel else ""
                 nuevos_asignados[f"p{k}_t"] = t_limpio
             with c2:
                 if tipo_seccion == "Maestros":
                     op_ayu = reglas.filtrar_ayudantes_inteligente(t_limpio, lista_hermanos, "Seamos Mejores Maestros")
                     op_ayu_al = [f"{h['nombre']} (⚠️ REPETIDO x{conteo_mes[h['nombre']]} )" if h['nombre'] in conteo_mes else h['nombre'] for h in op_ayu]
                     if "" not in op_ayu_al: op_ayu_al.insert(0, "")
+                    
                     idx_a = 0
-                    if curr_a := asignados_actuales.get(f"p{k}_a", ""):
+                    curr_ayu = asignados_actuales.get(f"p{k}_a", "")
+                    if isinstance(curr_ayu, list) and curr_ayu: curr_ayu = curr_ayu
+                    if curr_ayu:
                         for idx_i, item_t in enumerate(op_ayu_al):
-                            if item_t.startswith(curr_a): idx_a = idx_i; break
+                            if item_t.startswith(curr_ayu): idx_a = idx_i; break
+                            
                     a_sel = st.selectbox(f"Ayudante {k}", op_ayu_al, index=idx_a, key=f"a_{k}")
-                    nuevos_asignados[f"p{k}_a"] = a_sel.split(" (⚠️") if a_sel else ""
+                    nuevos_asignados[f"p{k}_a"] = a_sel.split(" (⚠️")[0] if a_sel else ""
 
         if st.form_submit_button("💾 Guardar Asignaciones"):
             payload = {"mes": mes_seleccionado, "semana": semana_seleccionada, "fecha_cabecera": semana_data.get("fecha_cabecera"), "lectura_cabecera": semana_data.get("lectura_cabecera"), "materias": materias, "asignados": nuevos_asignados, "ultima_firma": f"Modificado por: {coordinador_activo}"}
@@ -233,14 +244,8 @@ with p_hermanos:
             
             if st.form_submit_button("Añadir Publicador"):
                 if n and a:
-                    # MAPEO INTELIGENTE TOLERANTE: Traduce al nombre exacto exigido por la base de datos
-                    aptidades_mapeadas = []
-                    for item in ap:
-                        if "Maestros" in item: aptidades_mapeadas.append("Seamos Mejores Maestros")
-                        elif "Tesoros" in item: aptidades_mapeadas.append("Tesoros")
-                        else: aptidades_mapeadas.append(item)
-                        
-                    requests.post(f"{URL_BASE}/hermanos", headers=HDRS, json={"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": aptidades_mapeadas})
+                    # Enviamos las aptitudes directamente limpias a la base de datos
+                    requests.post(f"{URL_BASE}/hermanos", headers=HDRS, json={"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": ap})
                     st.success("¡Añadido con éxito total!")
                     st.rerun()
     with c_d:
@@ -251,7 +256,8 @@ with p_hermanos:
                 requests.delete(f"{URL_BASE}/hermanos?id=eq.{t['id']}", headers=HDRS)
                 st.warning("Eliminado.")
                 st.rerun()
-    st.table([{"Nombre": h.get("nombre"), "Apellido": h.get("apellido"), "Sexo": h.get("sexo"), "Aptitudes": ", ".join(h.get("aptitudes", []))} for h in lista_hermanos])
+                
+    st.table([{"Nombre": h.get("nombre"), "Apellido": h.get("apellido"), "Sexo": h.get("sexo"), "Aptitudes": ", ".join(h.get("aptitudes", [])) if isinstance(h.get("aptitudes"), list) else str(h.get("aptitudes"))} for h in lista_hermanos])
 
 with p_reuniones:
     st.header("📝 Pegar Programa de la Reunión")
