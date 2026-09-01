@@ -64,17 +64,18 @@ def cargar_reemplazos_cloud():
 lista_hermanos = cargar_hermanos_cloud()
 datos_reuniones = cargar_reuniones_cloud()
 lista_reemplazos = cargar_reemplazos_cloud()
+
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
-    fecha_cab = lineas if len(lineas) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas if len(lineas) > 1 else "JEREMÍAS 32, 33"
+    fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas[1] if len(lineas) > 1 else "JEREMÍAS 32, 33"
 
     for linea in lineas:
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
         if match_punto:
             num_punto = match_punto.group(1)
-            contenido = match_punto.group(2)
+            contenido = match_punto.group(2).strip()
             match_mins = re.search(r"\(\s*(\d+)\s*min", contenido, re.IGNORECASE)
             minutos = match_mins.group(1) if match_mins else "5"
             
@@ -82,18 +83,25 @@ def procesar_texto_plano_reunion(texto_usuario):
             elif num_punto in ["4", "5", "6"]: seccion_real = "Maestros"
             else: seccion_real = "Vida"
             
-            materias_detectadas[num_punto] = {"titulo": contenido.strip(), "minutos": minutos, "seccion": seccion_real}
+            materias_detectadas[num_punto] = {"titulo": contenido, "minutos": minutos, "seccion": seccion_real}
             
     if not materias_detectadas:
         materias_detectadas = {
-            "1": {"titulo": "1. Discurso (10 mins.)", "minutos": "10", "seccion": "Tesoros"},
-            "2": {"titulo": "2. Perlas de la Biblia (10 mins.)", "minutos": "10", "seccion": "Tesoros"},
-            "3": {"titulo": "3. Lectura de la Biblia (4 mins.)", "minutos": "4", "seccion": "Tesoros"}
+            "1": {"titulo": "Discurso (10 mins.)", "minutos": "10", "seccion": "Tesoros"},
+            "2": {"titulo": "Perlas de la Biblia (10 mins.)", "minutos": "10", "seccion": "Tesoros"},
+            "3": {"titulo": "Lectura de la Biblia (4 mins.)", "minutos": "4", "seccion": "Tesoros"},
+            "4": {"titulo": "Primera conversación (5 mins.)", "minutos": "5", "seccion": "Maestros"},
+            "5": {"titulo": "Segunda conversación (5 mins.)", "minutos": "5", "seccion": "Maestros"},
+            "6": {"titulo": "Tercera conversación (5 mins.)", "minutos": "5", "seccion": "Maestros"},
+            "7": {"titulo": "Nuestra vida cristiana (15 mins.)", "minutos": "15", "seccion": "Vida"},
+            "8": {"titulo": "Estudio bíblico de la congregación (30 mins.)", "minutos": "30", "seccion": "Vida"}
         }
     return fecha_cab, lectura_cab, materias_detectadas
 
 p_asignaciones, p_hermanos, p_reuniones = st.tabs(["📋 Mesa de Asignaciones", "👥 Gestión de Hermanos (Nómina)", "📝 Pegar Programa de la Reunión"])
-
+# =========================================================================
+# PESTAÑA 1: MESA DE ASIGNACIONES (HISTORIAL, REEMPLAZOS Y ALERTAS)
+# =========================================================================
 with p_asignaciones:
     col_mes, col_sem = st.columns(2)
     with col_mes: mes_seleccionado = st.selectbox("Seleccione el Mes:", ORDEN_MESES, key="sel_mes_v2")
@@ -103,7 +111,16 @@ with p_asignaciones:
     if semana_seleccionada not in datos_reuniones[mes_seleccionado]:
         datos_reuniones[mes_seleccionado][semana_seleccionada] = {
             "fecha_cabecera": f"Semana de {mes_seleccionado.capitalize()}", "lectura_cabecera": "Lectura Oficial por Cargar",
-            "materias": {"1": {"titulo": "1. Discurso (10 mins.)", "minutos": "10", "seccion": "Tesoros"}, "2": {"titulo": "2. Perlas de la Biblia (10 mins.)", "minutos": "10", "seccion": "Tesoros"}, "3": {"titulo": "3. Lectura de la Biblia (4 mins.)", "minutos": "4", "seccion": "Tesoros"}},
+            "materias": {
+                "1": {"titulo": "Discurso (10 mins.)", "minutos": "10", "seccion": "Tesoros"}, 
+                "2": {"titulo": "Perlas de la Biblia (10 mins.)", "minutos": "10", "seccion": "Tesoros"}, 
+                "3": {"titulo": "Lectura de la Biblia (4 mins.)", "minutos": "4", "seccion": "Tesoros"},
+                "4": {"titulo": "Primera conversación (5 mins.)", "minutos": "5", "seccion": "Maestros"},
+                "5": {"titulo": "Segunda conversación (5 mins.)", "minutos": "5", "seccion": "Maestros"},
+                "6": {"titulo": "Tercera conversación (5 mins.)", "minutos": "5", "seccion": "Maestros"},
+                "7": {"titulo": "Nuestra vida cristiana (15 mins.)", "minutos": "15", "seccion": "Vida"},
+                "8": {"titulo": "Estudio bíblico de la congregación (30 mins.)", "minutos": "30", "seccion": "Vida"}
+            },
             "asignados": {}, "ultima_firma": ""
         }
 
@@ -150,6 +167,8 @@ with p_asignaciones:
             m = materias[k]
             tipo_seccion = m.get("seccion", "Tesoros")
             color_sub = "Seamos Mejores Maestros" if tipo_seccion == "Maestros" else ("Vida Cristiana" if tipo_seccion == "Vida" else "Tesoros de la Biblia")
+            
+            # Línea maestra corregida sin duplicación de número
             st.markdown(f"**{k}. {m.get('titulo', '')}**")
             op_m = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, color_sub)
             
@@ -197,6 +216,9 @@ with p_asignaciones:
             with open("Reunion_PROCESADO_WEB.pdf", "rb") as f:
                 st.download_button(label="🟣 Descargar Folleto PDF", data=f.read(), file_name=f"Reunion_{semana_seleccionada}_{mes_seleccionado}.pdf", mime="application/pdf")
 
+# =========================================================================
+# PESTAÑA 2: GESTIÓN DE HERMANOS (NÓMINA)
+# =========================================================================
 with p_hermanos:
     st.header("👥 Nómina")
     c_a, c_d = st.columns(2)
@@ -221,6 +243,9 @@ with p_hermanos:
                 st.rerun()
     st.table([{"Nombre": h.get("nombre"), "Apellido": h.get("apellido"), "Sexo": h.get("sexo"), "Aptitudes": ", ".join(h.get("aptitudes", []))} for h in lista_hermanos])
 
+# =========================================================================
+# PESTAÑA 3: PEGAR PROGRAMA DE LA REUNIÓN
+# =========================================================================
 with p_reuniones:
     st.header("📝 Pegar Programa de la Reunión")
     c_c1, c_c2 = st.columns(2)
@@ -231,10 +256,7 @@ with p_reuniones:
         t_pegar = st.text_area("Pega el texto completo de JW.org aquí:")
         if st.form_submit_button("⚡ Procesar y Cargar Semana Inmediatamente"):
             if t_pegar:
-                # 1. ORDEN DE DESTRUCCIÓN: Remueve cualquier residuo de duplicado en la nube
                 requests.delete(f"{URL_BASE}/reuniones?mes=eq.{m_dest}&semana=eq.{s_dest}", headers=HDRS)
-                
-                # 2. PROCESADO E INYECCIÓN LIMPIA
                 f, l, mats = procesar_texto_plano_reunion(t_pegar)
                 payload_reun = {"mes": m_dest, "semana": s_dest, "fecha_cabecera": f, "lectura_cabecera": l, "materias": mats, "asignados": {}, "ultima_firma": "Cargado desde JW.org"}
                 requests.post(f"{URL_BASE}/reuniones", headers=HDRS, json=payload_reun)
