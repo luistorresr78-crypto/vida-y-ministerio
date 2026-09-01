@@ -5,14 +5,9 @@ import re
 import requests
 import reglas
 
-# --- CONEXIÓN DIRECTA ULTRA VELOZ A TU CUENTA DE SUPABASE ---
+# --- CONEXIÓN DIRECTA CORREGIDA Y UNIFICADA ---
 URL_BASE = "https://supabase.co"
-HEADERS_NUBE = {
-    "apikey": "sb_publishable_GpDoDvr1ejZChSiAThb4uQ_-60A9S08",
-    "Authorization": "Bearer sb_publishable_GpDoDvr1ejZChSiAThb4uQ_-60A9S08",
-    "Content-Type": "application/json",
-    "Prefer": "return=representation"
-}
+HEADERS_NUBE = reglas.SUPABASE_HEADERS
 
 ORDEN_MESES = ["SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO"]
 SEMANAS_POSIBLES = ["Semana 1", "Semana 2", "Semana 3", "Semana 4", "Semana 5", "Semana 6"]
@@ -25,12 +20,12 @@ def cargar_hermanos_cloud():
             for h in res.json():
                 lista.append({
                     "id": h.get("id"),
-                    "nombre": h.get("nombre") or h.get("nombre_completo") or h.get("Nombre") or "",
-                    "apellido": h.get("apellido") or h.get("apellidos") or h.get("Apellido") or "",
-                    "sexo": h.get("sexo") or h.get("Sexo") or "Varón",
-                    "aptitudes": h.get("aptitudes") or h.get("Aptitudes") or []
+                    "nombre": h.get("nombre", "").strip().title(),
+                    "apellido": h.get("apellido", "").strip().title(),
+                    "sexo": h.get("sexo", "Varón"),
+                    "aptitudes": h.get("aptitudes", [])
                 })
-            return sorted(lista, key=lambda x: (str(x.get("nombre")).lower(), str(x.get("apellido")).lower()))
+            return sorted(lista, key=lambda x: (x.get("nombre", "").lower(), x.get("apellido", "").lower()))
     except Exception: pass
     return []
 
@@ -103,7 +98,7 @@ with p_asignaciones:
                 "1": {"titulo": "1. Meditar en las cualidades de Jehová fortalece nuestra fe (10 min.)", "minutos": "10", "seccion": "Tesoros"}, 
                 "2": {"titulo": "2. Busquemos perlas escondidas (10 min.)", "minutos": "10", "seccion": "Tesoros"}, 
                 "3": {"titulo": "3. Lectura de la Biblia (4 min.) Jer 32:6-18 (th lección 2).", "minutos": "4", "seccion": "Tesoros"},
-                "4": {"titulo": "4. Empiece conversations (3 min.) DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 4 punto 3).", "minutos": "3", "seccion": "Maestros"},
+                "4": {"titulo": "4. Empiece conversaciones (3 min.) DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 4 punto 3).", "minutos": "3", "seccion": "Maestros"},
                 "5": {"titulo": "5. Empiece conversaciones (4 min.) PREDICACIÓN INFORMAL. Ofrezca un curso de la Biblia (lmd lección 4 punto 4).", "minutos": "4", "seccion": "Maestros"},
                 "6": {"titulo": "6. Haga revisitas (5 min.) DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 8 punto 3).", "minutos": "5", "seccion": "Maestros"},
                 "7": {"titulo": "7. En esta campaña, ni un golpe al aire (15 min.)", "minutos": "15", "seccion": "Vida"},
@@ -135,7 +130,7 @@ with p_asignaciones:
         if sem_k != semana_seleccionada:
             for rol, nom_val in sem_v.get("asignados", {}).items():
                 if nom_val and nom_val != "Por asignar":
-                    val_limpio = nom_val if isinstance(nom_val, str) else (nom_val if isinstance(nom_val, list) and nom_val else "")
+                    val_limpio = nom_val if isinstance(nom_val, str) else (nom_val[0] if isinstance(nom_val, list) and nom_val else "")
                     if val_limpio: conteo_mes[val_limpio] = conteo_mes.get(val_limpio, 0) + 1
 
     with st.form("form_mesa"):
@@ -145,14 +140,14 @@ with p_asignaciones:
             op_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia")
             nom_presi = [h["nombre"] for h in op_presi]
             val_presi_curr = asignados_actuales.get("presidente", "")
-            if isinstance(val_presi_curr, list) and val_presi_curr: val_presi_curr = val_presi_curr
+            if isinstance(val_presi_curr, list) and val_presi_curr: val_presi_curr = val_presi_curr[0]
             idx_presi = nom_presi.index(val_presi_curr) if val_presi_curr in nom_presi else 0
             presidente = st.selectbox("Presidente", nom_presi, index=idx_presi)
         with c_p2:
             op_ora = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Oración")
             nom_ora = [h["nombre"] for h in op_ora]
             val_ora_curr = asignados_actuales.get("oracion_inicial", "")
-            if isinstance(val_ora_curr, list) and val_ora_curr: val_ora_curr = val_ora_curr
+            if isinstance(val_ora_curr, list) and val_ora_curr: val_ora_curr = val_ora_curr[0]
             idx_ora = nom_ora.index(val_ora_curr) if val_ora_curr in nom_ora else 0
             oracion_inicial = st.selectbox("Oración Inicial", nom_ora, index=idx_ora)
 
@@ -222,22 +217,10 @@ with p_hermanos:
             a = st.text_input("Apellido:")
             s = st.selectbox("Sexo:", ["Varón", "Mujer"])
             ap = st.multiselect("Aptitudes:", ["Tesoros", "Lectura", "Seamos Mejores Maestros", "Presidencia", "Oración", "Vida Cristiana"])
-            
             if st.form_submit_button("Añadir Publicador"):
                 if n and a:
-                    nom_t = n.strip().title()
-                    ape_t = a.strip().title()
-                    
-                    # INYECTOR MULTIETIQUETA TOLERANTE: Sacia cualquier nombre de columna existente en Supabase
-                    payload_flexible = {
-                        "nombre": nom_t, "Nombre": nom_t, "nombre_completo": nom_t,
-                        "apellido": ape_t, "Apellido": ape_t, "apellidos": ape_t,
-                        "sexo": s, "Sexo": s,
-                        "aptitudes": ap, "Aptitudes": ap
-                    }
-                    
-                    requests.post(f"{URL_BASE}/hermanos", headers=HEADERS_NUBE, json=payload_flexible)
-                    st.success("¡Inyección adaptable procesada!")
+                    requests.post(f"{URL_BASE}/hermanos", headers=HEADERS_NUBE, json={"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": ap})
+                    st.success("¡Añadido con éxito total!")
                     st.rerun()
     with c_d:
         hermano_a_eliminar = st.selectbox("Dar de baja:", [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos])
@@ -247,7 +230,6 @@ with p_hermanos:
                 requests.delete(f"{URL_BASE}/hermanos?id=eq.{t['id']}", headers=HEADERS_NUBE)
                 st.warning("Eliminado.")
                 st.rerun()
-                
     st.table([{"Nombre": h.get("nombre"), "Apellido": h.get("apellido"), "Sexo": h.get("sexo"), "Aptitudes": ", ".join(h.get("aptitudes", [])) if isinstance(h.get("aptitudes"), list) else str(h.get("aptitudes"))} for h in lista_hermanos])
 
 with p_reuniones:
