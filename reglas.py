@@ -40,15 +40,13 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
     return lista_listas
 
 def estilizar_minutos_y_referencias(texto_base, color_titulo_hex):
-    # Buscamos el momento exacto donde abre el paréntesis de los minutos
     match = re.search(r"(\(\s*\d+\s*min.*)", texto_base, re.IGNORECASE)
     if match:
         parte_minutos_referencia = match.group(1)
-        # Cortamos el título principal para que se quede con su color fuerte original
         titulo_principal = texto_base.replace(parte_minutos_referencia, "").strip()
         
-        # Formateamos la parte trasera: letra más chica (size=9), color negro (#1A1A1A) y cursiva (i)
-        texto_estilizado = f"{titulo_principal} <font size=9 color='#1A1A1A'><i>{parte_minutos_referencia}</i></font>"
+        # AJUSTE AJUSTADO: Reducimos el tamaño de la fuente a 7.5 para que luzca más compacta y estilizada
+        texto_estilizado = f"{titulo_principal} <font size=7.5 color='#1A1A1A'><i>{parte_minutos_referencia}</i></font>"
         return texto_estilizado
     return texto_base
 
@@ -88,7 +86,7 @@ def generar_pdf_estilo_oficial(lectura_cabecera, fecha_cabecera, materias, asign
     datos_cancion_1 = [
         [Paragraph("🎵 <b>Canción 40</b> y oración", est_cab_tit), Paragraph("<b>Palabras de Introducción</b>", est_cab_tit), Paragraph(f"{ora_ini}", est_hnos)]
     ]
-    t_c1 = Table(datos_cancion_1, colWidths=[160, 160, 220])
+    t_c1 = Table(datos_cancion_1, colWidths=[150, 240, 150])
     t_c1.setStyle(TableStyle([('LINEABOVE', (0,0), (-1,-1), 1, colors.black), ('LINEBELOW', (0,0), (-1,-1), 1, colors.black), ('PADDING', (0,0), (-1,-1), 6), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
     elementos.append(t_c1)
     elementos.append(Spacer(1, 20))
@@ -104,14 +102,13 @@ def generar_pdf_estilo_oficial(lectura_cabecera, fecha_cabecera, materias, asign
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         if k in ["1", "2", "3"]:
             m = materias[k]
-            # Limpiamos el texto para evitar que se repita el numero adelante
             titulo_limpio_num = re.sub(r"^[1-8]\.\s*", "", m.get('titulo',''))
             txt_formateado = estilizar_minutos_y_referencias(titulo_limpio_num, "#3A7885")
             txt_punto = f"<b>{k}. {txt_formateado}</b>"
             titular = asignados.get(f"p{k}_t") or ""
             filas_t.append([Paragraph(txt_punto, est_blu), Paragraph(titular, est_hnos), ""])
     if filas_t:
-        t_filas_t = Table(filas_t, colWidths=[360, 140, 40])
+        t_filas_t = Table(filas_t, colWidths=[380, 130, 30])
         t_filas_t.setStyle(TableStyle([('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E1")), ('PADDING', (0,0), (-1,-1), 10), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
         elementos.append(t_filas_t)
     elementos.append(Spacer(1, 25))
@@ -134,7 +131,7 @@ def generar_pdf_estilo_oficial(lectura_cabecera, fecha_cabecera, materias, asign
                 ayudante = asignados.get(f"p{k}_a") or ""
                 filas_m.append([Paragraph(txt_punto, est_ora), Paragraph(titular, est_hnos), Paragraph(ayudante, est_hnos)])
     if filas_m:
-        t_filas_m = Table(filas_m, colWidths=[320, 110, 110])
+        t_filas_m = Table(filas_m, colWidths=[280, 130, 130])
         t_filas_m.setStyle(TableStyle([('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E1")), ('PADDING', (0,0), (-1,-1), 10), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
         elementos.append(t_filas_m)
     elementos.append(Spacer(1, 25))
@@ -160,12 +157,12 @@ def generar_pdf_estilo_oficial(lectura_cabecera, fecha_cabecera, materias, asign
                 titular = asignados.get(f"p{k}_t") or ""
                 filas_v.append([Paragraph(txt_punto, est_red), Paragraph(titular, est_hnos), ""])
     if filas_v:
-        t_filas_v = Table(filas_v, colWidths=[360, 140, 40])
+        t_filas_v = Table(filas_v, colWidths=[380, 130, 30])
         t_filas_v.setStyle(TableStyle([('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E1")), ('PADDING', (0,0), (-1,-1), 10), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
         elementos.append(t_filas_v)
     elementos.append(Spacer(1, 20))
     
-    t_c3 = Table([[Paragraph("Palabras de conclusión (3 mins.)", est_cab_tit), Paragraph("🎵 <b>Canción 60</b> y oración", est_cab_tit), Paragraph("", est_hnos)]], colWidths=[180, 180, 180])
+    t_c3 = Table([[Paragraph("Palabras de conclusión (3 mins.)", est_cab_tit), Paragraph("🎵 <b>Canción 60</b> y oración", est_cab_tit), Paragraph("", est_hnos)]], colWidths=[180, 210, 150])
     t_c3.setStyle(TableStyle([('LINEABOVE', (0,0), (-1,-1), 1, colors.black), ('LINEBELOW', (0,0), (-1,-1), 1, colors.black), ('PADDING', (0,0), (-1,-1), 6), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
     elementos.append(t_c3)
     
