@@ -223,6 +223,7 @@ with p_hermanos:
             ap = st.multiselect("Aptitudes:", ["Tesoros", "Lectura", "Seamos Mejores Maestros", "Presidencia", "Oración", "Vida Cristiana"])
             if st.form_submit_button("Añadir Publicador"):
                 if n and a:
+                    # ORDEN CORRECTA: Envío limpio directo sin la etiqueta conflictiva de duplicados
                     requests.post(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, json={"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": ap})
                     st.success("¡Añadido con éxito total!")
                     st.rerun()
@@ -249,6 +250,6 @@ with p_reuniones:
                 requests.delete(f"{URL_BASE}/rest/v1/reuniones?mes=eq.{m_dest}&semana=eq.{s_dest}", headers=HEADERS_NUBE)
                 f, l, mats = procesar_texto_plano_reunion(t_pegar)
                 payload_reun = {"mes": m_dest, "semana": s_dest, "fecha_cabecera": f, "lectura_cabecera": l, "materias": mats, "asignados": {}, "ultima_firma": "Cargado desde JW.org"}
-                requests.post(f"{URL_BASE}/rest/v1/reuniones", headers=HEADERS_NUBE, json=payload_reun)
+                requests.post(f"{URL_BASE}/rest/v1/reuniones", headers={**HEADERS_NUBE, "Prefer": "resolution=merge-duplicates"}, json=payload_reun)
                 st.success("¡Cargado con éxito absoluto en internet!")
                 st.rerun()
