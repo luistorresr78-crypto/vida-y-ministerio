@@ -2,53 +2,45 @@ import streamlit as st
 import json
 import os
 import re
+import requests
 import reglas
 
-# Configuracion adaptativa de la pagina web para celulares, iPads y laptops
-st.set_page_config(page_title="Mesa de Asignaciones Teocraticas", page_icon="📝", layout="wide")
+# Configuración adaptativa de la página web
+st.set_page_config(page_title="Mesa de Asignaciones Teocráticas", page_icon="📝", layout="wide")
 
-FICHERO_HERMANOS = "hermanos.json"
+# CONEXIÓN BLINDADA A TU BASE DE DATOS SUPABASE
+SUPABASE_URL = "https://supabase.co"
+SUPABASE_HEADERS = {
+    "apikey": "sb_publishable_GpDoDvr1ejZChSiAThb4uQ_-60A9S08",
+    "Authorization": "Bearer sb_publishable_GpDoDvr1ejZChSiAThb4uQ_-60A9S08",
+    "Content-Type": "application/json",
+    "Prefer": "return=representation"
+}
 
-# Carga segura con ordenamiento alfabético Tipo Título por Nombre
-def cargar_hermanos_iniciales():
-    if not os.path.exists(FICHERO_HERMANOS):
-        hermanos_base = [
-            {"nombre": "Jonathan", "apellido": "Coordinador", "sexo": "Varón", "aptitudes": ["Tesaros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
-            {"nombre": "Luis", "apellido": "Torres", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
-            {"nombre": "Sergio", "apellido": "Coordinador", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]}
-        ]
-        with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
-            json.dump(hermanos_base, f, ensure_ascii=False, indent=4)
-            
-    with open(FICHERO_HERMANOS, "r", encoding="utf-8") as f:
-        lista_raw = json.load(f)
-        lista_saneada = []
-        for h in lista_raw:
-            lista_saneada.append({
-                "nombre": h.get("nombre", "").strip().title(),
-                "apellido": h.get("apellido", "").strip().title(),
-                "sexo": h.get("sexo", "Varón"),
-                "aptitudes": h.get("aptitudes", [])
-            })
-        lista_ordenada = sorted(lista_saneada, key=lambda x: (x.get("nombre", "").lower(), x.get("apellido", "").lower()))
-        return lista_ordenada
+# Carga en tiempo real desde la nube con ordenamiento estricto por Nombre
+def cargar_hermanos_cloud():
+    try:
+        response = requests.get(SUPABASE_URL, headers=SUPABASE_HEADERS, timeout=10)
+        if response.status_code == 200:
+            lista_raw = response.json()
+            # Estandariza a Tipo Título y ordena de la A a la Z por el Nombre de pila
+            lista_saneada = []
+            for h in lista_raw:
+                lista_saneada.append({
+                    "id": h.get("id"),
+                    "nombre": h.get("nombre", "").strip().title(),
+                    "apellido": h.get("apellido", "").strip().title(),
+                    "sexo": h.get("sexo", "Varón"),
+                    "aptitudes": h.get("aptitudes", [])
+                })
+            return sorted(lista_saneada, key=lambda x: (x.get("nombre", "").lower(), x.get("apellido", "").lower()))
+    except Exception:
+        pass
+    return []
 
-lista_hermanos = cargar_hermanos_iniciales()
+lista_hermanos = cargar_hermanos_cloud()
 
-def guardar_hermanos(lista):
-    lista_saneada = []
-    for h in lista:
-        lista_saneada.append({
-            "nombre": h.get("nombre", "").strip().title(),
-            "apellido": h.get("apellido", "").strip().title(),
-            "sexo": h.get("sexo", "Varón"),
-            "aptitudes": h.get("aptitudes", [])
-        })
-    lista_ordenada = sorted(lista_saneada, key=lambda x: (x.get("nombre", "").lower(), x.get("apellido", "").lower()))
-    with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
-        json.dump(lista_ordenada, f, ensure_ascii=False, indent=4)
-
-# --- PROCESADOR EXTRACTOR EN CALIENTE INDESTRUCTIBLE DE JW.ORG ---
+# --- PROCESADOR EXTRACTOR DE JW.ORG ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
@@ -89,32 +81,21 @@ pestana_programa, pestana_hermanos = st.tabs([
     "🚀 Fabricador en Caliente de Folletos", 
     "👥 Gestión de Hermanos (Nómina)"
 ])
-# =========================================================================
-# PESTAÑA 1: FABRICADOR EN CALIENTE DE FOLLETOS (CORREGIDO INDESTRUCTIBLE)
-# =========================================================================
+
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
-    st.markdown("Copia la Guía de Actividades completa desde **JW.org**, pégala abajo y el sistema extraerá en tiempo real la fecha, la lectura bíblica y los minutos exactos de cada punto.")
-
-    # Entrada de texto abierta para jalar los datos de internet
-    texto_jw_entrada = st.text_area(
-        "Pega aquí el texto completo copiado de JW.org:", 
-        height=200, 
-        placeholder="Línea 1: Fecha\nLínea 2: Lectura Bíblica\nLíneas siguientes: Puntos numerados...",
-        key="txt_jw_live"
-    )
+    texto_jw_entrada = st.text_area("Pega aquí el texto completo copiado de JW.org:", height=180, key="txt_jw_live")
 
     f_cab, l_cab, materias_dinamicas = procesar_texto_plano_reunion(texto_jw_entrada)
 
     st.markdown("---")
-    st.subheader(f"📅 Vista Previa de la Semana: {f_cab}")
+    st.subheader(f"📅 Vista Previa: {f_cab}")
     st.info(f"📖 Lectura Bíblica Detectada: **{l_cab}**")
 
     with st.sidebar:
         st.header("⚙️ Control de Operación")
         coordinador_activo = st.selectbox("¿Quién asigna hoy?", ["Sergio", "Jonathan", "Luis"], key="coord_live")
 
-    # Formulario protegido: Las tómbolas se dibujan dinámicamente según el texto pegado
     with st.form("formulario_live_seguro"):
         st.markdown("### 🎚️ Asignar Privilegios para el Folleto")
         col_p1, col_p2 = st.columns(2)
@@ -128,7 +109,6 @@ with pestana_programa:
         st.markdown("---")
         asignados_en_vivo = {"presidente": presidente, "oracion_inicial": oracion_inicial}
         
-        # Este bucle dibuja dinámicamente los puntos que extrae de la caja de texto
         for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
             m = materias_dinamicas[k]
             tipo_seccion = m.get("seccion", "Tesoros")
@@ -151,39 +131,24 @@ with pestana_programa:
                     ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"a_{k}_live")
                     asignados_en_vivo[f"p{k}_a"] = ayudante
 
-        st.markdown("---")
-        # El botón de procesar ahora valida y empaqueta la información de forma segura
         boton_armar = st.form_submit_button("⚙️ Procesar Datos para Descarga")
 
-    # Guardamos los datos de descarga en un contenedor de memoria interna
+    st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
     if boton_armar:
         reglas.generar_pdf_estilo_oficial(l_cab, f_cab, materias_dinamicas, asignados_en_vivo)
         st.session_state["pdf_listo"] = True
         st.session_state["f_cab_guardada"] = f_cab
         st.session_state["l_cab_guardada"] = l_cab
-        st.success("¡Folleto procesado con éxito total! El botón de descarga de abajo se ha habilitado.")
-    st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
-    # El botón morado solo se dibuja en la pantalla si el usuario ya presionó el botón de procesar arriba
+        st.success("¡Folleto procesado con éxito total!")
+
     if st.session_state.get("pdf_listo", False):
         nombre_archivo_pdf = "Reunion_PROCESADO_WEB.pdf"
         f_cab_g = st.session_state.get("f_cab_guardada", "Semana")
-        
         if os.path.exists(nombre_archivo_pdf):
             with open(nombre_archivo_pdf, "rb") as pdf_file:
                 pdf_bytes = pdf_file.read()
-            st.download_button(
-                label="🟣 Descargar Folleto Oficial en PDF", 
-                data=pdf_bytes, 
-                file_name=f"Reunion_{f_cab_g.replace(' ', '_')}.pdf", 
-                mime="application/pdf",
-                key="btn_descarga_final_live"
-            )
-    else:
-        st.info("💡 Por favor, rellena las tómbolas de arriba y haz clic en el botón '⚙️ Procesar Datos para Descarga' para activar el botón morado.")
+            st.download_button(label="🟣 Descargar Folleto Oficial en PDF", data=pdf_bytes, file_name=f"Reunion_{f_cab_g.replace(' ', '_')}.pdf", mime="application/pdf", key="btn_descarga_final_live")
 
-# =========================================================================
-# PESTAÑA 2: GESTIÓN DE HERMANOS (NÓMINA EN FORMATO TIPO TÍTULO POR NOMBRE)
-# =========================================================================
 with pestana_hermanos:
     st.header("👥 Control de la Nómina de la Congregación")
     col_add, col_del = st.columns(2)
@@ -194,43 +159,25 @@ with pestana_hermanos:
             nuevo_nom = st.text_input("Nombre:")
             nuevo_ape = st.text_input("Apellido:")
             nuevo_sexo = st.selectbox("Sexo:", ["Varón", "Mujer"])
-            nuevas_apt = st.multiselect("Asignar Aptitudes/Secciones:", ["Tesoros", "Lectura", "Seamos Mejores Maestros", "Presidencia", "Oración", "Vida Cristiana"])
-            btn_dar_alta = st.form_submit_button("Añadir Publicador")
-            
-            if btn_dar_alta:
+            nuevas_apt = st.multiselect("Asignar Aptitudes:", ["Tesoros", "Lectura", "Seamos Mejores Maestros", "Presidencia", "Oración", "Vida Cristiana"])
+            if st.form_submit_button("Añadir Publicador"):
                 if nuevo_nom and nuevo_ape:
-                    lista_hermanos.append({
-                        "nombre": nuevo_nom.strip().title(), 
-                        "apellido": nuevo_ape.strip().title(), 
-                        "sexo": nuevo_sexo, 
-                        "aptitudes": nuevas_apt
-                    })
-                    guardar_hermanos(lista_hermanos)
-                    st.success(f"¡{nuevo_nom.strip().title()} {nuevo_ape.strip().title()} ha sido añadido con éxito!")
+                    payload = {"nombre": nuevo_nom.strip().title(), "apellido": nuevo_ape.strip().title(), "sexo": nuevo_sexo, "aptitudes": nuevas_apt}
+                    requests.post(SUPABASE_URL, headers=SUPABASE_HEADERS, json=payload)
+                    st.success("¡Añadido a la nube de por vida!")
                     st.rerun()
-                else:
-                    st.error("Por favor ingresa Nombre y Apellido.")
 
     with col_del:
         st.subheader("❌ Dar de Baja Publicador")
         nombres_baja = [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos]
-        hermano_a_eliminar = st.selectbox("Seleccione quién se muda o da de baja:", nombres_baja, key="baja_sel_live")
-        
-        if st.button("Confirmar Eliminación Permanente", type="primary", key="btn_baja_live"):
-            lista_hermanos = [h for h in lista_hermanos if f"{h['nombre']} {h['apellido']}" != hermano_a_eliminar]
-            guardar_hermanos(lista_hermanos)
-            st.warning(f"¡{hermano_a_eliminar} ha sido eliminado de la base de datos!")
-            st.rerun()
+        hermano_a_eliminar = st.selectbox("Seleccione quién dar de baja:", nombres_baja, key="baja_sel_live")
+        if st.button("Confirmar Eliminación Permanente", type="primary"):
+            target = next((h for h in lista_hermanos if f"{h['nombre']} {h['apellido']}" == hermano_a_eliminar), None)
+            if target and target.get("id"):
+                requests.delete(f"{SUPABASE_URL}?id=eq.{target['id']}", headers=SUPABASE_HEADERS)
+                st.warning("Eliminado de la nube.")
+                st.rerun()
 
     st.markdown("---")
-    st.subheader("📜 Listado Oficial de la Congregación (Tipo Título - De la A a la Z por Nombre)")
-    
-    tabla_visual = []
-    for h in lista_hermanos:
-        tabla_visual.append({
-            "Nombre": h.get("nombre", ""),
-            "Apellido": h.get("apellido", ""),
-            "Sexo": h.get("sexo", "Varón"),
-            "Aptitudes Registradas": ", ".join(h.get("aptitudes", []))
-        })
-    st.table(tabla_visual)
+    st.subheader("📜 Listado Oficial de la Congregación (Nube - Orden Alfabético por Nombre)")
+    st.table([{"Nombre": h.get("nombre"), "Apellido": h.get("apellido"), "Sexo": h.get("sexo"), "Aptitudes": ", ".join(h.get("aptitudes", []))} for h in lista_hermanos])
