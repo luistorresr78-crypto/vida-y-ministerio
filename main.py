@@ -44,11 +44,8 @@ def cargar_reuniones_cloud():
                 s = r.get("semana")
                 if m not in dicc_reuns: dicc_reuns[m] = {}
                 dicc_reuns[m][s] = {
-                    "fecha_cabecera": r.get("fecha_cabecera"),
-                    "lectura_cabecera": r.get("lectura_cabecera"),
-                    "materias": r.get("materias", {}),
-                    "asignados": r.get("asignados", {}),
-                    "ultima_firma": r.get("ultima_firma", "")
+                    "fecha_cabecera": r.get("fecha_cabecera"), "lectura_cabecera": r.get("lectura_cabecera"),
+                    "materias": r.get("materias", {}), "asignados": r.get("asignados", {}), "ultima_firma": r.get("ultima_firma", "")
                 }
             return dicc_reuns
     except Exception: pass
@@ -64,44 +61,53 @@ def cargar_reemplazos_cloud():
 lista_hermanos = cargar_hermanos_cloud()
 datos_reuniones = cargar_reuniones_cloud()
 lista_reemplazos = cargar_reemplazos_cloud()
-
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
-    lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
-    fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas[1] if len(lineas) > 1 else "JEREMÍAS 32, 33"
+    lineas = [l.strip() for l in texto_usuario.split("\n")]
+    lineas_limpias = [l for l in lineas if l]
+    
+    fecha_cab = lineas_limpias[0] if len(lineas_limpias) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas_limpias[1] if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
 
-    for linea in lineas:
+    # MOTOR INTELIGENTE: Recorre las lineas y fusiona los renglones de referencias largas
+    for i, linea in enumerate(lineas_limpias):
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
         if match_punto:
             num_punto = match_punto.group(1)
-            contenido = match_punto.group(2).strip()
-            match_mins = re.search(r"\(\s*(\d+)\s*min", contenido, re.IGNORECASE)
+            titulo_principal = match_punto.group(2).strip()
+            
+            # Si el siguiente renglon contiene los minutos y la referencia, los unimos de golpe
+            referencia_abajo = ""
+            if i + 1 < len(lineas_limpias):
+                sig_linea = lineas_limpias[i+1]
+                if not re.match(r"^[1-8]\.", sig_linea):
+                    referencia_abajo = " " + sig_linea.strip()
+            
+            titulo_completo = f"{titulo_principal}{referencia_abajo}"
+            match_mins = re.search(r"\(\s*(\d+)\s*min", titulo_completo, re.IGNORECASE)
             minutos = match_mins.group(1) if match_mins else "5"
             
             if num_punto in ["1", "2", "3"]: seccion_real = "Tesoros"
             elif num_punto in ["4", "5", "6"]: seccion_real = "Maestros"
             else: seccion_real = "Vida"
             
-            materias_detectadas[num_punto] = {"titulo": contenido, "minutos": minutos, "seccion": seccion_real}
+            materias_detectadas[num_punto] = {"titulo": titulo_completo, "minutos": minutos, "seccion": seccion_real}
             
     if not materias_detectadas:
         materias_detectadas = {
-            "1": {"titulo": "Discurso (10 mins.)", "minutos": "10", "seccion": "Tesoros"},
-            "2": {"titulo": "Perlas de la Biblia (10 mins.)", "minutos": "10", "seccion": "Tesoros"},
-            "3": {"titulo": "Lectura de la Biblia (4 mins.)", "minutos": "4", "seccion": "Tesoros"},
-            "4": {"titulo": "Primera conversación (5 mins.)", "minutos": "5", "seccion": "Maestros"},
-            "5": {"titulo": "Segunda conversación (5 mins.)", "minutos": "5", "seccion": "Maestros"},
-            "6": {"titulo": "Tercera conversación (5 mins.)", "minutos": "5", "seccion": "Maestros"},
-            "7": {"titulo": "Nuestra vida cristiana (15 mins.)", "minutos": "15", "seccion": "Vida"},
-            "8": {"titulo": "Estudio bíblico de la congregación (30 mins.)", "minutos": "30", "seccion": "Vida"}
+            "1": {"titulo": "1. Meditar en las cualidades de Jehová fortalece nuestra fe (10 min.)", "minutos": "10", "seccion": "Tesoros"},
+            "2": {"titulo": "2. Busquemos perlas escondidas (10 min.)", "minutos": "10", "seccion": "Tesoros"},
+            "3": {"titulo": "3. Lectura de la Biblia (4 min.) Jer 32:6-18 (th lección 2).", "minutos": "4", "seccion": "Tesoros"},
+            "4": {"titulo": "4. Empiece conversaciones (3 min.) DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 4 punto 3).", "minutos": "3", "seccion": "Maestros"},
+            "5": {"titulo": "5. Empiece conversaciones (4 min.) PREDICACIÓN INFORMAL. Ofrezca un curso de la Biblia (lmd lección 4 punto 4).", "minutos": "4", "seccion": "Maestros"},
+            "6": {"titulo": "6. Haga revisitas (5 min.) DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 8 punto 3).", "minutos": "5", "seccion": "Maestros"},
+            "7": {"titulo": "7. En esta campaña, ni un golpe al aire (15 min.)", "minutos": "15", "seccion": "Vida"},
+            "8": {"titulo": "8. Estudio bíblico de la congregación (30 min.) wcg cap. 7.", "minutos": "30", "seccion": "Vida"}
         }
     return fecha_cab, lectura_cab, materias_detectadas
 
 p_asignaciones, p_hermanos, p_reuniones = st.tabs(["📋 Mesa de Asignaciones", "👥 Gestión de Hermanos (Nómina)", "📝 Pegar Programa de la Reunión"])
-# =========================================================================
-# PESTAÑA 1: MESA DE ASIGNACIONES (HISTORIAL, REEMPLAZOS Y ALERTAS)
-# =========================================================================
+
 with p_asignaciones:
     col_mes, col_sem = st.columns(2)
     with col_mes: mes_seleccionado = st.selectbox("Seleccione el Mes:", ORDEN_MESES, key="sel_mes_v2")
@@ -112,14 +118,14 @@ with p_asignaciones:
         datos_reuniones[mes_seleccionado][semana_seleccionada] = {
             "fecha_cabecera": f"Semana de {mes_seleccionado.capitalize()}", "lectura_cabecera": "Lectura Oficial por Cargar",
             "materias": {
-                "1": {"titulo": "Discurso (10 mins.)", "minutos": "10", "seccion": "Tesoros"}, 
-                "2": {"titulo": "Perlas de la Biblia (10 mins.)", "minutos": "10", "seccion": "Tesoros"}, 
-                "3": {"titulo": "Lectura de la Biblia (4 mins.)", "minutos": "4", "seccion": "Tesoros"},
-                "4": {"titulo": "Primera conversación (5 mins.)", "minutos": "5", "seccion": "Maestros"},
-                "5": {"titulo": "Segunda conversación (5 mins.)", "minutos": "5", "seccion": "Maestros"},
-                "6": {"titulo": "Tercera conversación (5 mins.)", "minutos": "5", "seccion": "Maestros"},
-                "7": {"titulo": "Nuestra vida cristiana (15 mins.)", "minutos": "15", "seccion": "Vida"},
-                "8": {"titulo": "Estudio bíblico de la congregación (30 mins.)", "minutos": "30", "seccion": "Vida"}
+                "1": {"titulo": "1. Meditar en las cualidades de Jehová fortalece nuestra fe (10 min.)", "minutos": "10", "seccion": "Tesoros"}, 
+                "2": {"titulo": "2. Busquemos perlas escondidas (10 min.)", "minutos": "10", "seccion": "Tesoros"}, 
+                "3": {"titulo": "3. Lectura de la Biblia (4 min.) Jer 32:6-18 (th lección 2).", "minutos": "4", "seccion": "Tesoros"},
+                "4": {"titulo": "4. Empiece conversaciones (3 min.) DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 4 punto 3).", "minutos": "3", "seccion": "Maestros"},
+                "5": {"titulo": "5. Empiece conversaciones (4 min.) PREDICACIÓN INFORMAL. Ofrezca un curso de la Biblia (lmd lección 4 punto 4).", "minutos": "4", "seccion": "Maestros"},
+                "6": {"titulo": "6. Haga revisitas (5 min.) DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 8 punto 3).", "minutos": "5", "seccion": "Maestros"},
+                "7": {"titulo": "7. En esta campaña, ni un golpe al aire (15 min.)", "minutos": "15", "seccion": "Vida"},
+                "8": {"titulo": "8. Estudio bíblico de la congregación (30 min.) wcg cap. 7.", "minutos": "30", "seccion": "Vida"}
             },
             "asignados": {}, "ultima_firma": ""
         }
@@ -168,8 +174,7 @@ with p_asignaciones:
             tipo_seccion = m.get("seccion", "Tesoros")
             color_sub = "Seamos Mejores Maestros" if tipo_seccion == "Maestros" else ("Vida Cristiana" if tipo_seccion == "Vida" else "Tesoros de la Biblia")
             
-            # Línea maestra corregida sin duplicación de número
-            st.markdown(f"**{k}. {m.get('titulo', '')}**")
+            st.markdown(f"**{m.get('titulo', '')}**")
             op_m = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, color_sub)
             
             op_alert = []
@@ -216,9 +221,6 @@ with p_asignaciones:
             with open("Reunion_PROCESADO_WEB.pdf", "rb") as f:
                 st.download_button(label="🟣 Descargar Folleto PDF", data=f.read(), file_name=f"Reunion_{semana_seleccionada}_{mes_seleccionado}.pdf", mime="application/pdf")
 
-# =========================================================================
-# PESTAÑA 2: GESTIÓN DE HERMANOS (NÓMINA)
-# =========================================================================
 with p_hermanos:
     st.header("👥 Nómina")
     c_a, c_d = st.columns(2)
@@ -243,9 +245,6 @@ with p_hermanos:
                 st.rerun()
     st.table([{"Nombre": h.get("nombre"), "Apellido": h.get("apellido"), "Sexo": h.get("sexo"), "Aptitudes": ", ".join(h.get("aptitudes", []))} for h in lista_hermanos])
 
-# =========================================================================
-# PESTAÑA 3: PEGAR PROGRAMA DE LA REUNIÓN
-# =========================================================================
 with p_reuniones:
     st.header("📝 Pegar Programa de la Reunión")
     c_c1, c_c2 = st.columns(2)
