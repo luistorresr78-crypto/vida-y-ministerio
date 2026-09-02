@@ -189,18 +189,24 @@ with p_hermanos:
     st.header("👥 Nómina")
     c_a, c_d = st.columns(2)
     with c_a:
+        # SISTEMA DE VALIDACIÓN PREVIA TOTALMENTE BLINDADO
         n = st.text_input("Nombre:", key="nom_p2")
         a = st.text_input("Apellido:", key="ape_p2")
         s = st.selectbox("Sexo:", ["Varón", "Mujer"], key="sex_p2")
         ap = st.multiselect("Aptitudes:", ["Tesoros", "Lectura", "Seamos Mejores Maestros", "Presidencia", "Oración", "Vida Cristiana"], key="apt_p2")
         
         if st.button("⚡ Añadir Publicador"):
-            if n and a:
+            if not n.strip() or not a.strip():
+                st.error("🚨 Error obligatorio: ¡No puede dejar los casilleros de Nombre o Apellido vacíos!")
+            else:
                 cadena_plana_aptitudes = ", ".join(ap) if ap else ""
                 payload_nuevo = {"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": cadena_plana_aptitudes}
-                requests.post(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, json=payload_nuevo)
-                st.success("¡Publicador añadido con éxito absoluto!")
-                st.rerun()
+                res_post = requests.post(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, json=payload_nuevo)
+                if res_post.status_code in:
+                    st.success("¡Publicador añadido con éxito absoluto en internet!")
+                    st.rerun()
+                else:
+                    st.error(f"❌ Error de internet: La base de datos rechazó el guardado. Código: {res_post.status_code}")
     with c_d:
         hermano_a_eliminar = st.selectbox("Dar de baja:", [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos])
         if st.button("Confirmar Eliminación", type="primary"):
