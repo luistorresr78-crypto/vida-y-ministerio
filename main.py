@@ -16,13 +16,13 @@ HEADERS_NUBE = {
 ORDEN_MESES = ["SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO"]
 SEMANAS_POSIBLES = ["Semana 1", "Semana 2", "Semana 3", "Semana 4", "Semana 5", "Semana 6"]
 
-# --- FILTRO INTELIGENTE LOCAL CORREGIDO ---
+# --- FILTRO INTELIGENTE LOCAL ADAPTADO A FORMATO PLANO ---
 def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtro):
     filtro_real = aptitud_filtro
     if "Tesoros" in aptitud_filtro: filtro_real = "Tesoros"
     elif "Maestros" in aptitud_filtro or "Seamos" in aptitud_filtro: filtro_real = "Seamos Mejores Maestros"
     
-    candidatos = [h for h in lista_hermanos if filtro_real in h.get("aptitudes", []) or filtro_real in "".join(h.get("aptitudes", []))]
+    candidatos = [h for h in lista_hermanos if filtro_real in h.get("aptitudes", "")]
     
     if hermano_titular and filtro_real == "Seamos Mejores Maestros":
         titular_limpio = hermano_titular.strip()
@@ -50,17 +50,14 @@ def cargar_hermanos_cloud():
         if res.status_code == 200:
             lista = []
             for h in res.json():
-                apt_crudas = h.get("aptitudes", [])
-                if isinstance(apt_crudas, str): apt_lista = [a.strip() for a in apt_crudas.split(",") if a.strip()]
-                elif isinstance(apt_crudas, list): apt_lista = apt_crudas
-                else: apt_lista = []
-                
+                # Tolera si en la bd viene como texto simple o lista
+                apt_crudas = h.get("aptitudes", "")
                 lista.append({
                     "id": h.get("id"),
                     "nombre": h.get("nombre", "").strip().title(),
                     "apellido": h.get("apellido", "").strip().title(),
                     "sexo": h.get("sexo", "Varón"),
-                    "aptitudes": apt_lista
+                    "aptitudes": str(apt_crudas)
                 })
             return sorted(lista, key=lambda x: (x.get("nombre", "").lower(), x.get("apellido", "").lower()))
     except Exception: pass
@@ -89,8 +86,8 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n")]
     lineas_limpias = [l for l in lineas if l]
-    fecha_cab = lineas_limpias[0] if len(lineas_limpias) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas_limpias[1] if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
+    fecha_cab = lineas_limpias if len(lineas_limpias) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas_limpias if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
 
     for i, linea in enumerate(lineas_limpias):
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
@@ -127,8 +124,8 @@ with p_asignaciones:
                 "1": {"titulo": "1. Meditar en las cualidades de Jehová fortalece nuestra fe (10 min.)", "minutos": "10", "seccion": "Tesoros"}, 
                 "2": {"titulo": "2. Busquemos perlas escondidas (10 min.)", "minutos": "10", "seccion": "Tesoros"}, 
                 "3": {"titulo": "3. Lectura de la Biblia (4 min.) Jer 32:6-18 (th lección 2).", "minutos": "4", "seccion": "Tesoros"},
-                "4": {"titulo": "4. Empiece conversaciones (3 min.) DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 4 punto 3).", "minutos": "3", "seccion": "Maestros"},
-                "5": {"titulo": "5. Empiece conversaciones (4 min.) PREDICACIÓN INFORMAL. Ofrezca un curso de la Biblia (lmd lección 4 punto 4).", "minutos": "4", "seccion": "Maestros"},
+                "4": {"titulo": "4. Empiece conversations (3 min.) DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 4 punto 3).", "minutos": "3", "seccion": "Maestros"},
+                "5": {"titulo": "5. Empiece conversations (4 min.) PREDICACIÓN INFORMAL. Ofrezca un curso de la Biblia (lmd lección 4 punto 4).", "minutos": "4", "seccion": "Maestros"},
                 "6": {"titulo": "6. Haga revisitas (5 min.) DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 8 punto 3).", "minutos": "5", "seccion": "Maestros"},
                 "7": {"titulo": "7. En esta campaña, ni un golpe al aire (15 min.)", "minutos": "15", "seccion": "Vida"},
                 "8": {"titulo": "8. Estudio bíblico de la congregación (30 min.) wcg cap. 7.", "minutos": "30", "seccion": "Vida"}
@@ -234,7 +231,7 @@ with p_hermanos:
     st.header("👥 Nómina")
     c_a, c_d = st.columns(2)
     with c_a:
-        # BOTÓN ULTRA LIBRE FUERA DE CUALQUIER FORMULARIO TRABADO
+        # BOTÓN INDEPENDIENTE REAJUSTADO AL FORMATO TEXTO PLANO INDESTRUCTIBLE
         n = st.text_input("Nombre:", key="nom_p2")
         a = st.text_input("Apellido:", key="ape_p2")
         s = st.selectbox("Sexo:", ["Varón", "Mujer"], key="sex_p2")
@@ -242,7 +239,15 @@ with p_hermanos:
         
         if st.button("⚡ Añadir Publicador"):
             if n and a:
-                requests.post(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, json={"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": ap})
+                # Transforma la lista en un texto limpio separado por comas: "Lectura, Tesoros"
+                cadena_plana_aptitudes = ", ".join(ap) if ap else ""
+                payload_nuevo = {
+                    "nombre": n.strip().title(), 
+                    "apellido": a.strip().title(), 
+                    "sexo": s, 
+                    "aptitudes": cadena_plana_aptitudes
+                }
+                requests.post(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, json=payload_nuevo)
                 st.success("¡Publicador añadido con éxito absoluto!")
                 st.rerun()
     with c_d:
@@ -251,13 +256,12 @@ with p_hermanos:
             t = next((h for h in lista_hermanos if f"{h['nombre']} {h['apellido']}" == hermano_a_eliminar), None)
             if t and t.get("id"):
                 requests.delete(f"{URL_BASE}/rest/v1/hermanos?id=eq.{t['id']}", headers=HEADERS_NUBE)
-                st.warning("Eliminado.")
+                st.warning("Eliminado de la nube.")
                 st.rerun()
                 
-    # OBLIGAMOS A LEER LA NÓMINA EN CALIENTE EN TIEMPO REAL DIRECTO EN LA TABLA FRONTAL
     nomina_fresca_web = cargar_hermanos_cloud()
     if nomina_fresca_web:
-        st.table([{"Nombre": h.get("nombre"), "Apellido": h.get("apellido"), "Sexo": h.get("sexo"), "Aptitudes": ", ".join(h.get("aptitudes", [])) if isinstance(h.get("aptitudes"), list) else str(h.get("aptitudes"))} for h in nomina_fresca_web])
+        st.table([{"Nombre": h.get("nombre"), "Apellido": h.get("apellido"), "Sexo": h.get("sexo"), "Aptitudes": h.get("aptitudes", "")} for h in nomina_fresca_web])
     else:
         st.info("La nómina está vacía en internet. Ingrese el primer publicador arriba.")
 
