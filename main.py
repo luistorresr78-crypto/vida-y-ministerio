@@ -69,8 +69,8 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n")]
     lineas_limpias = [l for l in lineas if l]
-    fecha_cab = lineas_limpias[0] if len(lineas_limpias) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas_limpias[1] if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
+    fecha_cab = lineas_limpias if len(lineas_limpias) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas_limpias if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
 
     for i, linea in enumerate(lineas_limpias):
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
@@ -203,8 +203,8 @@ with p_hermanos:
                 payload_nuevo = {"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": cadena_plana_aptitudes}
                 res_post = requests.post(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, json=payload_nuevo)
                 
-                # REPARACIÓN DE SINTAXIS SÓLIDA CON NÚMEROS DE ÉXITO ASIGNADOS
-                if res_post.status_code in:
+                # CORRECCIÓN DEFINITIVA EXPLÍCITA SIN LA PALABRA IN
+                if res_post.status_code == 201 or res_post.status_code == 200:
                     st.success("¡Publicador añadido con éxito absoluto en internet!")
                     st.rerun()
                 else:
