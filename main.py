@@ -69,8 +69,8 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n")]
     lineas_limpias = [l for l in lineas if l]
-    fecha_cab = lineas_limpias if len(lineas_limpias) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas_limpias if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
+    fecha_cab = lineas_limpias[0] if len(lineas_limpias) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas_limpias[1] if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
 
     for i, linea in enumerate(lineas_limpias):
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
@@ -123,7 +123,6 @@ with p_asignaciones:
     st.subheader(f"📅 Rango de Fecha: {semana_data.get('fecha_cabecera')}")
     st.info(f"📖 Lectura de la Semana: **{semana_data.get('lectura_cabecera')}**")
 
-    # --- BARRA LATERAL DE CONTROL RESTAURADA ---
     with st.sidebar:
         st.header("⚙️ Control")
         coordinador_activo = st.selectbox("¿Quién firma?", ["Sergio", "Jonathan", "Luis"], key="cf")
@@ -160,76 +159,4 @@ with p_asignaciones:
             oracion_inicial = st.selectbox("Oración Inicial", nom_ora, index=idx_ora)
 
         nuevos_asignados = {"presidente": presidente, "oracion_inicial": oracion_inicial}
-        for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
-            m = materias[k]
-            tipo_seccion = m.get("seccion", "Tesoros")
-            color_sub = "Seamos Mejores Maestros" if tipo_seccion == "Maestros" else ("Vida Cristiana" if tipo_seccion == "Vida" else "Tesoros de la Biblia")
-            st.markdown(f"**{k}. {m.get('titulo', '')}**")
-            op_m = filtrar_ayudantes_inteligente("", lista_hermanos, color_sub)
-            op_alert = [f"{h['nombre']} (⚠️ REPETIDO x{conteo_mes[h['nombre']]})" if h['nombre'] in conteo_mes else h['nombre'] for h in op_m]
-            if "" not in op_alert: op_alert.insert(0, "")
-            
-            curr_val = asignados_actuales.get(f"p{k}_t", "")
-            idx_t = 0
-            if curr_val:
-                for idx_i, item_t in enumerate(op_alert):
-                    if item_t.startswith(curr_val): idx_t = idx_i; break
-
-            c1, c2 = st.columns(2)
-            with c1:
-                t_sel = st.selectbox(f"Titular {k}", op_alert, index=idx_t, key=f"t_{k}")
-                nuevos_asignados[f"p{k}_t"] = t_sel.split(" (⚠️") if t_sel else ""
-
-        if st.form_submit_button("💾 Guardar Asignaciones"):
-            payload = {"mes": mes_seleccionado, "semana": semana_seleccionada, "fecha_cabecera": semana_data.get("fecha_cabecera"), "lectura_cabecera": semana_data.get("lectura_cabecera"), "materias": materias, "asignados": nuevos_asignados, "ultima_firma": f"Modificado por: {coordinador_activo}"}
-            requests.post(f"{URL_BASE}/rest/v1/reuniones", headers=HEADERS_NUBE, json=payload)
-            st.success("¡Guardado!")
-            st.rerun()
-
-with p_hermanos:
-    st.header("👥 Nómina")
-    c_a, c_d = st.columns(2)
-    with c_a:
-        n = st.text_input("Nombre:", key="nom_p2")
-        a = st.text_input("Apellido:", key="ape_p2")
-        s = st.selectbox("Sexo:", ["Varón", "Mujer"], key="sex_p2")
-        ap = st.multiselect("Aptitudes:", ["Tesoros", "Lectura", "Seamos Mejores Maestros", "Presidencia", "Oración", "Vida Cristiana"], key="apt_p2")
-        
-        if st.button("⚡ Añadir Publicador"):
-            if n and a:
-                cadena_plana_aptitudes = ", ".join(ap) if ap else ""
-                payload_nuevo = {"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": cadena_plana_aptitudes}
-                requests.post(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, json=payload_nuevo)
-                st.success("¡Publicador añadido con éxito absoluto!")
-                st.rerun()
-    with c_d:
-        hermano_a_eliminar = st.selectbox("Dar de baja:", [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos])
-        if st.button("Confirmar Eliminación", type="primary"):
-            t = next((h for h in lista_hermanos if f"{h['nombre']} {h['apellido']}" == hermano_a_eliminar), None)
-            if t and t.get("id"):
-                requests.delete(f"{URL_BASE}/rest/v1/hermanos?id=eq.{t['id']}", headers=HEADERS_NUBE)
-                st.warning("Eliminado de la nube.")
-                st.rerun()
-                
-    nomina_fresca_web = cargar_hermanos_cloud()
-    if nomina_fresca_web:
-        st.table([{"Nombre": h.get("nombre"), "Apellido": h.get("apellido"), "Sexo": h.get("sexo"), "Aptitudes": h.get("aptitudes", "")} for h in nomina_fresca_web])
-    else:
-        st.info("La nómina está vacía en internet. Ingrese el primer publicador arriba.")
-
-with p_reuniones:
-    st.header("📝 Pegar Programa de la Reunión")
-    c_c1, c_c2 = st.columns(2)
-    with c_c1: m_dest = st.selectbox("Mes Destino:", ORDEN_MESES, key="m_p3")
-    with c_c2: s_dest = st.selectbox("Semana Destino:", SEMANAS_POSIBLES, key="s_p3")
-
-    with st.form("fp"):
-        t_pegar = st.text_area("Pega el texto completo de JW.org aquí:")
-        if st.form_submit_button("⚡ Cargar Semana"):
-            if t_pegar:
-                requests.delete(f"{URL_BASE}/rest/v1/reuniones?mes=eq.{m_dest}&semana=eq.{s_dest}", headers=HEADERS_NUBE)
-                f, l, mats = procesar_texto_plano_reunion(t_pegar)
-                payload_reun = {"mes": m_dest, "semana": s_dest, "fecha_cabecera": f, "lectura_cabecera": l, "materias": mats, "asignados": {}, "ultima_firma": "Cargado desde JW.org"}
-                requests.post(f"{URL_BASE}/rest/v1/reuniones", headers=HEADERS_NUBE, json=payload_reun)
-                st.success("¡Cargado con éxito absoluto!")
-                st.rerun()
+"Listo el bloque 2, pásame la parte 3 del refrescado instantáneo"
