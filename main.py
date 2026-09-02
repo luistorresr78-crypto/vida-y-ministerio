@@ -200,7 +200,7 @@ with p_hermanos:
                 payload_nuevo = {"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": cadena_plana_aptitudes}
                 requests.post(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, json=payload_nuevo)
                 st.success("¡Publicador añadido con éxito absoluto!")
-                st.rerun() # REFRESCADO INMEDIATO EN CALIENTE
+                st.rerun()
     with c_d:
         hermano_a_eliminar = st.selectbox("Dar de baja:", [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos])
         if st.button("Confirmar Eliminación", type="primary"):
@@ -208,7 +208,7 @@ with p_hermanos:
             if t and t.get("id"):
                 requests.delete(f"{URL_BASE}/rest/v1/hermanos?id=eq.{t['id']}", headers=HEADERS_NUBE)
                 st.warning("Eliminado de la nube.")
-                st.rerun() # REFRESCADO INMEDIATO AL BORRAR
+                st.rerun()
                 
     nomina_fresca_web = cargar_hermanos_cloud()
     if nomina_fresca_web:
@@ -232,4 +232,3 @@ with p_reuniones:
                 requests.post(f"{URL_BASE}/rest/v1/reuniones", headers=HEADERS_NUBE, json=payload_reun)
                 st.success("¡Cargado con éxito absoluto!")
                 st.rerun()
-
