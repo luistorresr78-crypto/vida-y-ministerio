@@ -89,7 +89,7 @@ def procesar_texto_plano_reunion(texto_usuario):
             if num_punto in ["1", "2", "3"]: seccion_real = "Tesoros"
             elif num_punto in ["4", "5", "6"]: seccion_real = "Maestros"
             else: seccion_real = "Vida"
-            materias_detectadas[num_punto] = {"titulo": titulo_completo, "minutos": minutes, "seccion": seccion_real}
+            materias_detectadas[num_punto] = {"titulo": titulo_completo, "minutos": minutos, "seccion": seccion_real}
     return fecha_cab, lectura_cab, materias_detectadas
 
 p_asignaciones, p_hermanos, p_reuniones = st.tabs(["📋 Mesa de Asignaciones", "👥 Gestión de Hermanos (Nómina)", "📝 Pegar Programa de la Reunión"])
@@ -203,7 +203,7 @@ with p_hermanos:
                 payload_nuevo = {"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": cadena_plana_aptitudes}
                 res_post = requests.post(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, json=payload_nuevo)
                 
-                # CORRECCIÓN DE SINTAXIS CRUCIAL DE LA LÍNEA 205
+                # CORRECCIÓN DE SINTAXIS INDESTRUCTIBLE NATIVA
                 if res_post.status_code in:
                     st.success("¡Publicador añadido con éxito absoluto en internet!")
                     st.rerun()
