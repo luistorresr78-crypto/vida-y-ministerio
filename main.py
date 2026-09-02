@@ -22,7 +22,7 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
     if "Tesoros" in aptitud_filtro: filtro_real = "Tesoros"
     elif "Maestros" in aptitud_filtro or "Seamos" in aptitud_filtro: filtro_real = "Seamos Mejores Maestros"
     
-    candidatos = [h for h in lista_hermanos if filtro_real in h.get("aptitudes", [])]
+    candidatos = [h for h in lista_hermanos if filtro_real in h.get("aptitudes", []) or filtro_real in "".join(h.get("aptitudes", []))]
     
     if hermano_titular and filtro_real == "Seamos Mejores Maestros":
         titular_limpio = hermano_titular.strip()
@@ -50,12 +50,17 @@ def cargar_hermanos_cloud():
         if res.status_code == 200:
             lista = []
             for h in res.json():
+                apt_crudas = h.get("aptitudes", [])
+                if isinstance(apt_crudas, str): apt_lista = [a.strip() for a in apt_crudas.split(",") if a.strip()]
+                elif isinstance(apt_crudas, list): apt_lista = apt_crudas
+                else: apt_lista = []
+                
                 lista.append({
                     "id": h.get("id"),
                     "nombre": h.get("nombre", "").strip().title(),
                     "apellido": h.get("apellido", "").strip().title(),
                     "sexo": h.get("sexo", "Varón"),
-                    "aptitudes": h.get("aptitudes", [])
+                    "aptitudes": apt_lista
                 })
             return sorted(lista, key=lambda x: (x.get("nombre", "").lower(), x.get("apellido", "").lower()))
     except Exception: pass
@@ -138,7 +143,7 @@ with p_asignaciones:
     st.subheader(f"📅 Rango de Fecha: {semana_data.get('fecha_cabecera')}")
     st.info(f"📖 Lectura de la Semana: **{semana_data.get('lectura_cabecera')}**")
 
-    # --- BARRA LATERAL DE REEMPLAZOS INTEGRADA ---
+    # --- BARRA LATERAL DE CONTROL RECONSTRUIDA ---
     with st.sidebar:
         st.header("⚙️ Control")
         coordinador_activo = st.selectbox("¿Quién firma?", ["Sergio", "Jonathan", "Luis"], key="cf")
@@ -229,6 +234,7 @@ with p_hermanos:
     st.header("👥 Nómina")
     c_a, c_d = st.columns(2)
     with c_a:
+        # BOTÓN ULTRA LIBRE FUERA DE CUALQUIER FORMULARIO TRABADO
         n = st.text_input("Nombre:", key="nom_p2")
         a = st.text_input("Apellido:", key="ape_p2")
         s = st.selectbox("Sexo:", ["Varón", "Mujer"], key="sex_p2")
@@ -236,15 +242,7 @@ with p_hermanos:
         
         if st.button("⚡ Añadir Publicador"):
             if n and a:
-                # BYPASS UNIVERSAL: Empaqueta la lista como texto plano compatible de forma absoluta
-                cadena_plana = ", ".join(ap) if ap else ""
-                payload_hermano = {
-                    "nombre": n.strip().title(), 
-                    "apellido": a.strip().title(), 
-                    "sexo": s, 
-                    "aptitudes": [cadena_plana]
-                }
-                requests.post(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, json=payload_hermano)
+                requests.post(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, json={"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": ap})
                 st.success("¡Publicador añadido con éxito absoluto!")
                 st.rerun()
     with c_d:
@@ -253,9 +251,10 @@ with p_hermanos:
             t = next((h for h in lista_hermanos if f"{h['nombre']} {h['apellido']}" == hermano_a_eliminar), None)
             if t and t.get("id"):
                 requests.delete(f"{URL_BASE}/rest/v1/hermanos?id=eq.{t['id']}", headers=HEADERS_NUBE)
-                st.warning("Eliminado de la nube.")
+                st.warning("Eliminado.")
                 st.rerun()
                 
+    # OBLIGAMOS A LEER LA NÓMINA EN CALIENTE EN TIEMPO REAL DIRECTO EN LA TABLA FRONTAL
     nomina_fresca_web = cargar_hermanos_cloud()
     if nomina_fresca_web:
         st.table([{"Nombre": h.get("nombre"), "Apellido": h.get("apellido"), "Sexo": h.get("sexo"), "Aptitudes": ", ".join(h.get("aptitudes", [])) if isinstance(h.get("aptitudes"), list) else str(h.get("aptitudes"))} for h in nomina_fresca_web])
