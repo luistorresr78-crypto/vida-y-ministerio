@@ -84,8 +84,8 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n")]
     lineas_limpias = [l for l in lineas if l]
-    fecha_cab = lineas_limpias if len(lineas_limpias) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas_limpias if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
+    fecha_cab = lineas_limpias[0] if len(lineas_limpias) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas_limpias[1] if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
 
     for i, linea in enumerate(lineas_limpias):
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
@@ -101,7 +101,7 @@ def procesar_texto_plano_reunion(texto_usuario):
             match_mins = re.search(r"\(\s*(\d+)\s*min", titulo_completo, re.IGNORECASE)
             minutos = match_mins.group(1) if match_mins else "5"
             
-            if num_punto in ["1", "2", "3"]: seccion_real = "T珍oros"
+            if num_punto in ["1", "2", "3"]: seccion_real = "Tesoros"
             elif num_punto in ["4", "5", "6"]: seccion_real = "Maestros"
             else: seccion_real = "Vida"
             materias_detectadas[num_punto] = {"titulo": titulo_completo, "minutos": minutos, "seccion": seccion_real}
@@ -138,7 +138,7 @@ with p_asignaciones:
     st.subheader(f"📅 Rango de Fecha: {semana_data.get('fecha_cabecera')}")
     st.info(f"📖 Lectura de la Semana: **{semana_data.get('lectura_cabecera')}**")
 
-    # --- BARRA LATERAL RESTAURADA DE REEMPLAZOS ---
+    # --- BARRA LATERAL DE REEMPLAZOS INTEGRADA ---
     with st.sidebar:
         st.header("⚙️ Control")
         coordinador_activo = st.selectbox("¿Quién firma?", ["Sergio", "Jonathan", "Luis"], key="cf")
@@ -229,7 +229,6 @@ with p_hermanos:
     st.header("👥 Nómina")
     c_a, c_d = st.columns(2)
     with c_a:
-        # BOTÓN INDEPENDIENTE CORREGIDO FUERA DE CUALQUIER FORMULARIO TRABADO
         n = st.text_input("Nombre:", key="nom_p2")
         a = st.text_input("Apellido:", key="ape_p2")
         s = st.selectbox("Sexo:", ["Varón", "Mujer"], key="sex_p2")
@@ -237,7 +236,15 @@ with p_hermanos:
         
         if st.button("⚡ Añadir Publicador"):
             if n and a:
-                requests.post(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, json={"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": ap})
+                # BYPASS UNIVERSAL: Empaqueta la lista como texto plano compatible de forma absoluta
+                cadena_plana = ", ".join(ap) if ap else ""
+                payload_hermano = {
+                    "nombre": n.strip().title(), 
+                    "apellido": a.strip().title(), 
+                    "sexo": s, 
+                    "aptitudes": [cadena_plana]
+                }
+                requests.post(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, json=payload_hermano)
                 st.success("¡Publicador añadido con éxito absoluto!")
                 st.rerun()
     with c_d:
@@ -246,7 +253,7 @@ with p_hermanos:
             t = next((h for h in lista_hermanos if f"{h['nombre']} {h['apellido']}" == hermano_a_eliminar), None)
             if t and t.get("id"):
                 requests.delete(f"{URL_BASE}/rest/v1/hermanos?id=eq.{t['id']}", headers=HEADERS_NUBE)
-                st.warning("Eliminado.")
+                st.warning("Eliminado de la nube.")
                 st.rerun()
                 
     nomina_fresca_web = cargar_hermanos_cloud()
