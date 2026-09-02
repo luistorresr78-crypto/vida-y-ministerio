@@ -16,7 +16,7 @@ HEADERS_NUBE = {
 ORDEN_MESES = ["SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO"]
 SEMANAS_POSIBLES = ["Semana 1", "Semana 2", "Semana 3", "Semana 4", "Semana 5", "Semana 6"]
 
-# --- FILTRO INTELIGENTE LOCAL INTEGRADO ---
+# --- FILTRO INTELIGENTE LOCAL CORREGIDO ---
 def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtro):
     filtro_real = aptitud_filtro
     if "Tesoros" in aptitud_filtro: filtro_real = "Tesoros"
@@ -104,7 +104,7 @@ def procesar_texto_plano_reunion(texto_usuario):
             if num_punto in ["1", "2", "3"]: seccion_real = "Tesoros"
             elif num_punto in ["4", "5", "6"]: seccion_real = "Maestros"
             else: seccion_real = "Vida"
-            materias_detectadas[num_punto] = {"titulo": titulo_completo, "minutos": minutos, "seccion": seccion_real}
+            materias_detectadas[num_punto] = {"titulo": titulo_completo, "minutos": minutes, "seccion": seccion_real}
     return fecha_cab, lectura_cab, materias_detectadas
 
 p_asignaciones, p_hermanos, p_reuniones = st.tabs(["📋 Mesa de Asignaciones", "👥 Gestión de Hermanos (Nómina)", "📝 Pegar Programa de la Reunión"])
@@ -162,6 +162,7 @@ with p_asignaciones:
         st.markdown("### 🎚️ Asignar Privilegios")
         c_p1, c_p2 = st.columns(2)
         with c_p1:
+            # CORREGIDO: Llama a la funcion limpia local sin prefijos externos
             op_presi = filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia")
             nom_presi = [h["nombre"] for h in op_presi]
             val_presi_curr = asignados_actuales.get("presidente", "")
@@ -169,6 +170,7 @@ with p_asignaciones:
             idx_presi = nom_presi.index(val_presi_curr) if val_presi_curr in nom_presi else 0
             presidente = st.selectbox("Presidente", nom_presi, index=idx_presi)
         with c_p2:
+            # CORREGIDO: Llama a la funcion limpia local sin prefijos externos
             op_ora = filtrar_ayudantes_inteligente("", lista_hermanos, "Oración")
             nom_ora = [h["nombre"] for h in op_ora]
             val_ora_curr = asignados_actuales.get("oracion_inicial", "")
@@ -182,6 +184,7 @@ with p_asignaciones:
             tipo_seccion = m.get("seccion", "Tesoros")
             color_sub = "Seamos Mejores Maestros" if tipo_seccion == "Maestros" else ("Vida Cristiana" if tipo_seccion == "Vida" else "Tesoros de la Biblia")
             st.markdown(f"**{k}. {m.get('titulo', '')}**")
+            # CORREGIDO: Tómbola local directa libre de llamadas externas erróneas
             op_m = filtrar_ayudantes_inteligente("", lista_hermanos, color_sub)
             
             op_alert = []
@@ -204,6 +207,7 @@ with p_asignaciones:
                 nuevos_asignados[f"p{k}_t"] = t_limpio
             with c2:
                 if tipo_seccion == "Maestros":
+                    # CORREGIDO: Tómbola local directa libre de llamadas externas erróneas
                     op_ayu = filtrar_ayudantes_inteligente(t_limpio, lista_hermanos, "Seamos Mejores Maestros")
                     op_ayu_al = [f"{h['nombre']} (⚠️ REPETIDO x{conteo_mes[h['nombre']]} )" if h['nombre'] in conteo_mes else h['nombre'] for h in op_ayu]
                     if "" not in op_ayu_al: op_ayu_al.insert(0, "")
@@ -229,7 +233,6 @@ with p_hermanos:
     st.header("👥 Nómina")
     c_a, c_d = st.columns(2)
     with c_a:
-        # BOTÓN INDEPENDIENTE LIBERADO FUERA DE FORMULARIOS TRABADOS
         n = st.text_input("Nombre:", key="nom_p2")
         a = st.text_input("Apellido:", key="ape_p2")
         s = st.selectbox("Sexo:", ["Varón", "Mujer"], key="sex_p2")
@@ -246,10 +249,9 @@ with p_hermanos:
             t = next((h for h in lista_hermanos if f"{h['nombre']} {h['apellido']}" == hermano_a_eliminar), None)
             if t and t.get("id"):
                 requests.delete(f"{URL_BASE}/rest/v1/hermanos?id=eq.{t['id']}", headers=HEADERS_NUBE)
-                st.warning("Eliminado de la nube.")
+                st.warning("Eliminado.")
                 st.rerun()
                 
-    # Recarga en caliente en tiempo real
     nomina_fresca_web = cargar_hermanos_cloud()
     if nomina_fresca_web:
         st.table([{"Nombre": h.get("nombre"), "Apellido": h.get("apellido"), "Sexo": h.get("sexo"), "Aptitudes": ", ".join(h.get("aptitudes", [])) if isinstance(h.get("aptitudes"), list) else str(h.get("aptitudes"))} for h in nomina_fresca_web])
