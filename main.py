@@ -101,7 +101,7 @@ def procesar_texto_plano_reunion(texto_usuario):
             match_mins = re.search(r"\(\s*(\d+)\s*min", titulo_completo, re.IGNORECASE)
             minutos = match_mins.group(1) if match_mins else "5"
             
-            if num_punto in ["1", "2", "3"]: seccion_real = "Tesoros"
+            if num_punto in ["1", "2", "3"]: seccion_real = "T珍oros"
             elif num_punto in ["4", "5", "6"]: seccion_real = "Maestros"
             else: seccion_real = "Vida"
             materias_detectadas[num_punto] = {"titulo": titulo_completo, "minutos": minutos, "seccion": seccion_real}
@@ -246,7 +246,7 @@ with p_hermanos:
             t = next((h for h in lista_hermanos if f"{h['nombre']} {h['apellido']}" == hermano_a_eliminar), None)
             if t and t.get("id"):
                 requests.delete(f"{URL_BASE}/rest/v1/hermanos?id=eq.{t['id']}", headers=HEADERS_NUBE)
-                st.warning("Eliminado de la nube.")
+                st.warning("Eliminado.")
                 st.rerun()
                 
     nomina_fresca_web = cargar_hermanos_cloud()
