@@ -4,42 +4,22 @@ import os
 import re
 import requests
 
-# --- CONEXIÓN DIRECTA SOLDADA A LOS SECRETS DE LA NUBE ---
+# --- CONEXIÓN DIRECTA CORREGIDA A LOS SECRETS DE LA NUBE ---
 URL_BASE = st.secrets["SUPABASE_URL"]
 HEADERS_NUBE = {
     "apikey": st.secrets["SUPABASE_KEY"],
     "Authorization": f"Bearer {st.secrets['SUPABASE_KEY']}",
-    "Content-Type": "application/json",
-    "Prefer": "return=representation"
 }
 
 ORDEN_MESES = ["SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO"]
 SEMANAS_POSIBLES = ["Semana 1", "Semana 2", "Semana 3", "Semana 4", "Semana 5", "Semana 6"]
 
-# --- FILTRO INTELIGENTE LOCAL COMPATIBLE CON FORMATO PLANO ---
 def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtro):
     filtro_real = aptitud_filtro
     if "Tesoros" in aptitud_filtro: filtro_real = "Tesoros"
     elif "Maestros" in aptitud_filtro or "Seamos" in aptitud_filtro: filtro_real = "Seamos Mejores Maestros"
     
-    # Busca la coincidencia de texto común de forma tolerante
     candidatos = [h for h in lista_hermanos if filtro_real.lower() in h.get("aptitudes", "").lower()]
-    
-    if hermano_titular and filtro_real == "Seamos Mejores Maestros":
-        titular_limpio = hermano_titular.strip()
-        sexo_tit = next((h["sexo"] for h in lista_hermanos if f"{h['nombre']} {h['apellido']}" == titular_limpio), "Varón")
-        apellido_tit = titular_limpio.split(" ")[-1] if " " in titular_limpio else ""
-
-        candidatos_validos = []
-        for h in candidatos:
-            nombre_h = f"{h['nombre']} {h['apellido']}"
-            if nombre_h == titular_limpio: continue
-            if sexo_tit == "Mujer" and h["sexo"] == "Mujer": candidatos_validos.append(h)
-            elif sexo_tit == "Varón":
-                if h["sexo"] == "Varón" or (h["sexo"] == "Mujer" and h["apellido"].lower() == apellido_tit.lower()):
-                    candidatos_validos.append(h)
-        candidatos = candidatos_validos
-
     lista_listas = []
     for h in candidatos:
         lista_listas.append({"nombre": f"{h['nombre']} {h['apellido']}"})
@@ -47,7 +27,7 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
 
 def cargar_hermanos_cloud():
     try:
-        res = requests.get(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, timeout=10)
+        res = requests.get(f"{URL_BASE}/rest/v1/hermanos?select=*", headers=HEADERS_NUBE, timeout=10)
         if res.status_code == 200:
             lista = []
             for h in res.json():
@@ -56,7 +36,7 @@ def cargar_hermanos_cloud():
                     "nombre": h.get("nombre", "").strip().title(),
                     "apellido": h.get("apellido", "").strip().title(),
                     "sexo": h.get("sexo", "Varón"),
-                    "aptitudes": str(h.get("aptitudes", "")) # Carga el texto plano directo sin procesar listas corruptas
+                    "aptitudes": str(h.get("aptitudes", ""))
                 })
             return sorted(lista, key=lambda x: (x.get("nombre", "").lower(), x.get("apellido", "").lower()))
     except Exception: pass
@@ -64,7 +44,7 @@ def cargar_hermanos_cloud():
 
 def cargar_reuniones_cloud():
     try:
-        res = requests.get(f"{URL_BASE}/rest/v1/reuniones", headers=HEADERS_NUBE, timeout=10)
+        res = requests.get(f"{URL_BASE}/rest/v1/reuniones?select=*", headers=HEADERS_NUBE, timeout=10)
         if res.status_code == 200:
             dicc_reuns = {}
             for r in res.json():
@@ -85,8 +65,8 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n")]
     lineas_limpias = [l for l in lineas if l]
-    fecha_cab = lineas_limpias[0] if len(lineas_limpias) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas_limpias[1] if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
+    fecha_cab = lineas_limpias if len(lineas_limpias) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas_limpias if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
 
     for i, linea in enumerate(lineas_limpias):
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
@@ -123,11 +103,11 @@ with p_asignaciones:
                 "1": {"titulo": "1. Meditar en las cualidades de Jehová fortalece nuestra fe (10 min.)", "minutos": "10", "seccion": "Tesoros"}, 
                 "2": {"titulo": "2. Busquemos perlas escondidas (10 min.)", "minutos": "10", "seccion": "Tesoros"}, 
                 "3": {"titulo": "3. Lectura de la Biblia (4 min.) Jer 32:6-18 (th lección 2).", "minutos": "4", "seccion": "Tesoros"},
-                "4": {"titulo": "4. Empiece conversaciones (3 min.) DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 4 punto 3).", "minutos": "3", "seccion": "Maestros"},
-                "5": {"titulo": "5. Empiece conversaciones (4 min.) PREDICACIÓN INFORMAL. Ofrezca un curso de la Biblia (lmd lección 4 punto 4).", "minutos": "4", "seccion": "Maestros"},
-                "6": {"titulo": "6. Haga revisitas (5 min.) DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 8 punto 3).", "minutos": "5", "seccion": "Maestros"},
+                "4": {"titulo": "4. Empiece conversaciones (3 min.)", "minutos": "3", "seccion": "Maestros"},
+                "5": {"titulo": "5. Empiece conversaciones (4 min.)", "minutos": "4", "seccion": "Maestros"},
+                "6": {"titulo": "6. Haga revisitas (5 min.)", "minutos": "5", "seccion": "Maestros"},
                 "7": {"titulo": "7. En esta campaña, ni un golpe al aire (15 min.)", "minutos": "15", "seccion": "Vida"},
-                "8": {"titulo": "8. Estudio bíblico de la congregación (30 min.) wcg cap. 7.", "minutos": "30", "seccion": "Vida"}
+                "8": {"titulo": "8. Estudio bíblico de la congregación (30 min.)", "minutos": "30", "seccion": "Vida"}
             },
             "asignados": {}, "ultima_firma": ""
         }
@@ -139,7 +119,6 @@ with p_asignaciones:
     st.subheader(f"📅 Rango de Fecha: {semana_data.get('fecha_cabecera')}")
     st.info(f"📖 Lectura de la Semana: **{semana_data.get('lectura_cabecera')}**")
 
-    # --- BARRA LATERAL DE CONTROL RECONSTRUIDA ---
     with st.sidebar:
         st.header("⚙️ Control")
         coordinador_activo = st.selectbox("¿Quién firma?", ["Sergio", "Jonathan", "Luis"], key="cf")
@@ -166,14 +145,12 @@ with p_asignaciones:
             op_presi = filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia")
             nom_presi = [h["nombre"] for h in op_presi]
             val_presi_curr = asignados_actuales.get("presidente", "")
-            if isinstance(val_presi_curr, list) and val_presi_curr: val_presi_curr = val_presi_curr
             idx_presi = nom_presi.index(val_presi_curr) if val_presi_curr in nom_presi else 0
             presidente = st.selectbox("Presidente", nom_presi, index=idx_presi)
         with c_p2:
             op_ora = filtrar_ayudantes_inteligente("", lista_hermanos, "Oración")
             nom_ora = [h["nombre"] for h in op_ora]
             val_ora_curr = asignados_actuales.get("oracion_inicial", "")
-            if isinstance(val_ora_curr, list) and val_ora_curr: val_ora_curr = val_ora_curr
             idx_ora = nom_ora.index(val_ora_curr) if val_ora_curr in nom_ora else 0
             oracion_inicial = st.selectbox("Oración Inicial", nom_ora, index=idx_ora)
 
@@ -184,16 +161,11 @@ with p_asignaciones:
             color_sub = "Seamos Mejores Maestros" if tipo_seccion == "Maestros" else ("Vida Cristiana" if tipo_seccion == "Vida" else "Tesoros de la Biblia")
             st.markdown(f"**{k}. {m.get('titulo', '')}**")
             op_m = filtrar_ayudantes_inteligente("", lista_hermanos, color_sub)
-            
-            op_alert = []
-            for h in op_m:
-                n = h["nombre"]
-                op_alert.append(f"{n} (⚠️ REPETIDO x{conteo_mes[n]})" if n in conteo_mes else n)
+            op_alert = [f"{h['nombre']} (⚠️ REPETIDO x{conteo_mes[h['nombre']]})" if h['nombre'] in conteo_mes else h['nombre'] for h in op_m]
             if "" not in op_alert: op_alert.insert(0, "")
             
-            idx_t = 0
             curr_val = asignados_actuales.get(f"p{k}_t", "")
-            if isinstance(curr_val, list) and curr_val: curr_val = curr_val
+            idx_t = 0
             if curr_val:
                 for idx_i, item_t in enumerate(op_alert):
                     if item_t.startswith(curr_val): idx_t = idx_i; break
@@ -201,30 +173,13 @@ with p_asignaciones:
             c1, c2 = st.columns(2)
             with c1:
                 t_sel = st.selectbox(f"Titular {k}", op_alert, index=idx_t, key=f"t_{k}")
-                t_limpio = t_sel.split(" (⚠️") if t_sel else ""
-                nuevos_asignados[f"p{k}_t"] = t_limpio
-            with c2:
-                if tipo_seccion == "Maestros":
-                    op_ayu = filtrar_ayudantes_inteligente(t_limpio, lista_hermanos, "Seamos Mejores Maestros")
-                    op_ayu_al = [f"{h['nombre']} (⚠️ REPETIDO x{conteo_mes[h['nombre']]} )" if h['nombre'] in conteo_mes else h['nombre'] for h in op_ayu]
-                    if "" not in op_ayu_al: op_ayu_al.insert(0, "")
-                    idx_a = 0
-                    curr_ayu = asignados_actuales.get(f"p{k}_a", "")
-                    if isinstance(curr_ayu, list) and curr_ayu: curr_ayu = curr_ayu
-                    if curr_ayu:
-                        for idx_i, item_t in enumerate(op_ayu_al):
-                            if item_t.startswith(curr_ayu): idx_a = idx_i; break
-                    a_sel = st.selectbox(f"Ayudante {k}", op_ayu_al, index=idx_a, key=f"a_{k}")
-                    nuevos_asignados[f"p{k}_a"] = a_sel.split(" (⚠️") if a_sel else ""
+                nuevos_asignados[f"p{k}_t"] = t_sel.split(" (⚠️") if t_sel else ""
 
         if st.form_submit_button("💾 Guardar Asignaciones"):
             payload = {"mes": mes_seleccionado, "semana": semana_seleccionada, "fecha_cabecera": semana_data.get("fecha_cabecera"), "lectura_cabecera": semana_data.get("lectura_cabecera"), "materias": materias, "asignados": nuevos_asignados, "ultima_firma": f"Modificado por: {coordinador_activo}"}
-            requests.post(f"{URL_BASE}/rest/v1/reuniones", headers={**HEADERS_NUBE, "Prefer": "resolution=merge-duplicates"}, json=payload)
+            requests.post(f"{URL_BASE}/rest/v1/reuniones", headers=HEADERS_NUBE, json=payload)
             st.success("¡Guardado!")
             st.rerun()
-
-    if st.button("⚙️ Procesar Formato Carta/A4"):
-        st.info("Función de PDF acoplada con éxito.")
 
 with p_hermanos:
     st.header("👥 Nómina")
@@ -238,13 +193,8 @@ with p_hermanos:
         if st.button("⚡ Añadir Publicador"):
             if n and a:
                 cadena_plana_aptitudes = ", ".join(ap) if ap else ""
-                payload_nuevo = {
-                    "nombre": n.strip().title(), 
-                    "apellido": a.strip().title(), 
-                    "sexo": s, 
-                    "aptitudes": cadena_plana_aptitudes
-                }
-                requests.post(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, json={**payload_nuevo})
+                payload_nuevo = {"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": cadena_plana_aptitudes}
+                requests.post(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, json=payload_nuevo)
                 st.success("¡Publicador añadido con éxito absoluto!")
                 st.rerun()
     with c_d:
@@ -270,11 +220,11 @@ with p_reuniones:
 
     with st.form("fp"):
         t_pegar = st.text_area("Pega el texto completo de JW.org aquí:")
-        if st.form_submit_button("⚡ Procesar y Cargar Semana Inmediatamente"):
+        if st.form_submit_button("⚡ Cargar Semana"):
             if t_pegar:
                 requests.delete(f"{URL_BASE}/rest/v1/reuniones?mes=eq.{m_dest}&semana=eq.{s_dest}", headers=HEADERS_NUBE)
                 f, l, mats = procesar_texto_plano_reunion(t_pegar)
                 payload_reun = {"mes": m_dest, "semana": s_dest, "fecha_cabecera": f, "lectura_cabecera": l, "materias": mats, "asignados": {}, "ultima_firma": "Cargado desde JW.org"}
-                requests.post(f"{URL_BASE}/rest/v1/reuniones", headers={**HEADERS_NUBE, "Prefer": "resolution=merge-duplicates"}, json=payload_reun)
-                st.success("¡Cargado con éxito absoluto en internet!")
+                requests.post(f"{URL_BASE}/rest/v1/reuniones", headers=HEADERS_NUBE, json=payload_reun)
+                st.success("¡Cargado con éxito absoluto!")
                 st.rerun()
