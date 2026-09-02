@@ -4,11 +4,15 @@ import os
 import re
 import requests
 
-# --- CONEXIÓN DIRECTA CORREGIDA A LOS SECRETS DE LA NUBE ---
+# --- CONFIGURACIÓN DE PÁGINA ÚNICA INDEPENDIENTE ---
+st.set_page_config(page_title="Programa de Reunión", page_icon="📋", layout="wide")
+
 URL_BASE = st.secrets["SUPABASE_URL"]
 HEADERS_NUBE = {
     "apikey": st.secrets["SUPABASE_KEY"],
     "Authorization": f"Bearer {st.secrets['SUPABASE_KEY']}",
+    "Content-Type": "application/json",
+    "Prefer": "return=representation"
 }
 
 ORDEN_MESES = ["SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO"]
@@ -58,15 +62,12 @@ def cargar_reuniones_cloud():
             return dicc_reuns
     except Exception: pass
     return {}
-
-lista_hermanos = cargar_hermanos_cloud()
-datos_reuniones = cargar_reuniones_cloud()
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n")]
     lineas_limpias = [l for l in lineas if l]
-    fecha_cab = lineas_limpias if len(lineas_limpias) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas_limpias if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
+    fecha_cab = lineas_limpias[0] if len(lineas_limpias) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas_limpias[1] if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
 
     for i, linea in enumerate(lineas_limpias):
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
@@ -119,6 +120,7 @@ with p_asignaciones:
     st.subheader(f"📅 Rango de Fecha: {semana_data.get('fecha_cabecera')}")
     st.info(f"📖 Lectura de la Semana: **{semana_data.get('lectura_cabecera')}**")
 
+    # --- BARRA LATERAL DE CONTROL RESTAURADA ---
     with st.sidebar:
         st.header("⚙️ Control")
         coordinador_activo = st.selectbox("¿Quién firma?", ["Sergio", "Jonathan", "Luis"], key="cf")
