@@ -51,14 +51,22 @@ def cargar_reuniones_cloud():
     except Exception: pass
     return {}
 
+def cargar_reemplazos_cloud():
+    try:
+        res = requests.get(f"{URL_BASE}/rest/v1/reemplazos", headers=HEADERS_NUBE, timeout=10)
+        if res.status_code == 200: return res.json()
+    except Exception: pass
+    return []
+
 lista_hermanos = cargar_hermanos_cloud()
 datos_reuniones = cargar_reuniones_cloud()
+lista_reemplazos = cargar_reemplazos_cloud()
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n")]
     lineas_limpias = [l for l in lineas if l]
-    fecha_cab = lineas_limpias[0] if len(lineas_limpias) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas_limpias[1] if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
+    fecha_cab = lineas_limpias if len(lineas_limpias) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas_limpias if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
 
     for i, linea in enumerate(lineas_limpias):
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
@@ -111,9 +119,17 @@ with p_asignaciones:
     st.subheader(f"📅 Rango de Fecha: {semana_data.get('fecha_cabecera')}")
     st.info(f"📖 Lectura de la Semana: **{semana_data.get('lectura_cabecera')}**")
 
+    # --- BARRA LATERAL RESTAURADA AL 100% ---
     with st.sidebar:
         st.header("⚙️ Control")
         coordinador_activo = st.selectbox("¿Quién firma?", ["Sergio", "Jonathan", "Luis"], key="cf")
+        h_aus = st.text_input("Ausente:")
+        h_sus = st.text_input("Suplente:")
+        if st.button("Guardar Reemplazo"):
+            if h_aus and h_sus:
+                requests.post(f"{URL_BASE}/rest/v1/reemplazos", headers=HEADERS_NUBE, json={"hermano_ausente": h_aus.strip().title(), "hermano_sustituto": h_sus.strip().title()})
+                st.success("¡Registrado!")
+                st.rerun()
 
     conteo_mes = {}
     for sem_k, sem_v in datos_reuniones[mes_seleccionado].items():
@@ -201,15 +217,16 @@ with p_hermanos:
     st.header("👥 Nómina")
     c_a, c_d = st.columns(2)
     with c_a:
-        n = st.text_input("Nombre:")
-        a = st.text_input("Apellido:")
-        s = st.selectbox("Sexo:", ["Varón", "Mujer"])
-        ap = st.multiselect("Aptitudes:", ["Tesoros", "Lectura", "Seamos Mejores Maestros", "Presidencia", "Oración", "Vida Cristiana"])
+        # BOTÓN INDEPENDIENTE CORREGIDO FUERA DE CUALQUIER FORMULARIO TRABADO
+        n = st.text_input("Nombre:", key="nom_p2")
+        a = st.text_input("Apellido:", key="ape_p2")
+        s = st.selectbox("Sexo:", ["Varón", "Mujer"], key="sex_p2")
+        ap = st.multiselect("Aptitudes:", ["Tesoros", "Lectura", "Seamos Mejores Maestros", "Presidencia", "Oración", "Vida Cristiana"], key="apt_p2")
         
         if st.button("⚡ Añadir Publicador"):
             if n and a:
                 requests.post(f"{URL_BASE}/rest/v1/hermanos", headers=HEADERS_NUBE, json={"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": ap})
-                st.success("¡Añadido con éxito total!")
+                st.success("¡Publicador añadido con éxito absoluto!")
                 st.rerun()
     with c_d:
         hermano_a_eliminar = st.selectbox("Dar de baja:", [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos])
@@ -217,12 +234,13 @@ with p_hermanos:
             t = next((h for h in lista_hermanos if f"{h['nombre']} {h['apellido']}" == hermano_a_eliminar), None)
             if t and t.get("id"):
                 requests.delete(f"{URL_BASE}/rest/v1/hermanos?id=eq.{t['id']}", headers=HEADERS_NUBE)
-                st.warning("Eliminado.")
+                st.warning("Eliminado de la nube.")
                 st.rerun()
                 
-    nomina_real = cargar_hermanos_cloud()
-    if nomina_real:
-        st.table([{"Nombre": h.get("nombre"), "Apellido": h.get("apellido"), "Sexo": h.get("sexo"), "Aptitudes": ", ".join(h.get("aptitudes", [])) if isinstance(h.get("aptitudes"), list) else str(h.get("aptitudes"))} for h in nomina_real])
+    # Recarga en vivo leyendo directo la tabla fresca
+    nomina_fresca_web = cargar_hermanos_cloud()
+    if nomina_fresca_web:
+        st.table([{"Nombre": h.get("nombre"), "Apellido": h.get("apellido"), "Sexo": h.get("sexo"), "Aptitudes": ", ".join(h.get("aptitudes", [])) if isinstance(h.get("aptitudes"), list) else str(h.get("aptitudes"))} for h in nomina_fresca_web])
     else:
         st.info("La nómina está vacía en internet. Ingrese el primer publicador arriba.")
 
