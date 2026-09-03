@@ -157,20 +157,21 @@ with pestana_programa:
 
     st.markdown("---")
     
-    # PROCESAMIENTO FORZADO TOLERANTE DE REPORLAB CONTRA EL STRIP VACÍO
+    # FORZAMOS UN NOMBRE DE ARCHIVO ESTÁNDAR FIJO CONTRA EL ERROR DE NOMBRE CORRUPTO
+    nombre_archivo_pdf = "reunion_procesada.pdf"
+    
     try:
-        reglas.generar_pdf_estilo_oficial("PROCESADO_WEB", f_cab, materias_dinamicas, asignados_en_vivo)
+        # Enviamos "reunion_procesada" en lugar de "PROCESADO_WEB" para evitar fallos de strings
+        reglas.generar_pdf_estilo_oficial("reunion_procesada", f_cab, materias_dinamicas, asignados_en_vivo)
     except Exception:
         pass
-        
-    nombre_archivo_pdf = f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"
 
     if boton_armar_pdf:
         st.success(f"¡Folleto procesado con éxito por {coordinador_activo}! El botón morado de abajo está listo con los datos reales.")
         
     st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
 
-    # EL BOTÓN SE QUEDA PINTADO FIJO Y CARGA EN CALIENTE LOS DATOS DEL LIENZO
+    # EL BOTÓN ENCUENTRA SIEMPRE EL MISMO NOMBRE Y SE ACTIVA SIN INTERRUPCIONES
     if os.path.exists(nombre_archivo_pdf):
         with open(nombre_archivo_pdf, "rb") as pdf_file:
             pdf_bytes = pdf_file.read()
@@ -183,7 +184,7 @@ with pestana_programa:
             use_container_width=True
         )
     else:
-        st.warning("⚠️ El motor ReportLab no ha detectado texto plano en el cuadro de arriba. Pegue la guía de JW.org para activar la descarga.")
+        st.warning("⚠️ No se ha generado el archivo físico temporal. Presione el botón gris de arriba 'Procesar Datos' para forzar la creación del PDF.")
 
 # =========================================================================
 # PESTAÑA 2: GESTIÓN DE HERMANOS
