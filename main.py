@@ -70,7 +70,7 @@ def procesar_texto_plano_reunion(texto_usuario):
             "2": {"titulo": "2. Busquemos perlas escondidas", "minutos": "10", "seccion": "Tesoros"},
             "3": {"titulo": "3. Lectura de la Biblia", "minutos": "4", "seccion": "Tesoros"}
         }
-    return fecha_cab, lectura_cab, materias_detectadas
+    return fecha_cab, lecture_cab, materias_detectadas
 
 pestana_programa, pestana_hermanos = st.tabs([
     "🚀 Fabricador en Caliente de Folletos", 
@@ -157,12 +157,14 @@ with pestana_programa:
 
     st.markdown("---")
     
-    # FORZAMOS UN NOMBRE DE ARCHIVO ESTÁNDAR FIJO CONTRA EL ERROR DE NOMBRE CORRUPTO
-    nombre_archivo_pdf = "reunion_procesada.pdf"
-    
+    # FORMATOS DE BÚSQUEDA ADAPTATIVOS COMPATIBLES CON TU REGLAS.PY ORIGINAL
+    nombre_archivo_opcion1 = f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"
+    nombre_archivo_opcion2 = f"Reunion_PROCESADO_WEB_{f_cab}.pdf"
+    nombre_archivo_final = nombre_archivo_opcion1
+
     try:
-        # Enviamos "reunion_procesada" en lugar de "PROCESADO_WEB" para evitar fallos de strings
-        reglas.generar_pdf_estilo_oficial("reunion_procesada", f_cab, materias_dinamicas, asignados_en_vivo)
+        # LLAMADA CON LA NOMENCLATURA CONFIGURADA EN TU REGLAS.PY DE AGOSTO
+        reglas.generar_pdf_estilo_oficial("PROCESADO_WEB", f_cab, materias_dinamicas, asignados_en_vivo)
     except Exception:
         pass
 
@@ -171,9 +173,20 @@ with pestana_programa:
         
     st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
 
-    # EL BOTÓN ENCUENTRA SIEMPRE EL MISMO NOMBRE Y SE ACTIVA SIN INTERRUPCIONES
-    if os.path.exists(nombre_archivo_pdf):
-        with open(nombre_archivo_pdf, "rb") as pdf_file:
+    # ESCÁNER INTELIGENTE DE ARCHIVOS COMPILADOS DE REPORTLAB
+    archivo_encontrado = ""
+    if os.path.exists(nombre_archivo_opcion1):
+        archivo_encontrado = nombre_archivo_opcion1
+    elif os.path.exists(nombre_archivo_opcion2):
+        archivo_encontrado = nombre_archivo_opcion2
+    else:
+        # Intento de escaneo de comodín para capturar cualquier PDF generado hoy en la raíz
+        for f in os.listdir("."):
+            if f.startswith("Reunion_PROCESADO_WEB_") and f.endswith(".pdf"):
+                archivo_encontrado = f; break
+
+    if archivo_encontrado:
+        with open(archivo_encontrado, "rb") as pdf_file:
             pdf_bytes = pdf_file.read()
         st.download_button(
             label="🟣 Descargar Folleto Oficial en PDF", 
@@ -184,7 +197,7 @@ with pestana_programa:
             use_container_width=True
         )
     else:
-        st.warning("⚠️ No se ha generado el archivo físico temporal. Presione el botón gris de arriba 'Procesar Datos' para forzar la creación del PDF.")
+        st.warning("⚠️ No se ha detectado el archivo generado. Presione el botón gris 'Procesar Datos (Paso 1)' arriba para compilar el PDF de ReportLab.")
 
 # =========================================================================
 # PESTAÑA 2: GESTIÓN DE HERMANOS
