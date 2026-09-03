@@ -32,10 +32,8 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
 
 def cargar_hermanos_cloud():
     try:
-        # Probamos llamando en singular 'hermano'
         res = requests.get(f"{URL_BASE}/hermano?select=*", headers=HEADERS_NUBE, timeout=10)
         if res.status_code == 404:
-            # Si falla, el sistema automáticamente intenta con 'hermanos'
             res = requests.get(f"{URL_BASE}/hermanos?select=*", headers=HEADERS_NUBE, timeout=10)
         
         if res.status_code == 200:
@@ -202,6 +200,7 @@ with p_hermanos:
     st.header("👥 Nómina")
     c_a, c_d = st.columns(2)
     with c_a:
+        # SISTEMA DE VALIDACIÓN PREVIA TOTALMENTE BLINDADO
         n = st.text_input("Nombre:", key="nom_p2")
         a = st.text_input("Apellido:", key="ape_p2")
         s = st.selectbox("Sexo:", ["Varón", "Mujer"], key="sex_p2")
@@ -214,12 +213,13 @@ with p_hermanos:
                 cadena_plana_aptitudes = ", ".join(ap) if ap else ""
                 payload_nuevo = {"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": cadena_plana_aptitudes}
                 
-                # ESCÁNER AUTOMÁTICO DE SEGURIDAD CONTRA EL 404
+                # ESCÁNER ADAPTATIVO EN ACCIÓN
                 res_post = requests.post(f"{URL_BASE}/hermano", headers=HEADERS_NUBE, json=payload_nuevo)
                 if res_post.status_code == 404:
                     res_post = requests.post(f"{URL_BASE}/hermanos", headers=HEADERS_NUBE, json=payload_nuevo)
                 
-                if res_post.status_code in:
+                # LA COMPARACIÓN TRADICIONAL CORREGIDA QUE SANA LA LÍNEA 222
+                if res_post.status_code == 201 or res_post.status_code == 200:
                     st.success("¡Publicador añadido con éxito absoluto en internet!")
                     st.rerun()
                 else:
