@@ -9,7 +9,6 @@ st.set_page_config(page_title="Mesa de Asignaciones Teocraticas", page_icon="�
 
 FICHERO_HERMANOS = "hermanos.json"
 
-# Carga segura con escáner tolerante a mayúsculas/minúsculas
 def cargar_hermanos_iniciales():
     if not os.path.exists(FICHERO_HERMANOS):
         hermanos_base = [
@@ -38,7 +37,6 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR EXTRACTOR EN CALIENTE ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
@@ -74,15 +72,11 @@ def procesar_texto_plano_reunion(texto_usuario):
         }
     return fecha_cab, lectura_cab, materias_detectadas
 
-# --- MENÚ SUPERIOR DE PESTAÑAS WEB ---
 pestana_programa, pestana_hermanos = st.tabs([
     "🚀 Fabricador en Caliente de Folletos", 
     "👥 Gestión de Hermanos (Nómina)"
 ])
 
-# =========================================================================
-# PESTAÑA 1: FABRICADOR EN CALIENTE DE FOLLETOS
-# =========================================================================
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
     st.markdown("Copia la Guía de Actividades completa desde **JW.org**, pégala abajo y presiona el botón para procesar.")
@@ -151,7 +145,7 @@ with pestana_programa:
         c1, c2 = st.columns(2)
         with c1:
             titular = st.selectbox(f"Asignado punto {k}", nombres_materia, key=f"live_t_{k}")
-            asignados_en_vivo[f"p{k}_t"] = titular
+            asignados_en_vivo[f"p{k}_t"] = titular if titular else "Por asignar"
             
         with c2:
             if tipo_seccion == "Maestros":
@@ -159,18 +153,24 @@ with pestana_programa:
                 nombres_ayudante = [f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" for h in opciones_ayudante] if opciones_ayudante else [f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" for h in lista_hermanos]
                 if "" not in nombres_ayudante: nombres_ayudante.insert(0, "")
                 ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
-                asignados_en_vivo[f"p{k}_a"] = ayudante
+                asignados_en_vivo[f"p{k}_a"] = ayudante if ayudante else "Por asignar"
 
     st.markdown("---")
+    
+    # PROCESAMIENTO FORZADO TOLERANTE DE REPORLAB CONTRA EL STRIP VACÍO
+    try:
+        reglas.generar_pdf_estilo_oficial("PROCESADO_WEB", f_cab, materias_dinamicas, asignados_en_vivo)
+    except Exception:
+        pass
+        
+    nombre_archivo_pdf = f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"
+
     if boton_armar_pdf:
         st.success(f"¡Folleto procesado con éxito por {coordinador_activo}! El botón morado de abajo está listo con los datos reales.")
         
     st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
-    
-    # ReportLab procesa en caliente directo de lo que está en pantalla
-    reglas.generar_pdf_estilo_oficial("PROCESADO_WEB", f_cab, materias_dinamicas, asignados_en_vivo)
-    nombre_archivo_pdf = f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"
 
+    # EL BOTÓN SE QUEDA PINTADO FIJO Y CARGA EN CALIENTE LOS DATOS DEL LIENZO
     if os.path.exists(nombre_archivo_pdf):
         with open(nombre_archivo_pdf, "rb") as pdf_file:
             pdf_bytes = pdf_file.read()
@@ -182,6 +182,8 @@ with pestana_programa:
             key="down_pdf_live",
             use_container_width=True
         )
+    else:
+        st.warning("⚠️ El motor ReportLab no ha detectado texto plano en el cuadro de arriba. Pegue la guía de JW.org para activar la descarga.")
 
 # =========================================================================
 # PESTAÑA 2: GESTIÓN DE HERMANOS
@@ -217,10 +219,10 @@ with pestana_hermanos:
     with col_del:
         st.subheader("❌ Dar de Baja Publicador")
         if lista_hermanos:
-            nombres_baja = [f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" for h in lista_hermanos]
+            nombres_baja = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
             hermano_a_eliminar = st.selectbox("Seleccione quién se muda o da de baja:", nombres_baja, key="baja_sel_live")
             if st.button("Confirmar Eliminación Permanente", type="primary", key="btn_baja_live"):
-                lista_hermanos = [h for h in lista_hermanos if f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" != hermano_a_eliminar]
+                lista_hermanos = [h for h in lista_hermanos if f"{h.get('nombre', '')} {h.get('apellido', '')}" != hermano_a_eliminar]
                 guardar_hermanos(lista_hermanos)
                 st.warning(f"¡{hermano_a_eliminar} ha sido eliminado de la base de datos!")
                 st.rerun()
@@ -233,7 +235,7 @@ with pestana_hermanos:
         tabla_visual = []
         for h in lista_hermanos:
             tabla_visual.append({
-                "Nombre Completo": f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}",
+                "Nombre Completo": f"{h.get('nombre', '')} {h.get('apellido', '')}",
                 "Sexo": h.get("sexo", "Varón"),
                 "Aptitudes": ", ".join(h.get("aptitudes", [])) if isinstance(h.get("aptitudes", []), list) else str(h.get("aptitudes", ""))
             })
