@@ -7,6 +7,7 @@ import requests
 # --- CONFIGURACIÓN DE PÁGINA ÚNICA INDEPENDIENTE ---
 st.set_page_config(page_title="Programa de Reunión", page_icon="📋", layout="wide")
 
+# CONEXIÓN ABSOLUTA INDESTRUCTIBLE APUNTANDO DIRECTO A LA RAÍZ DE LA API
 URL_BASE = "https://supabase.co"
 HEADERS_NUBE = {
     "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0cnhkemRodmdmbXJuZnRtdm52Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTI4MzM2MCwiZXhwIjoyMDQwODU5MzYwfQ.jRPh_3C65GzZ_r2Z6tU1jD6V_T11_354Jv_t11VvT-w",
@@ -23,7 +24,6 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
     if "Tesoros" in aptitud_filtro: filtro_real = "Tesoros"
     elif "Maestros" in aptitud_filtro or "Seamos" in aptitud_filtro: filtro_real = "Seamos Mejores Maestros"
     
-    # Escáner tolerante a mayúsculas/minúsculas para el filtro en memoria
     candidatos = []
     for h in lista_hermanos:
         apts = str(h.get("aptitudes", h.get("Aptitudes", ""))).lower()
@@ -38,7 +38,6 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
     return lista_listas
 
 def cargar_hermanos_cloud():
-    # El escáner dinámico barre todas las rutas posibles de la API para recuperar la nómina
     for endpoint in ["hermanos", "hermano", "Hermanos", "Hermano"]:
         try:
             res = requests.get(f"{URL_BASE}/{endpoint}?select=*", headers=HEADERS_NUBE, timeout=5)
@@ -80,8 +79,8 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n")]
     lineas_limpias = [l for l in lineas if l]
-    fecha_cab = lineas_limpias[0] if len(lineas_limpias) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas_limpias[1] if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
+    fecha_cab = lineas_limpias if len(lineas_limpias) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas_limpias if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
 
     for i, linea in enumerate(lineas_limpias):
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
@@ -234,19 +233,19 @@ elif st.session_state.pagina_actual == "👥 Gestión de Hermanos":
             else:
                 cadena_plana_aptitudes = ", ".join(ap) if ap else ""
                 
-                # ESCÁNER INTEGRAL: PROBAMOS TANTO LLAVES MINÚSCULAS COMO MAYÚSCULAS
                 exito_guardado = False
                 ultimo_codigo = 404
                 
+                # BÚSQUEDA SECUENCIAL INDESTRUCTIBLE CONTRA EL 404
                 for endpoint in ["hermanos", "hermano", "Hermanos", "Hermano"]:
-                    # Intento 1: Atributos en minúsculas
+                    # Formato 1: Columnas en minúsculas
                     payload_min = {"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": cadena_plana_aptitudes}
                     res_post = requests.post(f"{URL_BASE}/{endpoint}", headers=HEADERS_NUBE, json=payload_min)
                     ultimo_codigo = res_post.status_code
                     if res_post.status_code == 201 or res_post.status_code == 200:
                         exito_guardado = True; break
                         
-                    # Intento 2: Atributos en mayúsculas
+                    # Formato 2: Columnas en mayúsculas
                     payload_may = {"Nombre": n.strip().title(), "Apellido": a.strip().title(), "Sexo": s, "Aptitudes": cadena_plana_aptitudes}
                     res_post = requests.post(f"{URL_BASE}/{endpoint}", headers=HEADERS_NUBE, json=payload_may)
                     ultimo_codigo = res_post.status_code
