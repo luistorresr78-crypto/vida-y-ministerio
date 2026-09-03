@@ -9,7 +9,7 @@ st.set_page_config(page_title="Mesa de Asignaciones Teocraticas", page_icon="�
 
 FICHERO_HERMANOS = "hermanos.json"
 
-# Carga segura de la nomina de hermanos en la nube
+# Carga segura de la nomina de hermanos local en minúsculas exactas
 def cargar_hermanos_iniciales():
     if not os.path.exists(FICHERO_HERMANOS):
         hermanos_base = [
@@ -77,7 +77,6 @@ with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
     st.markdown("Copia la Guía de Actividades completa desde **JW.org**, pégala abajo y presiona el botón para procesar.")
 
-    # 1. Cuadro de Entrada unificado de JW.org
     texto_jw_entrada = st.text_area(
         "Pega aquí el texto completo copiado de JW.org:", 
         height=180, 
@@ -85,10 +84,8 @@ with pestana_programa:
         key="txt_jw_live"
     )
 
-    # ¡EL BOTÓN AHORA VIVE AQUÍ ARRIBA CON ACCESO INSTANTÁNEO!
     boton_armar_pdf = st.button("⚙️ Procesar Datos para Descarga (Paso 1)", use_container_width=True)
 
-    # El cerebro procesa el texto introducido
     f_cab, l_cab, materias_dinamicas = procesar_texto_plano_reunion(texto_jw_entrada)
 
     st.markdown("---")
@@ -177,7 +174,7 @@ with pestana_programa:
         )
 
 # =========================================================================
-# PESTAÑA 2: GESTIÓN DE HERMANOS (NÓMINA CON FILTRO DE GÉNERO Y APTITUD)
+# PESTAÑA 2: GESTIÓN DE HERMANOS (NÓMINA SANA EN MINÚSCULAS)
 # =========================================================================
 with pestana_hermanos:
     st.header("👥 Control de la Nómina de la Congregación")
@@ -210,10 +207,10 @@ with pestana_hermanos:
     with col_del:
         st.subheader("❌ Dar de Baja Publicador")
         if lista_hermanos:
-            nombres_baja = [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos]
+            nombres_baja = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
             hermano_a_eliminar = st.selectbox("Seleccione quién se muda o da de baja:", nombres_baja, key="baja_sel_live")
             if st.button("Confirmar Eliminación Permanente", type="primary", key="btn_baja_live"):
-                lista_hermanos = [h for h in lista_hermanos if f"{h['nombre']} {h['apellido']}" != hermano_a_eliminar]
+                lista_hermanos = [h for h in lista_hermanos if f"{h.get('nombre', '')} {h.get('apellido', '')}" != hermano_a_eliminar]
                 guardar_hermanos(lista_hermanos)
                 st.warning(f"¡{hermano_a_eliminar} ha sido eliminado de la base de datos!")
                 st.rerun()
@@ -226,7 +223,7 @@ with pestana_hermanos:
         tabla_visual = []
         for h in lista_hermanos:
             tabla_visual.append({
-                "Nombre Completo": f"{h['nombre']} {h['apellido']}",
+                "Nombre Completo": f"{h.get('nombre', '')} {h.get('apellido', '')}",
                 "Sexo": h.get("sexo", "Varón"),
                 "Aptitudes": ", ".join(h.get("aptitudes", [])) if isinstance(h.get("aptitudes", []), list) else str(h.get("aptitudes", ""))
             })
