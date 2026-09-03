@@ -41,7 +41,6 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    # EXTRACCIÓN MILIMÉTRICA: CON [0] Y [1] EXTRAEMOS TEXTO PURO, NUNCA LISTAS
     fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
     lectura_cab = lineas[1] if len(lineas) > 1 else "Lectura Oficial por Cargar"
 
@@ -114,19 +113,18 @@ with pestana_programa:
     col_p1, col_p2 = st.columns(2)
     with col_p1:
         opciones_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia")
-        nom_presi = [f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" for h in opciones_presi] if opciones_presi else [f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" for h in lista_hermanos]
+        nom_presi = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in opciones_presi] if opciones_presi else [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
         presidente = st.selectbox("Presidente de la Reunión", nom_presi, key="p_presi_live")
         
     with col_p2:
         opciones_ora = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Oración")
-        nom_ora = [f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" for h in opciones_ora] if opciones_ora else [f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" for h in lista_hermanos]
+        nom_ora = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in opciones_ora] if opciones_ora else [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
         oracion_inicial = st.selectbox("Oración Inicial", nom_ora, key="p_ora_live")
 
     st.markdown("---")
     
     asignados_en_vivo = {"presidente": presidente, "oracion_inicial": oracion_inicial}
     
-    # El bucle recorre y dibuja las materias extraídas del cuadro de texto grande libremente
     for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias_dinamicas[k]
         tipo_seccion = m.get("seccion", "Tesoros")
@@ -141,7 +139,7 @@ with pestana_programa:
         st.markdown(f"**{emoji} {k}. {m.get('titulo', '')}** ({m.get('minutos', '')} min.)")
         
         opciones_materia = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, color_sub)
-        nombres_materia = [f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" for h in opciones_materia] if opciones_materia else [f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" for h in lista_hermanos]
+        nombres_materia = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in opciones_materia] if opciones_materia else [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
         if "" not in nombres_materia: nombres_materia.insert(0, "")
             
         c1, c2 = st.columns(2)
@@ -152,21 +150,19 @@ with pestana_programa:
         with c2:
             if tipo_seccion == "Maestros":
                 opciones_ayudante = reglas.filtrar_ayudantes_inteligente(titular, lista_hermanos, "Seamos Mejores Maestros")
-                nombres_ayudante = [f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" for h in opciones_ayudante] if opciones_ayudante else [f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" for h in lista_hermanos]
+                nombres_ayudante = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in opciones_ayudante] if opciones_ayudante else [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
                 if "" not in nombres_ayudante: nombres_ayudante.insert(0, "")
                 ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
                 asignados_en_vivo[f"p{k}_a"] = ayudante if ayudante else "Por asignar"
 
     st.markdown("---")
-    # NOMBRE DE ARCHIVO ESTÁNDAR FIJO DE CONTROL EN MEMORIA
+    
     nombre_archivo_final = "reunion_actual.pdf"
 
-    # LA CREACIÓN DEL ARCHIVO SUCEDE ESTRICTAMENTE AL ENTRAR AL BOTÓN GRIS
     if boton_armar_pdf:
         try:
             reglas.generar_pdf_estilo_oficial("PROCESADO_WEB", f_cab, materias_dinamicas, asignados_en_vivo)
             
-            # Ubicamos el archivo físico dinámico con cadenas limpias para copiarlo
             nombre_reportlab_1 = f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"
             nombre_reportlab_2 = f"Reunion_PROCESADO_WEB_{f_cab}.pdf"
             
@@ -177,7 +173,6 @@ with pestana_programa:
                 with open(nombre_reportlab_2, "rb") as f_origen, open(nombre_archivo_final, "wb") as f_destino:
                     f_destino.write(f_origen.read())
             else:
-                # Escáner de seguridad redundante sobre la carpeta raíz del servidor
                 for arc in os.listdir("."):
                     if arc.startswith("Reunion_PROCESADO_WEB_") and arc.endswith(".pdf"):
                         with open(arc, "rb") as f_origen, open(nombre_archivo_final, "wb") as f_destino:
@@ -189,7 +184,6 @@ with pestana_programa:
 
     st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
 
-    # ESCÁNER INTEGRAL COMBINADO (MIRA EL NOMBRE PURIFICADO Y LOS DINÁMICOS COMPATIBLES)
     archivo_encontrado_fisco = ""
     nombre_reportlab_1 = f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"
     nombre_reportlab_2 = f"Reunion_PROCESADO_WEB_{f_cab}.pdf"
@@ -219,9 +213,6 @@ with pestana_programa:
     else:
         st.warning("⚠️ No se ha detectado el archivo en el sistema. Presione el botón gris 'Procesar Datos (Paso 1)' arriba para compilar el PDF de ReportLab.")
 
-# =========================================================================
-# PESTAÑA 2: GESTIÓN DE HERMANOS
-# =========================================================================
 with pestana_hermanos:
     st.header("👥 Control de la Nómina de la Congregación")
     col_add, col_del = st.columns(2)
