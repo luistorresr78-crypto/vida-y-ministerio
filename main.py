@@ -3,7 +3,6 @@ import json
 import os
 import re
 import reglas
-from io import BytesIO
 
 # Configuracion adaptativa de la pagina web para celulares, iPads y laptops
 st.set_page_config(page_title="Mesa de Asignaciones Teocraticas", page_icon="📝", layout="wide")
@@ -42,6 +41,7 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
+    # EXTRACCIÓN MILIMÉTRICA: EXTRAEMOS LA CADENA PURA [0] PARA EVITAR QUE VIAJE COMO LISTA ['...']
     fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
     lectura_cab = lineas[1] if len(lineas) > 1 else "Lectura Oficial por Cargar"
 
@@ -97,18 +97,6 @@ with pestana_programa:
     st.subheader(f"📅 Vista Previa de la Semana: {f_cab}")
     st.info(f"📖 Lectura Bíblica Extraída: **{l_cab}**")
 
-    with st.sidebar:
-        st.header("⚙️ Control de Operación")
-        coordinador_activo = st.selectbox("¿Quién está asignando hoy?", ["Sergio", "Jonathan", "Luis"], key="coord_act_live")
-        
-        st.subheader("♻️ Registro de Reemplazos")
-        with st.expander("Ver panel de Reemplazos"):
-            h_ausente = st.text_input("Hermano Ausente", key="aus_live")
-            h_sustituto = st.text_input("Hermano que Reemplaza", key="sust_live")
-            if st.button("Guardar Reemplazo en Bitácora", key="btn_remp_live"):
-                if h_ausente and h_sustituto:
-                    st.success(f"Sustitución guardada: {h_sustituto} cubre a {h_ausente}")
-
     st.markdown("### 🎚️ Asignar Privilegios para el Folleto PDF")
     
     col_p1, col_p2 = st.columns(2)
@@ -158,33 +146,53 @@ with pestana_programa:
                 asignados_en_vivo[f"p{k}_a"] = ayudante if ayudante else "Por asignar"
 
     st.markdown("---")
-    
+    # NOMBRE DE ARCHIVO ESTÁNDAR FIJO DE CONTROL EN MEMORIA
+    nombre_archivo_final = "reunion_actual.pdf"
+
     # LA CREACIÓN DEL ARCHIVO SUCEDE ESTRICTAMENTE AL ENTRAR AL BOTÓN GRIS
     if boton_armar_pdf:
         try:
             reglas.generar_pdf_estilo_oficial("PROCESADO_WEB", f_cab, materias_dinamicas, asignados_en_vivo)
+            
+            # Ubicamos el archivo físico dinámico con cadenas limpias para copiarlo
+            nombre_reportlab_1 = f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"
+            nombre_reportlab_2 = f"Reunion_PROCESADO_WEB_{f_cab}.pdf"
+            
+            if os.path.exists(nombre_reportlab_1):
+                with open(nombre_reportlab_1, "rb") as f_origen, open(nombre_archivo_final, "wb") as f_destino:
+                    f_destino.write(f_origen.read())
+            elif os.path.exists(nombre_reportlab_2):
+                with open(nombre_reportlab_2, "rb") as f_origen, open(nombre_archivo_final, "wb") as f_destino:
+                    f_destino.write(f_origen.read())
+            else:
+                # Escáner de seguridad redundante sobre la carpeta raíz del servidor
+                for arc in os.listdir("."):
+                    if arc.startswith("Reunion_PROCESADO_WEB_") and arc.endswith(".pdf"):
+                        with open(arc, "rb") as f_origen, open(nombre_archivo_final, "wb") as f_destino:
+                            f_destino.write(f_origen.read())
+                        break
         except Exception:
             pass
         st.success(f"¡Folleto procesado con éxito por {coordinador_activo}! El botón morado de abajo está listo con los datos reales.")
 
     st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
 
-    # ESCÁNER INTEGRAL DEL SISTEMA OPERATIVO DE ARCHIVOS
+    # ESCÁNER INTEGRAL COMBINADO (MIRA EL NOMBRE PURIFICADO Y LOS DINÁMICOS COMPATIBLES)
     archivo_encontrado_fisco = ""
-    nombre_archivo_opcion1 = f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"
-    nombre_archivo_opcion2 = f"Reunion_PROCESADO_WEB_{f_cab}.pdf"
+    nombre_reportlab_1 = f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"
+    nombre_reportlab_2 = f"Reunion_PROCESADO_WEB_{f_cab}.pdf"
 
-    if os.path.exists(nombre_archivo_opcion1):
-        archivo_encontrado_fisco = nombre_archivo_opcion1
-    elif os.path.exists(nombre_archivo_opcion2):
-        archivo_encontrado_fisco = nombre_archivo_opcion2
+    if os.path.exists(nombre_archivo_final):
+        archivo_encontrado_fisco = nombre_archivo_final
+    elif os.path.exists(nombre_reportlab_1):
+        archivo_encontrado_fisco = nombre_reportlab_1
+    elif os.path.exists(nombre_reportlab_2):
+        archivo_encontrado_fisco = nombre_reportlab_2
     else:
-        # Escaneo de contingencia multiruta en tiempo real en la carpeta del servidor
         for f_nom in os.listdir("."):
             if f_nom.startswith("Reunion_PROCESADO_WEB_") and f_nom.endswith(".pdf"):
                 archivo_encontrado_fisco = f_nom; break
 
-    # INYECTOR COMPATIBLE DE DESPLIEGUE CONTINUO
     if archivo_encontrado_fisco and os.path.exists(archivo_encontrado_fisco):
         with open(archivo_encontrado_fisco, "rb") as pdf_file:
             pdf_bytes = pdf_file.read()
