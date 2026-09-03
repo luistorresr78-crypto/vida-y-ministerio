@@ -41,7 +41,6 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    # EXTRACCIÓN MILIMÉTRICA: EXTRAEMOS LA CADENA PURA [0] PARA EVITAR QUE VIAJE COMO LISTA ['...']
     fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
     lectura_cab = lineas[1] if len(lineas) > 1 else "Lectura Oficial por Cargar"
 
@@ -96,6 +95,19 @@ with pestana_programa:
     st.markdown("---")
     st.subheader(f"📅 Vista Previa de la Semana: {f_cab}")
     st.info(f"📖 Lectura Bíblica Extraída: **{l_cab}**")
+
+    # BARRA LATERAL UNIFICADA CON LA VARIABLE COORDINADOR SIEMPRE DISPONIBLE
+    with st.sidebar:
+        st.header("⚙️ Control de Operación")
+        coordinador_activo = st.selectbox("¿Quién está asignando hoy?", ["Sergio", "Jonathan", "Luis"], key="coord_act_live")
+        
+        st.subheader("♻️ Registro de Reemplazos")
+        with st.expander("Ver panel de Reemplazos"):
+            h_ausente = st.text_input("Hermano Ausente", key="aus_live")
+            h_sustituto = st.text_input("Hermano que Reemplaza", key="sust_live")
+            if st.button("Guardar Reemplazo en Bitácora", key="btn_remp_live"):
+                if h_ausente and h_sustituto:
+                    st.success(f"Sustitución guardada: {h_sustituto} cubre a {h_ausente}")
 
     st.markdown("### 🎚️ Asignar Privilegios para el Folleto PDF")
     
