@@ -41,8 +41,9 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    fecha_cab = lineas if len(lineas) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas if len(lineas) > 1 else "Lectura Oficial por Cargar"
+    # SANA CORRECCIÓN EXTRACTORA: LEEMOS LOS ELEMENTOS ÍNDICES EN LUGAR DE LA LISTA COMPLETA
+    fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas[1] if len(lineas) > 1 else "Lectura Oficial por Cargar"
 
     for linea in lineas:
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
@@ -107,6 +108,7 @@ with pestana_programa:
             if st.button("Guardar Reemplazo en Bitácora", key="btn_remp_live"):
                 if h_ausente and h_sustituto:
                     st.success(f"Sustitución guardada: {h_sustituto} cubre a {h_ausente}")
+
     st.markdown("### 🎚️ Asignar Privilegios para el Folleto PDF")
     
     col_p1, col_p2 = st.columns(2)
@@ -172,12 +174,11 @@ with pestana_programa:
             
             if os.path.exists(nombre_reportlab_1):
                 with open(nombre_reportlab_1, "rb") as f_origen, open(nombre_archivo_final, "wb") as f_destino:
-                    f_destinatario = f_destino.write(f_origen.read())
+                    f_destino.write(f_origen.read())
             elif os.path.exists(nombre_reportlab_2):
                 with open(nombre_reportlab_2, "rb") as f_origen, open(nombre_archivo_final, "wb") as f_destino:
-                    f_destinatario = f_destino.write(f_origen.read())
+                    f_destino.write(f_origen.read())
             else:
-                # Comodín de rescate de archivos PDF generados hoy en la raíz por seguridad
                 for arc in os.listdir("."):
                     if arc.startswith("Reunion_PROCESADO_WEB_") and arc.endswith(".pdf"):
                         with open(arc, "rb") as f_origen, open(nombre_archivo_final, "wb") as f_destino:
@@ -190,7 +191,6 @@ with pestana_programa:
 
     st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
 
-    # EL BOTÓN VERIFICA EL DISCO EN CALIENTE Y QUEDA TOTALMENTE FIJO AL PROCESAR
     if os.path.exists(nombre_archivo_final):
         with open(nombre_archivo_final, "rb") as pdf_file:
             pdf_bytes = pdf_file.read()
