@@ -108,7 +108,7 @@ with pestana_programa:
             if st.button("Guardar Reemplazo en Bitácora", key="btn_remp_live"):
                 if h_ausente and h_sustituto:
                     st.success(f"Sustitución guardada: {h_sustituto} cubre a {h_ausente}")
-       st.markdown("### 🎚️ Asignar Privilegios para el Folleto PDF")
+    st.markdown("### 🎚️ Asignar Privilegios para el Folleto PDF")
     
     col_p1, col_p2 = st.columns(2)
     with col_p1:
