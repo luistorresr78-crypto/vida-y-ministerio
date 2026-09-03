@@ -7,6 +7,7 @@ import requests
 # --- CONFIGURACIÓN DE PÁGINA ÚNICA INDEPENDIENTE ---
 st.set_page_config(page_title="Programa de Reunión", page_icon="📋", layout="wide")
 
+# CORRECCIÓN DE DESTILACIÓN: APUNTAMOS LA URL BASE AL ESQUEMA COMPLETO DE SUPABASE
 URL_BASE = "https://supabase.co"
 HEADERS_NUBE = {
     "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0cnhkemRodmdmbXJuZnRtdm52Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTI4MzM2MCwiZXhwIjoyMDQwODU5MzYwfQ.jRPh_3C65GzZ_r2Z6tU1jD6V_T11_354Jv_t11VvT-w",
@@ -135,7 +136,6 @@ with p_asignaciones:
                 exito_rep = False
                 for ep in ["reemplazo", "reemplazos", "Reemplazo", "Reemplazos"]:
                     res = requests.post(f"{URL_BASE}/{ep}", headers=HEADERS_NUBE, json={"hermano_ausente": h_aus.strip().title(), "hermano_sustituto": h_sus.strip().title()})
-                    # SANA LA LÍNEA 139 ELIMINANDO LA FRASE CORRUPTA
                     if res.status_code == 201 or res.status_code == 200: exito_rep = True; break
                 st.success("¡Registrado!")
                 st.rerun()
