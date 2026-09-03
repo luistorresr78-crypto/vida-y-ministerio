@@ -96,7 +96,6 @@ with pestana_programa:
     st.subheader(f"📅 Vista Previa de la Semana: {f_cab}")
     st.info(f"📖 Lectura Bíblica Extraída: **{l_cab}**")
 
-    # BARRA LATERAL UNIFICADA CON LA VARIABLE COORDINADOR SIEMPRE DISPONIBLE
     with st.sidebar:
         st.header("⚙️ Control de Operación")
         coordinador_activo = st.selectbox("¿Quién está asignando hoy?", ["Sergio", "Jonathan", "Luis"], key="coord_act_live")
