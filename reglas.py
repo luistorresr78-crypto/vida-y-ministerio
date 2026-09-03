@@ -1,133 +1,199 @@
+import json
 import os
+import re
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib import colors
 
-def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtro):
-    # Función de compatibilidad local idéntica al 28 de agosto
-    candidatos = []
-    for h in lista_hermanos:
-        apts = [str(a).lower() for a in h.get("aptitudes", [])]
-        if aptit_filtro := aptitud_filtro.lower():
-            if "tesoros" in aptit_filtro and "tesoros" in apts: candidatos.append(h)
-            elif "maestros" in aptit_filtro and "seamos mejores maestros" in apts: candidatos.append(h)
-            elif "vida" in aptit_filtro and "vida cristiana" in apts: candidatos.append(h)
-            elif "presidencia" in aptit_filtro and "presidencia" in apts: candidatos.append(h)
-            elif "oración" in aptit_filtro and "oración" in apts: candidatos.append(h)
-    return candidatos
+FICHERO_REUNIONES = "reuniones.json"
+FICHERO_HERMANOS = "hermanos.json"
 
-def generar_pdf_estilo_oficial(modo, fecha_semana, materias, asignados):
-    # Forzamos por sistema un nombre plano controlado e indestructible en la raíz
+def obtener_nombre_coordinador():
+    return "Luis"
+
+def calcular_participaciones_mes(mes_activo):
+    conteo = {}
+    if not os.path.exists(FICHERO_REUNIONES): return conteo
+    try:
+        with open(FICHERO_REUNIONES, "r", encoding="utf-8") as f:
+            datos = json.load(f)
+        semanas_mes = datos.get(mes_activo, {})
+        for semana in semanas_mes.values():
+            for hermano in semana.get("asignados", {}).values():
+                if hermano and isinstance(hermano, str):
+                    nombre_limpio = hermano.split(" ->")[0].split("(")[0].strip()
+                    conteo[nombre_limpio] = conteo.get(nombre_limpio, 0) + 1
+    except: pass
+    return conteo
+
+def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtro):
+    mapeo_aptitudes = {
+        "Tesoros": "Tesoros", "Lectura": "Lectura",
+        "Seamos Mejores Maestros": "Seamos Mejores Maestros",
+        "Presidencia": "Presidencia", "Oración": "Oración",
+        "Vida Cristiana": "Vida Cristiana"
+    }
+    aptit_f = aptitud_filtro.replace("Tesoros de la Biblia", "Tesoros").replace("Vida Cristiana", "Vida Cristiana")
+    aptitud_real = mapeo_aptitudes.get(aptit_f, aptit_f)
+    
+    mes_detectado = "SEPTIEMBRE"
+    historial_mes = calcular_participaciones_mes(mes_detected = mes_detectado)
+    
+    candidatos = []
+    if not hermano_titular:
+        for h in lista_hermanos:
+            apts_h = [str(a).lower() for a in h.get("aptitudes", [])] if isinstance(h.get("aptitudes", []), list) else str(h.get("aptitudes", "")).lower()
+            if aptitud_real.lower() in apts_h or ("maestros" in aptitud_real.lower() and "maestros" in str(apts_h)):
+                candidatos.append(h)
+    else:
+        titular_limpio = hermano_titular.split(" ->")[0].split("(")[0].strip()
+        sexo_tit = "Varón"
+        apellido_tit = titular_limpio.split(" ")[-1] if " " in titular_limpio else ""
+        for h in lista_hermanos:
+            if f"{h.get('nombre', '')} {h.get('apellido', '')}" == titular_limpio:
+                sexo_tit = h.get("sexo", "Varón")
+        
+        for h in lista_hermanos:
+            nombre_h = f"{h.get('nombre', '')} {h.get('apellido', '')}"
+            if nombre_h == titular_limpio: continue
+            
+            apts_h = [str(a).lower() for a in h.get("aptitudes", [])] if isinstance(h.get("aptitudes", []), list) else str(h.get("aptitudes", "")).lower()
+            if "seamos mejores maestros" in apts_h or "maestros" in str(apts_h):
+                if sexo_tit == "Mujer" and h.get("sexo") == "Mujer":
+                    candidatos.append(h)
+                elif sexo_tit == "Varón":
+                    if h.get("sexo") == "Varón" or (h.get("sexo") == "Mujer" and h.get("apellido", "").lower() == apellido_tit.lower()):
+                        candidatos.append(h)
+                        
+    lista_ordenada = []
+    for h in candidatos:
+        nombre_h = f"{h.get('nombre', '')} {h.get('apellido', '')}"
+        v = historial_mes.get(nombre_h, 0)
+        etiqueta = nombre_h if v == 0 else (f"{nombre_h} (1 asignación)" if v == 1 else f"{nombre_h} (⚠️ REPETIDO x{v})")
+        lista_ordenada.append({"h": h, "etiqueta": etiqueta, "v": v})
+        
+    lista_ordenada.sort(key=lambda x: x["v"])
+    
+    hermanos_listos = []
+    for idx, item in enumerate(lista_ordenada):
+        h_copia = dict(item["h"])
+        h_copia["nombre"] = f"{item['etiqueta']} -> [Firma]" if idx == 0 else item["etiqueta"]
+        h_copia["apellido"] = ""
+        hermanos_listos.append(h_copia)
+        
+    return hermanos_listos
+def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     nombre_pdf = "reunion_actual.pdf"
     
-    # Configuramos el lienzo de ReportLab en tamaño Carta (Letter)
     doc = SimpleDocTemplate(
-        nombre_pdf, 
-        pagesize=letter,
-        rightMargin=36, leftMargin=36, 
-        topMargin=36, bottomMargin=36
+        nombre_pdf, pagesize=letter,
+        rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36
     )
     
-    styles = getSampleStyleSheet()
+    est_fecha = ParagraphStyle('EF', fontName='Helvetica-Bold', fontSize=12, textColor=colors.HexColor("#4A5568"))
+    est_lectura = ParagraphStyle('EL', fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor("#1A365D"))
+    est_letra_blank = ParagraphStyle('ELB', fontName='Helvetica-Bold', fontSize=10, textColor=colors.white, alignment=0)
     
-    # Definición de la paleta teocrática limpia original de agosto
-    estilo_titulo = ParagraphStyle(
-        'EstiloTitulo', parent=styles['Heading1'],
-        fontName='Helvetica-Bold', fontSize=16, textColor=colors.HexColor('#1A365D'),
-        alignment=1, spaceAfter=8
-    )
+    est_blu = ParagraphStyle('TB', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor("#3A7885"))
+    est_ora = ParagraphStyle('TO', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor("#D08F00"))
+    est_red = ParagraphStyle('TR', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor("#B32415"))
     
-    estilo_sub = ParagraphStyle(
-        'EstiloSub', parent=styles['Normal'],
-        fontName='Helvetica', fontSize=11, textColor=colors.HexColor('#4A5568'),
-        alignment=1, spaceAfter=15
-    )
-    
-    estilo_texto = ParagraphStyle(
-        'EstiloTexto', parent=styles['Normal'],
-        fontName='Helvetica', fontSize=10, textColor=colors.black,
-        leading=13
-    )
+    est_hnos = ParagraphStyle('TH', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#2D3748"))
+    est_cab_tit = ParagraphStyle('ECT', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor("#4A5568"))
+    est_texto_p = ParagraphStyle('ETP', fontName='Helvetica', fontSize=10, textColor=colors.black, leading=13)
 
-    story = []
+    elementos = []
     
-    # 1. Título y Rango de Fecha oficial
-    story.append(Paragraph(f"<b>PROGRAMA DE LA REUNIÓN</b>", estilo_titulo))
-    story.append(Paragraph(f"📅 Semana: {str(fecha_semana).strip()}", estilo_sub))
-    story.append(Spacer(1, 10))
+    texto_fecha = str(semana_act).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
+    texto_lectura = str(mes_activo).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
     
-    # 2. Mesa Principal de introducción
-    presi_nom = asignados.get("presidente", "Por asignar")
-    ora_nom = asignados.get("oracion_inicial", "Por asignar")
-    
-    tabla_intro_data = [
-        [Paragraph(f"<b>Presidente:</b> {presi_nom}", estilo_texto), 
-         Paragraph(f"<b>Oración Inicial:</b> {ora_nom}", estilo_texto)]
+    cab_izq = [
+        Paragraph(f"<b>{texto_fecha}</b>", est_fecha),
+        Paragraph(f"<b>{texto_lectura}</b>", est_lectura)
     ]
-    t_intro = Table(tabla_intro_data, colWidths=[270, 270])
-    t_intro.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#EDF2F7')),
-        ('PADDING', (0,0), (-1,-1), 6),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
-        ('LINEBELOW', (0,0), (-1,-1), 1.5, colors.HexColor('#CBD5E0')),
-    ]))
-    story.append(t_intro)
-    story.append(Spacer(1, 15))
     
-    # 3. Dibujo de la Cuadrícula Oficial del Programa
-    tabla_programa_data = [[
-        Paragraph("<b>Punto de la Reunión / Materia</b>", estilo_texto), 
-        Paragraph("<b>Asignado (Titular / Ayudante)</b>", estilo_texto)
-    ]]
+    presi = asignados.get("presidente") or "Por asignar"
+    cab_der = [[Paragraph("<b>Presidente</b>", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
+    t_presi = Table(cab_der, colWidths=[90, 110])
+    t_presi.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('LINEBELOW', (1,0), (1,0), 0.5, colors.black)
+    ]))
+    
+    t_principal = Table([[cab_izq, t_presi]], colWidths=[320, 220])
+    t_principal.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'TOP')]))
+    elementos.append(t_principal)
+    elementos.append(Spacer(1, 10))
+    
+    ora_ini = asignados.get("oracion_inicial") or "Por asignar"
+    datos_cancion_1 = [
+        Paragraph("🎵 <b>Canción 40</b> y oración", est_cab_tit),
+        Paragraph("<b>Palabras de Introducción</b>", est_cab_tit),
+        Paragraph(f"{ora_ini}", est_hnos)
+    ]
+    t_c1 = Table([datos_cancion_1], colWidths=[180, 180, 180])
+    t_c1.setStyle(TableStyle([
+        ('LINEABOVE', (0,0), (-1,-1), 1, colors.black),
+        ('LINEBELOW', (0,0), (-1,-1), 1, colors.black),
+        ('PADDING', (0,0), (-1,-1), 4),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE')
+    ]))
+    elementos.append(t_c1)
+    elementos.append(Spacer(1, 12))
+    
+    secciones_mapeadas = {
+        "Tesoros": {"titulo": "TESOROS DE LA BIBLIA", "color": "#3A7885", "estilo_t": est_blu},
+        "Maestros": {"titulo": "SEAMOS MEJORES MAESTROS", "color": "#D08F00", "estilo_t": est_ora},
+        "Vida": {"titulo": "NUESTRA VIDA CRISTIANA", "color": "#B32415", "estilo_t": est_red}
+    }
+    
+    seccion_actual = ""
     
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias[k]
-        tipo_sec = m.get("seccion", "Tesoros")
+        sec_materia = m.get("seccion", "Tesoros")
         
-        # Color del riel según la sección teocrática exacta de agosto
-        color_fila = '#EBF8FF' if tipo_sec == "Tesoros" else ('#F0FFF4' if tipo_sec == "Maestros" else '#FFFAF0')
-        
-        titular_punto = asignados.get(f"p{k}_t", "Por asignar")
-        ayudante_punto = asignados.get(f"p{k}_a", "")
-        
-        nombre_completo_asignado = f"{titular_punto}"
-        if ayudante_punto and ayudante_punto != "Por asignar":
-            nombre_completo_asignado += f" / <b>Ayudante:</b> {ayudante_punto}"
+        if sec_materia != seccion_actual:
+            seccion_actual = sec_materia
+            conf = secciones_mapeadas.get(seccion_actual, secciones_mapeadas["Tesoros"])
             
-        tabla_programa_data.append([
-            Paragraph(f"<b>{k}.</b> {m.get('titulo', '')} ({m.get('minutos', '')} min.)", estilo_texto),
-            Paragraph(nombre_completo_asignado, estilo_texto)
-        ])
-    
-    # Construcción visual de la tabla final
-    t_prog = Table(tabla_programa_data, colWidths=[330, 210])
-    estilos_tabla = [
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#2B6CB0')),
-        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('PADDING', (0,0), (-1,-1), 6),
-        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E2E8F0')),
-    ]
-    
-    # Coloreamos las filas una a una en base a su sección original de agosto
-    for i in range(1, len(tabla_programa_data)):
-        k_key = sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999)[i-1]
-        tipo_s = materias[k_key].get("seccion", "Tesoros")
-        c_bg = '#EBF8FF' if tipo_s == "Tesoros" else ('#F0FFF4' if tipo_s == "Maestros" else '#FFFAF0')
-        estilos_tabla.append(('BACKGROUND', (0, i), (-1, i), colors.HexColor(c_bg)))
+            t_tit = Table([[Paragraph(f"<b>{conf['titulo']}</b>", est_letra_blank)]], colWidths=[540])
+            t_tit.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,-1), colors.HexColor(conf["color"])),
+                ('PADDING', (0,0), (-1,-1), 5),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 6)
+            ]))
+            t_tit.hAlign = 'LEFT'
+            elementos.append(t_tit)
+            elementos.append(Spacer(1, 6))
+            
+        titular = asignados.get(f"p{k}_t", "Por asignar")
+        ayudante = asignados.get(f"p{k}_a", "")
         
-    t_prog.setStyle(TableStyle(estilos_tabla))
-    story.append(t_prog)
+        texto_hermanos = f"{titular}"
+        if ayudante and ayudante != "Por asignar":
+            texto_hermanos += f" / Ayudante: {ayudante}"
+            
+        fila_materia = [
+            Paragraph(f"<b>{k}. {m.get('titulo', '')}</b> ({m.get('minutos', '')} min.)", est_texto_p),
+            Paragraph(f"{texto_hermanos}", est_hnos)
+        ]
+        
+        t_fila = Table([fila_materia], colWidths=[340, 200])
+        t_fila.setStyle(TableStyle([
+            ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#E2E8F0")),
+            ('PADDING', (0,0), (-1,-1), 5),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE')
+        ]))
+        t_fila.hAlign = 'LEFT'
+        elementos.append(t_fila)
+        elementos.append(Spacer(1, 4))
+        
+    doc.build(elementos)
     
-    # 4. Compilación física del documento en el disco duro
-    doc.build(story)
-    
-    # Duplicamos el archivo con el nombre redundante tradicional por si main.py lo busca allí
-    nombre_tradicional = f"Reunion_PROCESADO_WEB_{str(fecha_semana).replace(' ', '_')}.pdf"
+    nombre_espejo = f"Reunion_PROCESADO_WEB_{texto_fecha.replace(' ', '_')}.pdf"
     try:
-        with open(nombre_pdf, "rb") as f_origen, open(nombre_tradicional, "wb") as f_destino:
-            f_destino.write(f_origen.read())
-    except Exception:
-        pass
+        with open(nombre_pdf, "rb") as f_orig, open(nombre_espejo, "wb") as f_dest:
+            f_dest.write(f_orig.read())
+    except: pass
