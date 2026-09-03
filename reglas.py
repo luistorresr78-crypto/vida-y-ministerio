@@ -1,169 +1,133 @@
+import os
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
-import os
-import re
-
-# --- CREDENCIALES UNIFICADAS DE LA NUBE ---
-SUPABASE_URL = "https://supabase.co"
-SUPABASE_KEY = "sb_publishable_GpDoDvr1ejZChSiAThb4uQ_-60A9S08"
-SUPABASE_HEADERS = {
-    "apikey": SUPABASE_KEY,
-    "Authorization": f"Bearer {SUPABASE_KEY}",
-    "Content-Type": "application/json",
-    "Prefer": "return=representation"
-}
 
 def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtro):
-    filtro_real = aptitud_filtro
-    if "Tesoros" in aptitud_filtro: filtro_real = "Tesoros"
-    elif "Maestros" in aptitud_filtro or "Seamos" in aptitud_filtro: filtro_real = "Seamos Mejores Maestros"
-    
-    candidatos = [h for h in lista_hermanos if filtro_real in h.get("aptitudes", [])]
-    
-    if hermano_titular and filtro_real == "Seamos Mejores Maestros":
-        titular_limpio = hermano_titular.strip()
-        sexo_tit = next((h["sexo"] for h in lista_hermanos if f"{h['nombre']} {h['apellido']}" == titular_limpio), "Varón")
-        apellido_tit = titular_limpio.split(" ")[-1] if " " in titular_limpio else ""
+    # Función de compatibilidad local idéntica al 28 de agosto
+    candidatos = []
+    for h in lista_hermanos:
+        apts = [str(a).lower() for a in h.get("aptitudes", [])]
+        if aptit_filtro := aptitud_filtro.lower():
+            if "tesoros" in aptit_filtro and "tesoros" in apts: candidatos.append(h)
+            elif "maestros" in aptit_filtro and "seamos mejores maestros" in apts: candidatos.append(h)
+            elif "vida" in aptit_filtro and "vida cristiana" in apts: candidatos.append(h)
+            elif "presidencia" in aptit_filtro and "presidencia" in apts: candidatos.append(h)
+            elif "oración" in aptit_filtro and "oración" in apts: candidatos.append(h)
+    return candidatos
 
-        candidatos_validos = []
-        for h in candidatos:
-            nombre_h = f"{h['nombre']} {h['apellido']}"
-            if nombre_h == titular_limpio: continue
-            if sexo_tit == "Mujer" and h["sexo"] == "Mujer": candidatos_validos.append(h)
-            elif sexo_tit == "Varón":
-                if h["sexo"] == "Varón" or (h["sexo"] == "Mujer" and h["apellido"].lower() == apellido_tit.lower()):
-                    candidatos_validos.append(h)
-        candidatos = candidatos_validos
+def generar_pdf_estilo_oficial(modo, fecha_semana, materias, asignados):
+    # Forzamos por sistema un nombre plano controlado e indestructible en la raíz
+    nombre_pdf = "reunion_actual.pdf"
+    
+    # Configuramos el lienzo de ReportLab en tamaño Carta (Letter)
+    doc = SimpleDocTemplate(
+        nombre_pdf, 
+        pagesize=letter,
+        rightMargin=36, leftMargin=36, 
+        topMargin=36, bottomMargin=36
+    )
+    
+    styles = getSampleStyleSheet()
+    
+    # Definición de la paleta teocrática limpia original de agosto
+    estilo_titulo = ParagraphStyle(
+        'EstiloTitulo', parent=styles['Heading1'],
+        fontName='Helvetica-Bold', fontSize=16, textColor=colors.HexColor('#1A365D'),
+        alignment=1, spaceAfter=8
+    )
+    
+    estilo_sub = ParagraphStyle(
+        'EstiloSub', parent=styles['Normal'],
+        fontName='Helvetica', fontSize=11, textColor=colors.HexColor('#4A5568'),
+        alignment=1, spaceAfter=15
+    )
+    
+    estilo_texto = ParagraphStyle(
+        'EstiloTexto', parent=styles['Normal'],
+        fontName='Helvetica', fontSize=10, textColor=colors.black,
+        leading=13
+    )
 
-    lista_listas = []
-    for h in candidatos:
-        lista_listas.append({"nombre": f"{h['nombre']} {h['apellido']}"})
-    return lista_listas
-
-def estilizar_minutos_y_referencias(texto_base, color_titulo_hex):
-    match = re.search(r"(\(\s*\d+\s*min.*)", texto_base, re.IGNORECASE)
-    if match:
-        parte_minutos_referencia = match.group(1)
-        titulo_principal = texto_base.replace(parte_minutos_referencia, "").strip()
-        texto_estilizado = f"{titulo_principal} <font size=7.5 color='#1A1A1A'><i>{parte_minutos_referencia}</i></font>"
-        return texto_estilizado
-    return texto_base
-
-def generar_pdf_estilo_oficial(lectura_cabecera, fecha_cabecera, materias, asignados):
-    nombre_pdf = "Reunion_PROCESADO_WEB.pdf"
-    doc = SimpleDocTemplate(nombre_pdf, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=45, bottomMargin=45)
+    story = []
     
-    est_fecha = ParagraphStyle('EF', fontName='Helvetica-Bold', fontSize=12, textColor=colors.HexColor("#4A5568"))
-    est_lectura = ParagraphStyle('EL', fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor("#1A365D"))
-    est_letra_blanca = ParagraphStyle('ELB', fontName='Helvetica-Bold', fontSize=10, textColor=colors.white, alignment=0)
+    # 1. Título y Rango de Fecha oficial
+    story.append(Paragraph(f"<b>PROGRAMA DE LA REUNIÓN</b>", estilo_titulo))
+    story.append(Paragraph(f"📅 Semana: {str(fecha_semana).strip()}", estilo_sub))
+    story.append(Spacer(1, 10))
     
-    est_blu = ParagraphStyle('TB', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor("#3A7885"))
-    est_ora = ParagraphStyle('TO', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor("#D08F00"))
-    est_red = ParagraphStyle('TR', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor("#B32415"))
+    # 2. Mesa Principal de introducción
+    presi_nom = asignados.get("presidente", "Por asignar")
+    ora_nom = asignados.get("oracion_inicial", "Por asignar")
     
-    est_hnos = ParagraphStyle('TH', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor("#2D3748"))
-    est_cab_tit = ParagraphStyle('ECT', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#4A5568"))
+    tabla_intro_data = [
+        [Paragraph(f"<b>Presidente:</b> {presi_nom}", estilo_texto), 
+         Paragraph(f"<b>Oración Inicial:</b> {ora_nom}", estilo_texto)]
+    ]
+    t_intro = Table(tabla_intro_data, colWidths=[270, 270])
+    t_intro.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#EDF2F7')),
+        ('PADDING', (0,0), (-1,-1), 6),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+        ('LINEBELOW', (0,0), (-1,-1), 1.5, colors.HexColor('#CBD5E0')),
+    ]))
+    story.append(t_intro)
+    story.append(Spacer(1, 15))
     
-    elementos = []
+    # 3. Dibujo de la Cuadrícula Oficial del Programa
+    tabla_programa_data = [[
+        Paragraph("<b>Punto de la Reunión / Materia</b>", estilo_texto), 
+        Paragraph("<b>Asignado (Titular / Ayudante)</b>", estilo_texto)
+    ]]
     
-    cab_izq = [
-        Paragraph(f"{fecha_cabecera}", est_fecha),
-        Paragraph(f"{lectura_cabecera}", est_lectura)
+    for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
+        m = materias[k]
+        tipo_sec = m.get("seccion", "Tesoros")
+        
+        # Color del riel según la sección teocrática exacta de agosto
+        color_fila = '#EBF8FF' if tipo_sec == "Tesoros" else ('#F0FFF4' if tipo_sec == "Maestros" else '#FFFAF0')
+        
+        titular_punto = asignados.get(f"p{k}_t", "Por asignar")
+        ayudante_punto = asignados.get(f"p{k}_a", "")
+        
+        nombre_completo_asignado = f"{titular_punto}"
+        if ayudante_punto and ayudante_punto != "Por asignar":
+            nombre_completo_asignado += f" / <b>Ayudante:</b> {ayudante_punto}"
+            
+        tabla_programa_data.append([
+            Paragraph(f"<b>{k}.</b> {m.get('titulo', '')} ({m.get('minutos', '')} min.)", estilo_texto),
+            Paragraph(nombre_completo_asignado, estilo_texto)
+        ])
+    
+    # Construcción visual de la tabla final
+    t_prog = Table(tabla_programa_data, colWidths=[330, 210])
+    estilos_tabla = [
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#2B6CB0')),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('PADDING', (0,0), (-1,-1), 6),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E2E8F0')),
     ]
     
-    presi = asignados.get("presidente") or "Por asignar"
-    cab_der = [[Paragraph("<b>Presidente</b>", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    t_presi = Table(cab_der, colWidths=[100, 150])
-    t_presi.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LINEBELOW', (1,0), (1,0), 0.5, colors.black)]))
+    # Coloreamos las filas una a una en base a su sección original de agosto
+    for i in range(1, len(tabla_programa_data)):
+        k_key = sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999)[i-1]
+        tipo_s = materias[k_key].get("seccion", "Tesoros")
+        c_bg = '#EBF8FF' if tipo_s == "Tesoros" else ('#F0FFF4' if tipo_s == "Maestros" else '#FFFAF0')
+        estilos_tabla.append(('BACKGROUND', (0, i), (-1, i), colors.HexColor(c_bg)))
+        
+    t_prog.setStyle(TableStyle(estilos_tabla))
+    story.append(t_prog)
     
-    t_principal = Table([[cab_izq, t_presi]], colWidths=[290, 290])
-    t_principal.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'TOP')]))
-    elementos.append(t_principal)
-    elementos.append(Spacer(1, 15))
+    # 4. Compilación física del documento en el disco duro
+    doc.build(story)
     
-    ora_ini = asignados.get("oracion_inicial") or "Por asignar"
-    datos_cancion_1 = [
-        [Paragraph("🎵 <b>Canción 40</b> y oración", est_cab_tit), Paragraph("<b>Palabras de Introducción</b>", est_cab_tit), Paragraph(f"{ora_ini}", est_hnos)]
-    ]
-    t_c1 = Table(datos_cancion_1, colWidths=[200, 200, 180])
-    t_c1.setStyle(TableStyle([('LINEABOVE', (0,0), (-1,-1), 1, colors.black), ('LINEBELOW', (0,0), (-1,-1), 1, colors.black), ('PADDING', (0,0), (-1,-1), 6), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
-    elementos.append(t_c1)
-    elementos.append(Spacer(1, 20))
-    
-    # === SECCIÓN 1: TESOROS DE LA BIBLIA ===
-    t_tit_tesoros = Table([[Paragraph("<b>TESOROS DE LA BIBLIA</b>", est_letra_blanca)]], colWidths=[580])
-    t_tit_tesoros.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#3A7885")), ('PADDING', (0,0), (-1,-1), 6)]))
-    t_tit_tesoros.hAlign = 'LEFT'
-    elementos.append(t_tit_tesoros)
-    elementos.append(Spacer(1, 10))
-    
-    filas_t = []
-    for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
-        if k in ["1", "2", "3"]:
-            m = materias[k]
-            titulo_limpio_num = re.sub(r"^[1-8]\.\s*", "", m.get('titulo',''))
-            txt_formateado = estilizar_minutos_y_referencias(titulo_limpio_num, "#3A7885")
-            txt_punto = f"<b>{k}. {txt_formateado}</b>"
-            titular = asignados.get(f"p{k}_t") or ""
-            filas_t.append([Paragraph(txt_punto, est_blu), Paragraph(titular, est_hnos), ""])
-    if filas_t:
-        t_filas_t = Table(filas_t, colWidths=[380, 200, 0])
-        t_filas_t.setStyle(TableStyle([('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E1")), ('PADDING', (0,0), (-1,-1), 10), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
-        elementos.append(t_filas_t)
-    elementos.append(Spacer(1, 25))
-    # === SECCIÓN 2: SEAMOS MEJORES MAESTROS ===
-    t_tit_maestros = Table([[Paragraph("<b>SEAMOS MEJORES MAESTROS</b>", est_letra_blanca)]], colWidths=[540])
-    t_tit_maestros.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#D08F00")), ('PADDING', (0,0), (-1,-1), 6)]))
-    t_tit_maestros.hAlign = 'LEFT'
-    elementos.append(t_tit_maestros)
-    elementos.append(Spacer(1, 10))
-    
-    filas_m = []
-    for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
-        if m_obj := materias.get(k):
-            if k in ["4", "5", "6", "7"] and m_obj.get("seccion") == "Maestros":
-                titulo_limpio_num = re.sub(r"^[1-8]\.\s*", "", m_obj.get('titulo',''))
-                txt_formateado = estilizar_minutos_y_referencias(titulo_limpio_num, "#D08F00")
-                txt_punto = f"<b>{k}. {txt_formateado}</b>"
-                titular = asignados.get(f"p{k}_t") or ""
-                ayudante = asignados.get(f"p{k}_a") or ""
-                filas_m.append([Paragraph(txt_punto, est_ora), Paragraph(titular, est_hnos), Paragraph(ayudante, est_hnos)])
-    if filas_m:
-        t_filas_m = Table(filas_m, colWidths=[340, 100, 100])
-        t_filas_m.setStyle(TableStyle([('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E1")), ('PADDING', (0,0), (-1,-1), 10), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
-        elementos.append(t_filas_m)
-    elementos.append(Spacer(1, 25))
-    
-    # === SECCIÓN 3: NUESTRA VIDA CRISTIANA ===
-    t_tit_vida = Table([[Paragraph("<b>NUESTRA VIDA CRISTIANA</b>", est_letra_blanca)]], colWidths=[540])
-    t_tit_vida.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#B32415")), ('PADDING', (0,0), (-1,-1), 6)]))
-    t_tit_vida.hAlign = 'LEFT'
-    elementos.append(t_tit_vida)
-    elementos.append(Spacer(1, 10))
-    
-    t_c2 = Table([[Paragraph("🎵 <b>Canción 103</b>", est_cab_tit)]], colWidths=[540])
-    t_c2.setStyle(TableStyle([('LINEBELOW', (0,0), (-1,-1), 0.5, colors.black), ('PADDING', (0,0), (-1,-1), 6)]))
-    elementos.append(t_c2)
-    
-    filas_v = []
-    for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
-        if m_obj := materias.get(k):
-            if k.isdigit() and int(k) >= 7 and m_obj.get("seccion") == "Vida":
-                titulo_limpio_num = re.sub(r"^[1-8]\.\s*", "", m_obj.get('titulo',''))
-                txt_formateado = estilizar_minutos_y_referencias(titulo_limpio_num, "#B32415")
-                txt_punto = f"<b>{k}. {txt_formateado}</b>"
-                titular = asignados.get(f"p{k}_t") or ""
-                filas_v.append([Paragraph(txt_punto, est_red), Paragraph(titular, est_hnos), ""])
-    if filas_v:
-        t_filas_v = Table(filas_v, colWidths=[380, 160, 0])
-        t_filas_v.setStyle(TableStyle([('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E1")), ('PADDING', (0,0), (-1,-1), 10), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
-        elementos.append(t_filas_v)
-    elementos.append(Spacer(1, 20))
-    
-    t_c3 = Table([[Paragraph("Palabras de conclusión (3 mins.)", est_cab_tit), Paragraph("🎵 <b>Canción 60</b> y oración", est_cab_tit), Paragraph("", est_hnos)]], colWidths=[180, 200, 160])
-    t_c3.setStyle(TableStyle([('LINEABOVE', (0,0), (-1,-1), 1, colors.black), ('LINEBELOW', (0,0), (-1,-1), 1, colors.black), ('PADDING', (0,0), (-1,-1), 6), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
-    elementos.append(t_c3)
-    
-    doc.build(elementos)
+    # Duplicamos el archivo con el nombre redundante tradicional por si main.py lo busca allí
+    nombre_tradicional = f"Reunion_PROCESADO_WEB_{str(fecha_semana).replace(' ', '_')}.pdf"
+    try:
+        with open(nombre_pdf, "rb") as f_origen, open(nombre_tradicional, "wb") as f_destino:
+            f_destino.write(f_origen.read())
+    except Exception:
+        pass
