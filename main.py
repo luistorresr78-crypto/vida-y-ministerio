@@ -108,7 +108,7 @@ with pestana_programa:
             if st.button("Guardar Reemplazo en Bitácora", key="btn_remp_live"):
                 if h_ausente and h_sustituto:
                     st.success(f"Sustitución guardada: {h_sustituto} cubre a {h_ausente}")
-    st.markdown("### 🎚️ Asignar Privilegios para el Folleto PDF")
+       st.markdown("### 🎚️ Asignar Privilegios para el Folleto PDF")
     
     col_p1, col_p2 = st.columns(2)
     with col_p1:
@@ -158,13 +158,17 @@ with pestana_programa:
 
     st.markdown("---")
     
-    # FORMATOS DE BÚSQUEDA ADAPTATIVOS COMPATIBLES CON TU REGLAS.PY ORIGINAL
-    nombre_archivo_opcion1 = f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"
-    nombre_archivo_opcion2 = f"Reunion_PROCESADO_WEB_{f_cab}.pdf"
+    # NOMBRE DE ARCHIVO FIJO INDESTRUCTIBLE PARA EVITAR ERRORES DE CARACTERES
+    nombre_archivo_final = "reunion_actual.pdf"
 
     try:
-        # LLAMADA CON LA NOMENCLATURA CONFIGURADA EN TU REGLAS.PY DE AGOSTO
+        # Generamos el documento ReportLab pasándole un nombre de archivo limpio y controlado
         reglas.generar_pdf_estilo_oficial("PROCESADO_WEB", f_cab, materias_dinamicas, asignados_en_vivo)
+        # Forzamos por sistema que el archivo se renombre o guarde en la raíz como reunion_actual.pdf
+        if os.path.exists(f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"):
+            os.rename(f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf", nombre_archivo_final)
+        elif os.path.exists(f"Reunion_PROCESADO_WEB_{f_cab}.pdf"):
+            os.rename(f"Reunion_PROCESADO_WEB_{f_cab}.pdf", nombre_archivo_final)
     except Exception:
         pass
 
@@ -173,20 +177,10 @@ with pestana_programa:
         
     st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
 
-    # ESCÁNER INTELIGENTE DE ARCHIVOS COMPILADOS DE REPORTLAB
-    archivo_encontrado = ""
-    if os.path.exists(nombre_archivo_opcion1):
-        archivo_encontrado = Regulatory = nombre_archivo_opcion1
-    elif os.path.exists(nombre_archivo_opcion2):
-        archivo_encontrado = nombre_archivo_opcion2
-    else:
-        # Intento de escaneo de comodín para capturar cualquier PDF generado hoy en la raíz
-        for f in os.listdir("."):
-            if f.startswith("Reunion_PROCESADO_WEB_") and f.endswith(".pdf"):
-                archivo_encontrado = f; break
-
-    if archivo_encontrado:
-        with open(archivo_encontrado, "rb") as pdf_file:
+    # EL BOTÓN ENCUENTRA SIEMPRE EL MISMO ARCHIVO FISICO Y QUEDA FIJO Y DISPONIBLE
+    if os.path.exists(nombre_archivo_final) or os.path.exists(f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"):
+        archivo_descarga = nombre_archivo_final if os.path.exists(nombre_archivo_final) else f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"
+        with open(archivo_descarga, "rb") as pdf_file:
             pdf_bytes = pdf_file.read()
         st.download_button(
             label="🟣 Descargar Folleto Oficial en PDF", 
@@ -197,7 +191,7 @@ with pestana_programa:
             use_container_width=True
         )
     else:
-        st.warning("⚠️ No se ha detectado el archivo generado. Presione el botón gris 'Procesar Datos (Paso 1)' arriba para compilar el PDF de ReportLab.")
+        st.warning("⚠️ No se ha generado el archivo temporal. Presione el botón gris 'Procesar Datos (Paso 1)' arriba para forzar la creación del PDF.")
 
 # =========================================================================
 # PESTAÑA 2: GESTIÓN DE HERMANOS
