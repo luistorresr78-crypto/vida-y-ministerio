@@ -76,8 +76,8 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n")]
     lineas_limpias = [l for l in lineas if l]
-    fecha_cab = lineas_limpias[0] if len(lineas_limpias) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas_limpias[1] if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
+    fecha_cab = lineas_limpias if len(lineas_limpias) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas_limpias if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
 
     for i, linea in enumerate(lineas_limpias):
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
@@ -167,7 +167,8 @@ with p_asignaciones:
             idx_ora = nom_ora.index(val_ora_curr) if val_ora_curr in nom_ora else 0
             oracion_inicial = st.selectbox("Oración Inicial", nom_ora, index=idx_ora)
 
-        nuevos_asignados = {"presidente": presidential, "oracion_inicial": oracion_inicial}
+        # SE SANA LA PARALABRA EN ESPAÑOL IMPEDIZANDO EL ERROR VISUAL
+        nuevos_asignados = {"presidente": presidente, "oracion_inicial": oracion_inicial}
         for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
             m = materias[k]
             tipo_seccion = m.get("seccion", "Tesoros")
