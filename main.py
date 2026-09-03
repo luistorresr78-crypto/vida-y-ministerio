@@ -7,7 +7,7 @@ import requests
 # --- CONFIGURACIÓN DE PÁGINA ÚNICA INDEPENDIENTE ---
 st.set_page_config(page_title="Programa de Reunión", page_icon="📋", layout="wide")
 
-# CONEXIÓN ABSOLUTA SOLDADA CON LA RUTA DE LA API EN SINGULAR
+# CONEXIÓN ABSOLUTA SOLDADA CON LA RUTA DE LA API EN SINGULAR Y PLURAL
 URL_BASE = "https://supabase.co"
 HEADERS_NUBE = {
     "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0cnhkemRodmdmbXJuZnRtdm52Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTI4MzM2MCwiZXhwIjoyMDQwODU5MzYwfQ.jRPh_3C65GzZ_r2Z6tU1jD6V_T11_354Jv_t11VvT-w",
@@ -24,10 +24,10 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
     if "Tesoros" in aptitud_filtro: filtro_real = "Tesoros"
     elif "Maestros" in aptitud_filtro or "Seamos" in aptitud_filtro: filtro_real = "Seamos Mejores Maestros"
     
-    candidatos = [h for h in lista_hermanos if filtro_real.lower() in h.get("aptitudes", "").lower()]
+    candidatos = [h for h in lista_hermanos if filtro_real.lower() in h.get("Aptitudes", "").lower()]
     lista_listas = []
     for h in candidatos:
-        lista_listas.append({"nombre": f"{h['nombre']} {h['apellido']}"})
+        lista_listas.append({"nombre": f"{h['Nombre']} {h['Apellido']}"})
     return lista_listas
 
 def cargar_hermanos_cloud():
@@ -41,12 +41,12 @@ def cargar_hermanos_cloud():
             for h in res.json():
                 lista.append({
                     "id": h.get("id"),
-                    "nombre": h.get("nombre", "").strip().title(),
-                    "apellido": h.get("apellido", "").strip().title(),
-                    "sexo": h.get("sexo", "Varón"),
-                    "aptitudes": str(h.get("aptitudes", ""))
+                    "Nombre": h.get("Nombre", h.get("nombre", "")).strip().title(),
+                    "Apellido": h.get("Apellido", h.get("apellido", "")).strip().title(),
+                    "Sexo": h.get("Sexo", h.get("sexo", "Varón")),
+                    "Aptitudes": str(h.get("Aptitudes", h.get("aptitudes", "")))
                 })
-            return sorted(lista, key=lambda x: (x.get("nombre", "").lower(), x.get("apellido", "").lower()))
+            return sorted(lista, key=lambda x: (x.get("Nombre", "").lower(), x.get("Apellido", "").lower()))
     except Exception: pass
     return []
 
@@ -76,8 +76,8 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n")]
     lineas_limpias = [l for l in lineas if l]
-    fecha_cab = lineas_limpias if len(lineas_limpias) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas_limpias if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
+    fecha_cab = lineas_limpias[0] if len(lineas_limpias) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas_limpias[1] if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
 
     for i, linea in enumerate(lineas_limpias):
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
@@ -167,7 +167,7 @@ with p_asignaciones:
             idx_ora = nom_ora.index(val_ora_curr) if val_ora_curr in nom_ora else 0
             oracion_inicial = st.selectbox("Oración Inicial", nom_ora, index=idx_ora)
 
-        nuevos_asignados = {"presidente": presidente, "oracion_inicial": oracion_inicial}
+        nuevos_asignados = {"presidente": presidential, "oracion_inicial": oracion_inicial}
         for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
             m = materias[k]
             tipo_seccion = m.get("seccion", "Tesoros")
@@ -200,7 +200,6 @@ with p_hermanos:
     st.header("👥 Nómina")
     c_a, c_d = st.columns(2)
     with c_a:
-        # SISTEMA DE VALIDACIÓN PREVIA TOTALMENTE BLINDADO
         n = st.text_input("Nombre:", key="nom_p2")
         a = st.text_input("Apellido:", key="ape_p2")
         s = st.selectbox("Sexo:", ["Varón", "Mujer"], key="sex_p2")
@@ -211,23 +210,22 @@ with p_hermanos:
                 st.error("🚨 Error obligatorio: ¡No puede dejar los casilleros de Nombre o Apellido vacíos!")
             else:
                 cadena_plana_aptitudes = ", ".join(ap) if ap else ""
-                payload_nuevo = {"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": cadena_plana_aptitudes}
+                # ADAPTACIÓN EXACTA A LAS COLUMNAS REALES EN MAYÚSCULA DE SUPABASE
+                payload_nuevo = {"Nombre": n.strip().title(), "Apellido": a.strip().title(), "Sexo": s, "Aptitudes": cadena_plana_aptitudes}
                 
-                # ESCÁNER ADAPTATIVO EN ACCIÓN
                 res_post = requests.post(f"{URL_BASE}/hermano", headers=HEADERS_NUBE, json=payload_nuevo)
                 if res_post.status_code == 404:
                     res_post = requests.post(f"{URL_BASE}/hermanos", headers=HEADERS_NUBE, json=payload_nuevo)
                 
-                # LA COMPARACIÓN TRADICIONAL CORREGIDA QUE SANA LA LÍNEA 222
                 if res_post.status_code == 201 or res_post.status_code == 200:
                     st.success("¡Publicador añadido con éxito absoluto en internet!")
                     st.rerun()
                 else:
                     st.error(f"❌ Error de internet: La base de datos rechazó el guardado. Código: {res_post.status_code}")
     with c_d:
-        hermano_a_eliminar = st.selectbox("Dar de baja:", [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos])
+        hermano_a_eliminar = st.selectbox("Dar de baja:", [f"{h['Nombre']} {h['Apellido']}" for h in lista_hermanos])
         if st.button("Confirmar Eliminación", type="primary"):
-            t = next((h for h in lista_hermanos if f"{h['nombre']} {h['apellido']}" == hermano_a_eliminar), None)
+            t = next((h for h in lista_hermanos if f"{h['Nombre']} {h['Apellido']}" == hermano_a_eliminar), None)
             if t and t.get("id"):
                 res_del = requests.delete(f"{URL_BASE}/hermano?id=eq.{t['id']}", headers=HEADERS_NUBE)
                 if res_del.status_code == 404:
@@ -237,7 +235,7 @@ with p_hermanos:
                 
     nomina_fresca_web = cargar_hermanos_cloud()
     if nomina_fresca_web:
-        st.table([{"Nombre": h.get("nombre"), "Apellido": h.get("apellido"), "Sexo": h.get("sexo"), "Aptitudes": h.get("aptitudes", "")} for h in nomina_fresca_web])
+        st.table([{"Nombre": h.get("Nombre"), "Apellido": h.get("Apellido"), "Sexo": h.get("Sexo"), "Aptitudes": h.get("Aptitudes", "")} for h in nomina_fresca_web])
     else:
         st.info("La nómina está vacía en internet. Ingrese el primer publicador arriba.")
 
