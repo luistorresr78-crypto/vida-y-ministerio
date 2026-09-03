@@ -7,7 +7,7 @@ import requests
 # --- CONFIGURACIÓN DE PÁGINA ÚNICA INDEPENDIENTE ---
 st.set_page_config(page_title="Programa de Reunión", page_icon="📋", layout="wide")
 
-# CONEXIÓN ABSOLUTA SOLDADA CON LA RUTA PÚBLICA DE LA API
+# CONEXIÓN ABSOLUTA SOLDADA CON LA RUTA DE LA API EN SINGULAR
 URL_BASE = "https://supabase.co"
 HEADERS_NUBE = {
     "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0cnhkemRodmdmbXJuZnRtdm52Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTI4MzM2MCwiZXhwIjoyMDQwODU5MzYwfQ.jRPh_3C65GzZ_r2Z6tU1jD6V_T11_354Jv_t11VvT-w",
@@ -32,7 +32,12 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
 
 def cargar_hermanos_cloud():
     try:
-        res = requests.get(f"{URL_BASE}/hermanos?select=*", headers=HEADERS_NUBE, timeout=10)
+        # Probamos llamando en singular 'hermano'
+        res = requests.get(f"{URL_BASE}/hermano?select=*", headers=HEADERS_NUBE, timeout=10)
+        if res.status_code == 404:
+            # Si falla, el sistema automáticamente intenta con 'hermanos'
+            res = requests.get(f"{URL_BASE}/hermanos?select=*", headers=HEADERS_NUBE, timeout=10)
+        
         if res.status_code == 200:
             lista = []
             for h in res.json():
@@ -49,7 +54,10 @@ def cargar_hermanos_cloud():
 
 def cargar_reuniones_cloud():
     try:
-        res = requests.get(f"{URL_BASE}/reuniones?select=*", headers=HEADERS_NUBE, timeout=10)
+        res = requests.get(f"{URL_BASE}/reunion?select=*", headers=HEADERS_NUBE, timeout=10)
+        if res.status_code == 404:
+            res = requests.get(f"{URL_BASE}/reuniones?select=*", headers=HEADERS_NUBE, timeout=10)
+            
         if res.status_code == 200:
             dicc_reuns = {}
             for r in res.json():
@@ -70,8 +78,8 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n")]
     lineas_limpias = [l for l in lineas if l]
-    fecha_cab = lineas_limpias[0] if len(lineas_limpias) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas_limpias[1] if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
+    fecha_cab = lineas_limpias if len(lineas_limpias) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas_limpias if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
 
     for i, linea in enumerate(lineas_limpias):
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
@@ -131,7 +139,9 @@ with p_asignaciones:
         h_sus = st.text_input("Suplente:")
         if st.button("Guardar Reemplazo"):
             if h_aus and h_sus:
-                requests.post(f"{URL_BASE}/reemplazos", headers=HEADERS_NUBE, json={"hermano_ausente": h_aus.strip().title(), "hermano_sustituto": h_sus.strip().title()})
+                res = requests.post(f"{URL_BASE}/reemplazo", headers=HEADERS_NUBE, json={"hermano_ausente": h_aus.strip().title(), "hermano_sustituto": h_sus.strip().title()})
+                if res.status_code == 404:
+                    requests.post(f"{URL_BASE}/reemplazos", headers=HEADERS_NUBE, json={"hermano_ausente": h_aus.strip().title(), "hermano_sustituto": h_sus.strip().title()})
                 st.success("¡Registrado!")
                 st.rerun()
 
@@ -182,7 +192,9 @@ with p_asignaciones:
 
         if st.form_submit_button("💾 Guardar Asignaciones"):
             payload = {"mes": mes_seleccionado, "semana": semana_seleccionada, "fecha_cabecera": semana_data.get("fecha_cabecera"), "lectura_cabecera": semana_data.get("lectura_cabecera"), "materias": materias, "asignados": nuevos_asignados, "ultima_firma": f"Modificado por: {coordinador_activo}"}
-            requests.post(f"{URL_BASE}/reuniones", headers=HEADERS_NUBE, json=payload)
+            res = requests.post(f"{URL_BASE}/reunion", headers=HEADERS_NUBE, json=payload)
+            if res.status_code == 404:
+                requests.post(f"{URL_BASE}/reuniones", headers=HEADERS_NUBE, json=payload)
             st.success("¡Guardado!")
             st.rerun()
 
@@ -201,9 +213,13 @@ with p_hermanos:
             else:
                 cadena_plana_aptitudes = ", ".join(ap) if ap else ""
                 payload_nuevo = {"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": cadena_plana_aptitudes}
-                res_post = requests.post(f"{URL_BASE}/hermanos", headers=HEADERS_NUBE, json=payload_nuevo)
                 
-                if res_post.status_code == 201 or res_post.status_code == 200:
+                # ESCÁNER AUTOMÁTICO DE SEGURIDAD CONTRA EL 404
+                res_post = requests.post(f"{URL_BASE}/hermano", headers=HEADERS_NUBE, json=payload_nuevo)
+                if res_post.status_code == 404:
+                    res_post = requests.post(f"{URL_BASE}/hermanos", headers=HEADERS_NUBE, json=payload_nuevo)
+                
+                if res_post.status_code in:
                     st.success("¡Publicador añadido con éxito absoluto en internet!")
                     st.rerun()
                 else:
@@ -213,7 +229,9 @@ with p_hermanos:
         if st.button("Confirmar Eliminación", type="primary"):
             t = next((h for h in lista_hermanos if f"{h['nombre']} {h['apellido']}" == hermano_a_eliminar), None)
             if t and t.get("id"):
-                requests.delete(f"{URL_BASE}/hermanos?id=eq.{t['id']}", headers=HEADERS_NUBE)
+                res_del = requests.delete(f"{URL_BASE}/hermano?id=eq.{t['id']}", headers=HEADERS_NUBE)
+                if res_del.status_code == 404:
+                    requests.delete(f"{URL_BASE}/hermanos?id=eq.{t['id']}", headers=HEADERS_NUBE)
                 st.warning("Eliminado de la nube.")
                 st.rerun()
                 
@@ -233,9 +251,13 @@ with p_reuniones:
         t_pegar = st.text_area("Pega el texto completo de JW.org aquí:")
         if st.form_submit_button("⚡ Cargar Semana"):
             if t_pegar:
-                requests.delete(f"{URL_BASE}/reuniones?mes=eq.{m_dest}&semana=eq.{s_dest}", headers=HEADERS_NUBE)
+                res_del_r = requests.delete(f"{URL_BASE}/reunion?mes=eq.{m_dest}&semana=eq.{s_dest}", headers=HEADERS_NUBE)
+                if res_del_r.status_code == 404:
+                    requests.delete(f"{URL_BASE}/reuniones?mes=eq.{m_dest}&semana=eq.{s_dest}", headers=HEADERS_NUBE)
                 f, l, mats = procesar_texto_plano_reunion(t_pegar)
                 payload_reun = {"mes": m_dest, "semana": s_dest, "fecha_cabecera": f, "lectura_cabecera": l, "materias": mats, "asignados": {}, "ultima_firma": "Cargado desde JW.org"}
-                requests.post(f"{URL_BASE}/reuniones", headers=HEADERS_NUBE, json=payload_reun)
+                res_p_r = requests.post(f"{URL_BASE}/reunion", headers=HEADERS_NUBE, json=payload_reun)
+                if res_p_r.status_code == 404:
+                    requests.post(f"{URL_BASE}/reuniones", headers=HEADERS_NUBE, json=payload_reun)
                 st.success("¡Cargado con éxito absoluto!")
                 st.rerun()
