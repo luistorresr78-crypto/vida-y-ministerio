@@ -41,9 +41,8 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
-    # SANA CORRECCIÓN: FIJAMOS EL MISMO NOMBRE DE VARIABLE EN TODO EL MAPA
-    lectura_cab = lineas[1] if len(lineas) > 1 else "Lectura Oficial por Cargar"
+    fecha_cab = lineas if len(lineas) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas if len(lineas) > 1 else "Lectura Oficial por Cargar"
 
     for linea in lineas:
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
@@ -158,29 +157,42 @@ with pestana_programa:
 
     st.markdown("---")
     
-    # NOMBRE DE ARCHIVO FIJO INDESTRUCTIBLE PARA EVITAR ERRORES DE CARACTERES
+    # NOMBRE DE ARCHIVO ESTÁNDAR FIJO INDESTRUCTIBLE EN RAÍZ
     nombre_archivo_final = "reunion_actual.pdf"
 
-    try:
-        # Generamos el documento ReportLab pasándole un nombre de archivo limpio y controlado
-        reglas.generar_pdf_estilo_oficial("PROCESADO_WEB", f_cab, materias_dinamicas, asignados_en_vivo)
-        # Forzamos por sistema que el archivo se renombre o guarde en la raíz como reunion_actual.pdf
-        if os.path.exists(f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"):
-            os.rename(f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf", nombre_archivo_final)
-        elif os.path.exists(f"Reunion_PROCESADO_WEB_{f_cab}.pdf"):
-            os.rename(f"Reunion_PROCESADO_WEB_{f_cab}.pdf", nombre_archivo_final)
-    except Exception:
-        pass
-
+    # LA CREACIÓN DEL ARCHIVO SUCEDE ESTRICTAMENTE CUANDO SE TOCA EL BOTÓN GRIS
     if boton_armar_pdf:
+        try:
+            # Forzamos la ejecución de ReportLab en caliente con variables dinámicas
+            reglas.generar_pdf_estilo_oficial("PROCESADO_WEB", f_cab, materias_dinamicas, asignados_en_vivo)
+            
+            # Ubicamos el archivo dinámico que crea ReportLab y lo unificamos a un nombre plano seguro
+            nombre_reportlab_1 = f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"
+            nombre_reportlab_2 = f"Reunion_PROCESADO_WEB_{f_cab}.pdf"
+            
+            if os.path.exists(nombre_reportlab_1):
+                with open(nombre_reportlab_1, "rb") as f_origen, open(nombre_archivo_final, "wb") as f_destino:
+                    f_destinatario = f_destino.write(f_origen.read())
+            elif os.path.exists(nombre_reportlab_2):
+                with open(nombre_reportlab_2, "rb") as f_origen, open(nombre_archivo_final, "wb") as f_destino:
+                    f_destinatario = f_destino.write(f_origen.read())
+            else:
+                # Comodín de rescate de archivos PDF generados hoy en la raíz por seguridad
+                for arc in os.listdir("."):
+                    if arc.startswith("Reunion_PROCESADO_WEB_") and arc.endswith(".pdf"):
+                        with open(arc, "rb") as f_origen, open(nombre_archivo_final, "wb") as f_destino:
+                            f_destino.write(f_origen.read())
+                        break
+        except Exception:
+            pass
+            
         st.success(f"¡Folleto procesado con éxito por {coordinador_activo}! El botón morado de abajo está listo con los datos reales.")
-        
+
     st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
 
-    # EL BOTÓN ENCUENTRA SIEMPRE EL MISMO ARCHIVO FISICO Y QUEDA FIJO Y DISPONIBLE
-    if os.path.exists(nombre_archivo_final) or os.path.exists(f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"):
-        archivo_descarga = nombre_archivo_final if os.path.exists(nombre_archivo_final) else f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"
-        with open(archivo_descarga, "rb") as pdf_file:
+    # EL BOTÓN VERIFICA EL DISCO EN CALIENTE Y QUEDA TOTALMENTE FIJO AL PROCESAR
+    if os.path.exists(nombre_archivo_final):
+        with open(nombre_archivo_final, "rb") as pdf_file:
             pdf_bytes = pdf_file.read()
         st.download_button(
             label="🟣 Descargar Folleto Oficial en PDF", 
@@ -191,7 +203,7 @@ with pestana_programa:
             use_container_width=True
         )
     else:
-        st.warning("⚠️ No se ha generado el archivo temporal. Presione el botón gris 'Procesar Datos (Paso 1)' arriba para forzar la creación del PDF.")
+        st.warning("⚠️ No se ha detectado el archivo en el sistema. Presione el botón gris 'Procesar Datos (Paso 1)' arriba para compilar el PDF de ReportLab.")
 
 # =========================================================================
 # PESTAÑA 2: GESTIÓN DE HERMANOS
