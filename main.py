@@ -41,7 +41,7 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    # EXTRACCIÓN PLANA ABSOLUTA: EXTRAEMOS EL ELEMENTO DE LA LÍNEA (EVITA ENVIAR CORCHETES COMO LISTA)
+    # EXTRACCIÓN MILIMÉTRICA: CON [0] Y [1] EXTRAEMOS TEXTO PURO, NUNCA LISTAS
     fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
     lectura_cab = lineas[1] if len(lineas) > 1 else "Lectura Oficial por Cargar"
 
