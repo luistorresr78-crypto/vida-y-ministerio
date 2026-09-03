@@ -9,7 +9,7 @@ st.set_page_config(page_title="Mesa de Asignaciones Teocraticas", page_icon="�
 
 FICHERO_HERMANOS = "hermanos.json"
 
-# Carga segura de la nomina de hermanos local en minúsculas exactas
+# Carga con escáner adaptativo tolerante a mayúsculas/minúsculas
 def cargar_hermanos_iniciales():
     if not os.path.exists(FICHERO_HERMANOS):
         hermanos_base = [
@@ -19,8 +19,19 @@ def cargar_hermanos_iniciales():
         ]
         with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
             json.dump(hermanos_base, f, ensure_ascii=False, indent=4)
+            
     with open(FICHERO_HERMANOS, "r", encoding="utf-8") as f:
-        return json.load(f)
+        datos_sucios = json.load(f)
+        lista_limpia = []
+        # Normalizamos cualquier formato viejo del archivo físico al vuelo
+        for h in datos_sucios:
+            lista_limpia.append({
+                "nombre": h.get("nombre", h.get("Nombre", "")).strip().title(),
+                "apellido": h.get("apellido", h.get("Apellido", "")).strip().title(),
+                "sexo": h.get("sexo", h.get("Sexo", "Varón")),
+                "aptitudes": h.get("aptitudes", h.get("Aptitudes", []))
+            })
+        return lista_limpia
 
 lista_hermanos = cargar_hermanos_iniciales()
 
@@ -174,7 +185,7 @@ with pestana_programa:
         )
 
 # =========================================================================
-# PESTAÑA 2: GESTIÓN DE HERMANOS (NÓMINA SANA EN MINÚSCULAS)
+# PESTAÑA 2: GESTIÓN DE HERMANOS
 # =========================================================================
 with pestana_hermanos:
     st.header("👥 Control de la Nómina de la Congregación")
