@@ -30,7 +30,6 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
     return lista_listas
 
 def cargar_hermanos_cloud():
-    # El escáner prueba todas las variantes ortográficas de la tabla hermanos
     for endpoint in ["hermano", "hermanos", "Hermano", "Hermanos"]:
         try:
             res = requests.get(f"{URL_BASE}/{endpoint}?select=*", headers=HEADERS_NUBE, timeout=5)
@@ -136,7 +135,8 @@ with p_asignaciones:
                 exito_rep = False
                 for ep in ["reemplazo", "reemplazos", "Reemplazo", "Reemplazos"]:
                     res = requests.post(f"{URL_BASE}/{ep}", headers=HEADERS_NUBE, json={"hermano_ausente": h_aus.strip().title(), "hermano_sustituto": h_sus.strip().title()})
-                    if res.status_code in: exito_rep = True; break
+                    # SANA LA LÍNEA 139 ELIMINANDO LA FRASE CORRUPTA
+                    if res.status_code == 201 or res.status_code == 200: exito_rep = True; break
                 st.success("¡Registrado!")
                 st.rerun()
 
@@ -186,6 +186,7 @@ with p_asignaciones:
                 nuevos_asignados[f"p{k}_t"] = t_sel.split(" (⚠️") if t_sel else ""
 
         if st.form_submit_button("💾 Guardar Asignaciones"):
+            payload = {"mes": mes_seleccionado, "semana": semana_seleccionada, "fecha_cabecera": semana_data.get("fecha_cabecera"), "lectura_cabecera": semana_data.get("lectura_cabecera"), "materias": materias, "asignados": nuevos_asignados, "ultima_firma": f"Modificado por: {coordinador_activo}"}
             exito_r = False
             for ep in ["reunion", "reuniones", "Reunion", "Reuniones"]:
                 res = requests.post(f"{URL_BASE}/{ep}", headers=HEADERS_NUBE, json=payload)
