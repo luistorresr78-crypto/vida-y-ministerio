@@ -7,11 +7,11 @@ import requests
 # --- CONFIGURACIÓN DE PÁGINA ÚNICA INDEPENDIENTE ---
 st.set_page_config(page_title="Programa de Reunión", page_icon="📋", layout="wide")
 
-# FIJAMOS LA RUTA OFICIAL ABSOLUTA AL NUEVO PROYECTO ACTIVO DE SUPABASE
+# CONEXIÓN ABSOLUTA SOLDADA CON LA RUTA DE LA API Y TU LLAVE VIRGEN REAL CONTRATADA
 URL_BASE = "https://supabase.co"
 HEADERS_NUBE = {
-    "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0cnhkemRodmdmbXJuZnRtdm52Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTI4MzM2MCwiZXhwIjoyMDQwODU5MzYwfQ.jRPh_3C65GzZ_r2Z6tU1jD6V_T11_354Jv_t11VvT-w",
-    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0cnhkemRodmdmbXJuZnRtdm52Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTI4MzM2MCwiZXhwIjoyMDQwODU5MzYwfQ.jRPh_3C65GzZ_r2Z6tU1jD6V_T11_354Jv_t11VvT-w",
+    "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0cnhkemRodmdmbXJuZnRtdm52Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxOTY2MTMsImV4cCI6MjEwMzc3MjYxM30.exP_GgNPxvlTOsS6-8gsnBQa5TPT38-pDpMiibeEinA",
+    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0cnhkemRodmdmbXJuZnRtdm52Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxOTY2MTMsImV4cCI6MjEwMzc3MjYxM30.exP_GgNPxvlTOsS6-8gsnBQa5TPT38-pDpMiibeEinA",
     "Content-Type": "application/json",
     "Prefer": "return=representation"
 }
@@ -90,7 +90,7 @@ def procesar_texto_plano_reunion(texto_usuario):
             if num_punto in ["1", "2", "3"]: seccion_real = "Tesoros"
             elif num_punto in ["4", "5", "6"]: seccion_real = "Maestros"
             else: seccion_real = "Vida"
-            materias_detectadas[num_punto] = {"titulo": titulo_completo, "minutos": minutos, "seccion": seccion_real}
+            materias_detectadas[num_punto] = {"titulo": titulo_completo, "minutos": minutes, "seccion": seccion_real}
     return fecha_cab, lectura_cab, materias_detectadas
 
 # --- MENÚ DE CONTROL DIRECTO FRONTAL ---
@@ -218,7 +218,7 @@ elif st.session_state.pagina_actual == "👥 Gestión de Hermanos":
                 st.error("🚨 Error obligatorio: ¡No puede dejar los casilleros de Nombre o Apellido vacíos!")
             else:
                 cadena_plana_aptitudes = ", ".join(ap) if ap else ""
-                # ADAPTACIÓN DEFINITIVA A TU BASE DE DATOS REAL DE SUPABASE EN MINÚSCULAS STRICTORAS
+                # ENVIAMOS LAS LLAVES FÍSICAS EN MINÚSCULAS STRICTAS A LA TABLA hermanos
                 payload_nuevo = {"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": cadena_plana_aptitudes}
                 res_post = requests.post(f"{URL_BASE}/hermanos", headers=HEADERS_NUBE, json=payload_nuevo)
                 
