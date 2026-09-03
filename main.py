@@ -9,7 +9,7 @@ st.set_page_config(page_title="Mesa de Asignaciones Teocraticas", page_icon="�
 
 FICHERO_HERMANOS = "hermanos.json"
 
-# Carga con escáner adaptativo tolerante a mayúsculas/minúsculas
+# Carga segura con escáner tolerante a mayúsculas/minúsculas
 def cargar_hermanos_iniciales():
     if not os.path.exists(FICHERO_HERMANOS):
         hermanos_base = [
@@ -23,7 +23,6 @@ def cargar_hermanos_iniciales():
     with open(FICHERO_HERMANOS, "r", encoding="utf-8") as f:
         datos_sucios = json.load(f)
         lista_limpia = []
-        # Normalizamos cualquier formato viejo del archivo físico al vuelo
         for h in datos_sucios:
             lista_limpia.append({
                 "nombre": h.get("nombre", h.get("Nombre", "")).strip().title(),
@@ -82,7 +81,7 @@ pestana_programa, pestana_hermanos = st.tabs([
 ])
 
 # =========================================================================
-# PESTAÑA 1: FABRICADOR EN CALIENTE DE FOLLETOS (TODO EN UNA PANTALLA)
+# PESTAÑA 1: FABRICADOR EN CALIENTE DE FOLLETOS
 # =========================================================================
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
@@ -119,12 +118,12 @@ with pestana_programa:
     col_p1, col_p2 = st.columns(2)
     with col_p1:
         opciones_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia")
-        nom_presi = [f"{h['nombre']} {h['apellido']}" for h in opciones_presi] if opciones_presi else [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos]
+        nom_presi = [f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" for h in opciones_presi] if opciones_presi else [f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" for h in lista_hermanos]
         presidente = st.selectbox("Presidente de la Reunión", nom_presi, key="p_presi_live")
         
     with col_p2:
         opciones_ora = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Oración")
-        nom_ora = [f"{h['nombre']} {h['apellido']}" for h in opciones_ora] if opciones_ora else [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos]
+        nom_ora = [f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" for h in opciones_ora] if opciones_ora else [f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" for h in lista_hermanos]
         oracion_inicial = st.selectbox("Oración Inicial", nom_ora, key="p_ora_live")
 
     st.markdown("---")
@@ -146,7 +145,7 @@ with pestana_programa:
         st.markdown(f"**{emoji} {k}. {m.get('titulo', '')}** ({m.get('minutos', '')} min.)")
         
         opciones_materia = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, color_sub)
-        nombres_materia = [f"{h['nombre']} {h['apellido']}" for h in opciones_materia] if opciones_materia else [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos]
+        nombres_materia = [f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" for h in opciones_materia] if opciones_materia else [f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" for h in lista_hermanos]
         if "" not in nombres_materia: nombres_materia.insert(0, "")
             
         c1, c2 = st.columns(2)
@@ -157,7 +156,7 @@ with pestana_programa:
         with c2:
             if tipo_seccion == "Maestros":
                 opciones_ayudante = reglas.filtrar_ayudantes_inteligente(titular, lista_hermanos, "Seamos Mejores Maestros")
-                nombres_ayudante = [f"{h['nombre']} {h['apellido']}" for h in opciones_ayudante] if opciones_ayudante else [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos]
+                nombres_ayudante = [f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" for h in opciones_ayudante] if opciones_ayudante else [f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" for h in lista_hermanos]
                 if "" not in nombres_ayudante: nombres_ayudante.insert(0, "")
                 ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
                 asignados_en_vivo[f"p{k}_a"] = ayudante
@@ -218,10 +217,10 @@ with pestana_hermanos:
     with col_del:
         st.subheader("❌ Dar de Baja Publicador")
         if lista_hermanos:
-            nombres_baja = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
+            nombres_baja = [f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" for h in lista_hermanos]
             hermano_a_eliminar = st.selectbox("Seleccione quién se muda o da de baja:", nombres_baja, key="baja_sel_live")
             if st.button("Confirmar Eliminación Permanente", type="primary", key="btn_baja_live"):
-                lista_hermanos = [h for h in lista_hermanos if f"{h.get('nombre', '')} {h.get('apellido', '')}" != hermano_a_eliminar]
+                lista_hermanos = [h for h in lista_hermanos if f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" != hermano_a_eliminar]
                 guardar_hermanos(lista_hermanos)
                 st.warning(f"¡{hermano_a_eliminar} ha sido eliminado de la base de datos!")
                 st.rerun()
@@ -234,7 +233,7 @@ with pestana_hermanos:
         tabla_visual = []
         for h in lista_hermanos:
             tabla_visual.append({
-                "Nombre Completo": f"{h.get('nombre', '')} {h.get('apellido', '')}",
+                "Nombre Completo": f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}",
                 "Sexo": h.get("sexo", "Varón"),
                 "Aptitudes": ", ".join(h.get("aptitudes", [])) if isinstance(h.get("aptitudes", []), list) else str(h.get("aptitudes", ""))
             })
