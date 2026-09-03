@@ -38,14 +38,16 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
     aptitud_real = mapeo_aptitudes.get(aptit_f, aptit_f)
     
     mes_detectado = "SEPTIEMBRE"
-    historial_mes = calcular_participaciones_mes(mes_detected = mes_detectado)
+    # SANA CORRECCIÓN: ELIMINAMOS LA PALABRA REPETIDA PARA QUE LEA LIMPIO
+    historial_mes = calcular_participaciones_mes(mes_detectado)
     
     candidatos = []
     if not hermano_titular:
         for h in lista_hermanos:
             apts_h = [str(a).lower() for a in h.get("aptitudes", [])] if isinstance(h.get("aptitudes", []), list) else str(h.get("aptitudes", "")).lower()
-            if aptitud_real.lower() in apts_h or ("maestros" in aptitud_real.lower() and "maestros" in str(apts_h)):
-                candidatos.append(h)
+            if aptid_real := aptitud_real.lower():
+                if aptid_real in apts_h or ("maestros" in aptid_real and "maestros" in str(apts_h)):
+                    candidatos.append(h)
     else:
         titular_limpio = hermano_titular.split(" ->")[0].split("(")[0].strip()
         sexo_tit = "Varón"
@@ -83,6 +85,7 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
         hermanos_listos.append(h_copia)
         
     return hermanos_listos
+
 def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     nombre_pdf = "reunion_actual.pdf"
     
@@ -180,7 +183,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             Paragraph(f"{texto_hermanos}", est_hnos)
         ]
         
-        t_fila = Table([fila_materia], colWidths=[340, 200])
+        t_fila = Table([fila_materia], colWidths=[360, 180])
         t_fila.setStyle(TableStyle([
             ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#E2E8F0")),
             ('PADDING', (0,0), (-1,-1), 5),
