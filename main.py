@@ -37,6 +37,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
+# --- PROCESADOR EXTRACTOR MULTILÍNEA ACUMULATIVO ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
@@ -44,6 +45,8 @@ def procesar_texto_plano_reunion(texto_usuario):
     fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
     lectura_cab = lineas[1] if len(lineas) > 1 else "Lectura Oficial por Cargar"
 
+    ultimo_punto = None
+    
     for linea in lineas:
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
         if match_punto:
@@ -63,6 +66,12 @@ def procesar_texto_plano_reunion(texto_usuario):
                 "minutos": minutos,
                 "seccion": seccion_real
             }
+            ultimo_punto = num_punto
+        else:
+            # SI LA LÍNEA NO EMPIEZA CON NÚMERO, SE LA PEGAMOS COMO REFERENCIA AL PUNTO ANTERIOR
+            if ultimo_punto and ultimo_punto in materias_detectadas:
+                if not linea.startswith("7-") and not linea.startswith("31 ") and "JEREMÍAS" not in linea:
+                    materias_detectadas[ultimo_punto]["titulo"] += " " + linea.strip()
             
     if not materias_detectadas:
         materias_detectadas = {
@@ -213,7 +222,7 @@ with pestana_programa:
     else:
         st.warning("⚠️ No se ha detectado el archivo en el sistema. Presione el botón gris 'Procesar Datos (Paso 1)' arriba para compilar el PDF de ReportLab.")
 
-with pestana_hermanos:
+with st.session_state.get("pestana_hermanos", pestana_hermanos):
     st.header("👥 Control de la Nómina de la Congregación")
     col_add, col_del = st.columns(2)
     
