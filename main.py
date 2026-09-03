@@ -7,7 +7,7 @@ import requests
 # --- CONFIGURACIÓN DE PÁGINA ÚNICA INDEPENDIENTE ---
 st.set_page_config(page_title="Programa de Reunión", page_icon="📋", layout="wide")
 
-# CONEXIÓN ABSOLUTA INDESTRUCTIBLE APUNTANDO DIRECTO A LA RAÍZ DE LA API
+# FIJAMOS LA RUTA OFICIAL ABSOLUTA AL NUEVO PROYECTO ACTIVO DE SUPABASE
 URL_BASE = "https://supabase.co"
 HEADERS_NUBE = {
     "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0cnhkemRodmdmbXJuZnRtdm52Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTI4MzM2MCwiZXhwIjoyMDQwODU5MzYwfQ.jRPh_3C65GzZ_r2Z6tU1jD6V_T11_354Jv_t11VvT-w",
@@ -24,53 +24,44 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
     if "Tesoros" in aptitud_filtro: filtro_real = "Tesoros"
     elif "Maestros" in aptitud_filtro or "Seamos" in aptitud_filtro: filtro_real = "Seamos Mejores Maestros"
     
-    candidatos = []
-    for h in lista_hermanos:
-        apts = str(h.get("aptitudes", h.get("Aptitudes", ""))).lower()
-        if filtro_real.lower() in apts:
-            candidatos.append(h)
-    
+    candidatos = [h for h in lista_hermanos if filtro_real.lower() in h.get("aptitudes", "").lower()]
     lista_listas = []
     for h in candidatos:
-        nom = h.get("nombre", h.get("Nombre", ""))
-        ape = h.get("apellido", h.get("Apellido", ""))
-        lista_listas.append({"nombre": f"{nom} {ape}"})
+        lista_listas.append({"nombre": f"{h['nombre']} {h['apellido']}"})
     return lista_listas
 
 def cargar_hermanos_cloud():
-    for endpoint in ["hermanos", "hermano", "Hermanos", "Hermano"]:
-        try:
-            res = requests.get(f"{URL_BASE}/{endpoint}?select=*", headers=HEADERS_NUBE, timeout=5)
-            if res.status_code == 200:
-                lista = []
-                for h in res.json():
-                    lista.append({
-                        "id": h.get("id"),
-                        "nombre": h.get("nombre", h.get("Nombre", "")).strip().title(),
-                        "apellido": h.get("apellido", h.get("Apellido", "")).strip().title(),
-                        "sexo": h.get("sexo", h.get("Sexo", "Varón")),
-                        "aptitudes": str(h.get("aptitudes", h.get("Aptitudes", "")))
-                    })
-                return sorted(lista, key=lambda x: (x.get("nombre", "").lower(), x.get("apellido", "").lower()))
-        except Exception: pass
+    try:
+        res = requests.get(f"{URL_BASE}/hermanos?select=*", headers=HEADERS_NUBE, timeout=10)
+        if res.status_code == 200:
+            lista = []
+            for h in res.json():
+                lista.append({
+                    "id": h.get("id"),
+                    "nombre": h.get("nombre", "").strip().title(),
+                    "apellido": h.get("apellido", "").strip().title(),
+                    "sexo": h.get("sexo", "Varón"),
+                    "aptitudes": str(h.get("aptitudes", ""))
+                })
+            return sorted(lista, key=lambda x: (x.get("nombre", "").lower(), x.get("apellido", "").lower()))
+    except Exception: pass
     return []
 
 def cargar_reuniones_cloud():
-    for endpoint in ["reuniones", "reunion", "Reuniones", "Reunion"]:
-        try:
-            res = requests.get(f"{URL_BASE}/{endpoint}?select=*", headers=HEADERS_NUBE, timeout=5)
-            if res.status_code == 200:
-                dicc_reuns = {}
-                for r in res.json():
-                    m = r.get("mes")
-                    s = r.get("semana")
-                    if m not in dicc_reuns: dicc_reuns[m] = {}
-                    dicc_reuns[m][s] = {
-                        "fecha_cabecera": r.get("fecha_cabecera"), "lectura_cabecera": r.get("lectura_cabecera"),
-                        "materias": r.get("materias", {}), "asignados": r.get("asignados", {}), "ultima_firma": r.get("ultima_firma", "")
-                    }
-                return dicc_reuns
-        except Exception: pass
+    try:
+        res = requests.get(f"{URL_BASE}/reuniones?select=*", headers=HEADERS_NUBE, timeout=10)
+        if res.status_code == 200:
+            dicc_reuns = {}
+            for r in res.json():
+                m = r.get("mes")
+                s = r.get("semana")
+                if m not in dicc_reuns: dicc_reuns[m] = {}
+                dicc_reuns[m][s] = {
+                    "fecha_cabecera": r.get("fecha_cabecera"), "lectura_cabecera": r.get("lectura_cabecera"),
+                    "materias": r.get("materias", {}), "asignados": r.get("asignados", {}), "ultima_firma": r.get("ultima_firma", "")
+                }
+            return dicc_reuns
+    except Exception: pass
     return {}
 
 lista_hermanos = cargar_hermanos_cloud()
@@ -79,8 +70,8 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n")]
     lineas_limpias = [l for l in lineas if l]
-    fecha_cab = lineas_limpias if len(lineas_limpias) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas_limpias if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
+    fecha_cab = lineas_limpias[0] if len(lineas_limpias) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas_limpias[1] if len(lineas_limpias) > 1 else "JEREMÍAS 32, 33"
 
     for i, linea in enumerate(lineas_limpias):
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
@@ -159,9 +150,7 @@ if st.session_state.pagina_actual == "📋 Mesa de Asignaciones":
         h_sus = st.text_input("Suplente:")
         if st.button("Guardar Reemplazo"):
             if h_aus and h_sus:
-                for ep in ["reemplazos", "reemplazo", "Reemplazos", "Reemplazo"]:
-                    res = requests.post(f"{URL_BASE}/" + ep, headers=HEADERS_NUBE, json={"hermano_ausente": h_aus.strip().title(), "hermano_sustituto": h_sus.strip().title()})
-                    if res.status_code == 201 or res.status_code == 200: break
+                requests.post(f"{URL_BASE}/reemplazos", headers=HEADERS_NUBE, json={"hermano_ausente": h_aus.strip().title(), "hermano_sustituto": h_sus.strip().title()})
                 st.success("¡Registrado!")
                 st.rerun()
 
@@ -212,10 +201,7 @@ if st.session_state.pagina_actual == "📋 Mesa de Asignaciones":
 
         if st.form_submit_button("💾 Guardar Asignaciones"):
             payload = {"mes": mes_seleccionado, "semana": semana_seleccionada, "fecha_cabecera": semana_data.get("fecha_cabecera"), "lectura_cabecera": semana_data.get("lectura_cabecera"), "materias": materias, "asignados": nuevos_asignados, "ultima_firma": f"Modificado por: {coordinador_activo}"}
-            exito_r = False
-            for ep in ["reuniones", "reunion", "Reuniones", "Reunion"]:
-                res = requests.post(f"{URL_BASE}/{ep}", headers=HEADERS_NUBE, json=payload)
-                if res.status_code == 201 or res.status_code == 200: exito_r = True; break
+            requests.post(f"{URL_BASE}/reuniones", headers=HEADERS_NUBE, json=payload)
             st.success("¡Guardado!")
             st.rerun()
 
@@ -232,40 +218,22 @@ elif st.session_state.pagina_actual == "👥 Gestión de Hermanos":
                 st.error("🚨 Error obligatorio: ¡No puede dejar los casilleros de Nombre o Apellido vacíos!")
             else:
                 cadena_plana_aptitudes = ", ".join(ap) if ap else ""
+                # ADAPTACIÓN DEFINITIVA A TU BASE DE DATOS REAL DE SUPABASE EN MINÚSCULAS STRICTORAS
+                payload_nuevo = {"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": cadena_plana_aptitudes}
+                res_post = requests.post(f"{URL_BASE}/hermanos", headers=HEADERS_NUBE, json=payload_nuevo)
                 
-                exito_guardado = False
-                ultimo_codigo = 404
-                
-                # BÚSQUEDA SECUENCIAL INDESTRUCTIBLE CONTRA EL 404
-                for endpoint in ["hermanos", "hermano", "Hermanos", "Hermano"]:
-                    # Formato 1: Columnas en minúsculas
-                    payload_min = {"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": cadena_plana_aptitudes}
-                    res_post = requests.post(f"{URL_BASE}/{endpoint}", headers=HEADERS_NUBE, json=payload_min)
-                    ultimo_codigo = res_post.status_code
-                    if res_post.status_code == 201 or res_post.status_code == 200:
-                        exito_guardado = True; break
-                        
-                    # Formato 2: Columnas en mayúsculas
-                    payload_may = {"Nombre": n.strip().title(), "Apellido": a.strip().title(), "Sexo": s, "Aptitudes": cadena_plana_aptitudes}
-                    res_post = requests.post(f"{URL_BASE}/{endpoint}", headers=HEADERS_NUBE, json=payload_may)
-                    ultimo_codigo = res_post.status_code
-                    if res_post.status_code == 201 or res_post.status_code == 200:
-                        exito_guardado = True; break
-                
-                if exito_guardado:
+                if res_post.status_code == 201 or res_post.status_code == 200:
                     st.success("¡Publicador añadido con éxito absoluto en internet!")
                     st.rerun()
                 else:
-                    st.error(f"❌ Error de internet: La base de datos rechazó el guardado. Código: {ultimo_codigo}")
+                    st.error(f"❌ Error de internet: La base de datos rechazó el guardado. Código: {res_post.status_code}")
     with c_d:
         if lista_hermanos:
-            hermano_a_eliminar = st.selectbox("Dar de baja:", [f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" for h in lista_hermanos])
+            hermano_a_eliminar = st.selectbox("Dar de baja:", [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos])
             if st.button("Confirmar Eliminación", type="primary"):
-                t = next((h for h in lista_hermanos if f"{h.get('nombre', h.get('Nombre', ''))} {h.get('apellido', h.get('Apellido', ''))}" == hermano_a_eliminar), None)
+                t = next((h for h in lista_hermanos if f"{h['nombre']} {h['apellido']}" == hermano_a_eliminar), None)
                 if t and t.get("id"):
-                    for endpoint in ["hermanos", "hermano", "Hermanos", "Hermano"]:
-                        res_del = requests.delete(f"{URL_BASE}/{endpoint}?id=eq.{t['id']}", headers=HEADERS_NUBE)
-                        if res_del.status_code == 204 or res_del.status_code == 200: break
+                    requests.delete(f"{URL_BASE}/hermanos?id=eq.{t['id']}", headers=HEADERS_NUBE)
                     st.warning("Eliminado de la nube.")
                     st.rerun()
         else:
@@ -274,7 +242,7 @@ elif st.session_state.pagina_actual == "👥 Gestión de Hermanos":
     st.markdown("---")
     st.markdown("### 📋 Nómina Registrada Abajo")
     if lista_hermanos:
-        st.table([{"Nombre": h.get("nombre", h.get("Nombre", "")), "Apellido": h.get("apellido", h.get("Apellido", "")), "Sexo": h.get("sexo", h.get("Sexo", "")), "Aptitudes": h.get("aptitudes", h.get("Aptitudes", ""))} for h in lista_hermanos])
+        st.table([{"Nombre": h.get("nombre"), "Apellido": h.get("apellido"), "Sexo": h.get("sexo"), "Aptitudes": h.get("aptitudes", "")} for h in lista_hermanos])
     else:
         st.info("La nómina está vacía en internet. Ingrese el primer publicador arriba.")
 
@@ -287,12 +255,9 @@ elif st.session_state.pagina_actual == "📝 Pegar Programa JW":
         t_pegar = st.text_area("Pega el texto completo de JW.org aquí:")
         if st.form_submit_button("⚡ Cargar Semana"):
             if t_pegar:
-                for endpoint in ["reuniones", "reunion", "Reuniones", "Reunion"]:
-                    requests.delete(f"{URL_BASE}/{endpoint}?mes=eq.{m_dest}&semana=eq.{s_dest}", headers=HEADERS_NUBE)
+                requests.delete(f"{URL_BASE}/reuniones?mes=eq.{m_dest}&semana=eq.{s_dest}", headers=HEADERS_NUBE)
                 f, l, mats = procesar_texto_plano_reunion(t_pegar)
                 payload_reun = {"mes": m_dest, "semana": s_dest, "fecha_cabecera": f, "lectura_cabecera": l, "materias": mats, "asignados": {}, "ultima_firma": "Cargado desde JW.org"}
-                for endpoint in ["reuniones", "reunion", "Reuniones", "Reunion"]:
-                    res_p_r = requests.post(f"{URL_BASE}/{endpoint}", headers=HEADERS_NUBE, json=payload_reun)
-                    if res_p_r.status_code == 201 or res_p_r.status_code == 200: break
+                requests.post(f"{URL_BASE}/reuniones", headers=HEADERS_NUBE, json=payload_reun)
                 st.success("¡Cargado con éxito absoluto!")
                 st.rerun()
