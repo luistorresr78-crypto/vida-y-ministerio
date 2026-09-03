@@ -42,6 +42,7 @@ def procesar_texto_plano_reunion(texto_usuario):
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
     fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
+    # SANA CORRECCIÓN: FIJAMOS EL MISMO NOMBRE DE VARIABLE EN TODO EL MAPA
     lectura_cab = lineas[1] if len(lineas) > 1 else "Lectura Oficial por Cargar"
 
     for linea in lineas:
@@ -70,7 +71,7 @@ def procesar_texto_plano_reunion(texto_usuario):
             "2": {"titulo": "2. Busquemos perlas escondidas", "minutos": "10", "seccion": "Tesoros"},
             "3": {"titulo": "3. Lectura de la Biblia", "minutos": "4", "seccion": "Tesoros"}
         }
-    return fecha_cab, lecture_cab, materias_detectadas
+    return fecha_cab, lectura_cab, materias_detectadas
 
 pestana_programa, pestana_hermanos = st.tabs([
     "🚀 Fabricador en Caliente de Folletos", 
@@ -160,7 +161,6 @@ with pestana_programa:
     # FORMATOS DE BÚSQUEDA ADAPTATIVOS COMPATIBLES CON TU REGLAS.PY ORIGINAL
     nombre_archivo_opcion1 = f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"
     nombre_archivo_opcion2 = f"Reunion_PROCESADO_WEB_{f_cab}.pdf"
-    nombre_archivo_final = nombre_archivo_opcion1
 
     try:
         # LLAMADA CON LA NOMENCLATURA CONFIGURADA EN TU REGLAS.PY DE AGOSTO
@@ -176,7 +176,7 @@ with pestana_programa:
     # ESCÁNER INTELIGENTE DE ARCHIVOS COMPILADOS DE REPORTLAB
     archivo_encontrado = ""
     if os.path.exists(nombre_archivo_opcion1):
-        archivo_encontrado = nombre_archivo_opcion1
+        archivo_encontrado = Regulatory = nombre_archivo_opcion1
     elif os.path.exists(nombre_archivo_opcion2):
         archivo_encontrado = nombre_archivo_opcion2
     else:
