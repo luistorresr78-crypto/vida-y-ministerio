@@ -28,13 +28,13 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR EXTRACTOR EN CALIENTE (INDENTACIÓN GARANTIZADA) ---
+# --- PROCESADOR EXTRACTOR EN CALIENTE ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    fecha_cab = lineas[0] if len(lineas) > 0 else "Fecha de la Reunión"
-    lectura_cab = lineas[1] if len(lineas) > 1 else "Lectura de la Semana"
+    fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas[1] if len(lineas) > 1 else "Lectura Oficial por Cargar"
 
     for linea in lineas:
         match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
@@ -58,9 +58,9 @@ def procesar_texto_plano_reunion(texto_usuario):
             
     if not materias_detectadas:
         materias_detectadas = {
-            "1": {"titulo": "Discurso", "minutos": "10", "seccion": "Tesoros"},
-            "2": {"titulo": "Perlas", "minutos": "10", "seccion": "Tesoros"},
-            "3": {"titulo": "Lectura", "minutos": "4", "seccion": "Tesoros"}
+            "1": {"titulo": "1. Discurso de apertura", "minutos": "10", "seccion": "Tesoros"},
+            "2": {"titulo": "2. Busquemos perlas escondidas", "minutos": "10", "seccion": "Tesoros"},
+            "3": {"titulo": "3. Lectura de la Biblia", "minutos": "4", "seccion": "Tesoros"}
         }
     return fecha_cab, lectura_cab, materias_detectadas
 
@@ -75,17 +75,20 @@ pestana_programa, pestana_hermanos = st.tabs([
 # =========================================================================
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
-    st.markdown("Copia la Guía de Actividades completa desde **JW.org**, pégala abajo y el sistema extraerá en tiempo real la fecha, la lectura bíblica y los minutos exactos de cada punto.")
+    st.markdown("Copia la Guía de Actividades completa desde **JW.org**, pégala abajo y presiona el botón para procesar.")
 
     # 1. Cuadro de Entrada unificado de JW.org
     texto_jw_entrada = st.text_area(
         "Pega aquí el texto completo copiado de JW.org:", 
-        height=200, 
+        height=180, 
         placeholder="1ra línea: Rango de Fecha\n2da línea: Lectura de la Semana\nSiguientes líneas: Los puntos de la reunión...",
         key="txt_jw_live"
     )
 
-    # El cerebro procesa en caliente el texto introducido
+    # ¡EL BOTÓN AHORA VIVE AQUÍ ARRIBA CON ACCESO INSTANTÁNEO!
+    boton_armar_pdf = st.button("⚙️ Procesar Datos para Descarga (Paso 1)", use_container_width=True)
+
+    # El cerebro procesa el texto introducido
     f_cab, l_cab, materias_dinamicas = procesar_texto_plano_reunion(texto_jw_entrada)
 
     st.markdown("---")
@@ -103,64 +106,61 @@ with pestana_programa:
             if st.button("Guardar Reemplazo en Bitácora", key="btn_remp_live"):
                 if h_ausente and h_sustituto:
                     st.success(f"Sustitución guardada: {h_sustituto} cubre a {h_ausente}")
+    st.markdown("### 🎚️ Asignar Privilegios para el Folleto PDF")
+    
+    col_p1, col_p2 = st.columns(2)
+    with col_p1:
+        opciones_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia")
+        nom_presi = [f"{h['nombre']} {h['apellido']}" for h in opciones_presi] if opciones_presi else [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos]
+        presidente = st.selectbox("Presidente de la Reunión", nom_presi, key="p_presi_live")
+        
+    with col_p2:
+        opciones_ora = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Oración")
+        nom_ora = [f"{h['nombre']} {h['apellido']}" for h in opciones_ora] if opciones_ora else [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos]
+        oracion_inicial = st.selectbox("Oración Inicial", nom_ora, key="p_ora_live")
 
-    # Formulario Web en Caliente conectado a los filtros de reglas.py
-    with st.form("formulario_asignaciones_en_vivo"):
-        st.markdown("### 🎚️ Asignar Privilegios para el Folleto PDF")
+    st.markdown("---")
+    
+    asignados_en_vivo = {"presidente": presidente, "oracion_inicial": oracion_inicial}
+    
+    # El bucle recorre y dibuja las materias extraídas del cuadro de texto grande libremente
+    for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
+        m = materias_dinamicas[k]
+        tipo_seccion = m.get("seccion", "Tesoros")
         
-        col_p1, col_p2 = st.columns(2)
-        with col_p1:
-            opciones_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia")
-            nom_presi = [h["nombre"] for h in opciones_presi]
-            presidente = st.selectbox("Presidente de la Reunión", nom_presi, key="p_presi_live")
+        if tipo_seccion == "Maestros":
+            emoji, color_sub = "🌾", "Seamos Mejores Maestros"
+        elif tipo_seccion == "Vida":
+            emoji, color_sub = "🐑", "Vida Cristiana"
+        else:
+            emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        with col_p2:
-            opciones_ora = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Oración")
-            nom_ora = [h["nombre"] for h in opciones_ora]
-            oracion_inicial = st.selectbox("Oración Inicial", nom_ora, key="p_ora_live")
-
-        st.markdown("---")
+        st.markdown(f"**{emoji} {k}. {m.get('titulo', '')}** ({m.get('minutos', '')} min.)")
         
-        asignados_en_vivo = {"presidente": presidente, "oracion_inicial": oracion_inicial}
-        
-        # El bucle recorre y dibuja las materias extraídas del cuadro de texto grande
-        for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
-            m = materias_dinamicas[k]
-            tipo_seccion = m.get("seccion", "Tesoros")
+        opciones_materia = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, color_sub)
+        nombres_materia = [f"{h['nombre']} {h['apellido']}" for h in opciones_materia] if opciones_materia else [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos]
+        if "" not in nombres_materia: nombres_materia.insert(0, "")
             
+        c1, c2 = st.columns(2)
+        with c1:
+            titular = st.selectbox(f"Asignado punto {k}", nombres_materia, key=f"live_t_{k}")
+            asignados_en_vivo[f"p{k}_t"] = titular
+            
+        with c2:
             if tipo_seccion == "Maestros":
-                emoji, color_sub = "🌾", "Seamos Mejores Maestros"
-            elif tipo_seccion == "Vida":
-                emoji, color_sub = "🐑", "Vida Cristiana"
-            else:
-                emoji, color_sub = "💎", "Tesoros de la Biblia"
-                
-            st.markdown(f"**{emoji} {k}. {m.get('titulo', '')}** ({m.get('minutos', '')} min.)")
-            
-            opciones_materia = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, color_sub)
-            nombres_materia = [h["nombre"] for h in opciones_materia]
-            if "" not in nombres_materia: nombres_materia.insert(0, "")
-                
-            c1, c2 = st.columns(2)
-            with c1:
-                titular = st.selectbox(f"Asignado punto {k}", nombres_materia, key=f"live_t_{k}")
-                asignados_en_vivo[f"p{k}_t"] = titular
-                
-            with c2:
-                if tipo_seccion == "Maestros":
-                    opciones_ayudante = reglas.filtrar_ayudantes_inteligente(titular, lista_hermanos, "Seamos Mejores Maestros")
-                    nombres_ayudante = [h["nombre"] for h in opciones_ayudante]
-                    if "" not in nombres_ayudante: nombres_ayudante.insert(0, "")
-                    ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
-                    asignados_en_vivo[f"p{k}_a"] = ayudante
-        st.markdown("---")
-        boton_armar_pdf = st.form_submit_button("⚙️ Procesar Datos para Descarga (Paso 1)")
+                opciones_ayudante = reglas.filtrar_ayudantes_inteligente(titular, lista_hermanos, "Seamos Mejores Maestros")
+                nombres_ayudante = [f"{h['nombre']} {h['apellido']}" for h in opciones_ayudante] if opciones_ayudante else [f"{h['nombre']} {h['apellido']}" for h in lista_hermanos]
+                if "" not in nombres_ayudante: nombres_ayudante.insert(0, "")
+                ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
+                asignados_en_vivo[f"p{k}_a"] = ayudante
 
+    st.markdown("---")
     if boton_armar_pdf:
         st.success(f"¡Folleto procesado con éxito por {coordinador_activo}! El botón morado de abajo está listo con los datos reales.")
+        
     st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
     
-    # ReportLab procesa las materias y asignados en caliente directo de lo que está en pantalla
+    # ReportLab procesa en caliente directo de lo que está en pantalla
     reglas.generar_pdf_estilo_oficial("PROCESADO_WEB", f_cab, materias_dinamicas, asignados_en_vivo)
     nombre_archivo_pdf = f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"
 
@@ -172,7 +172,8 @@ with pestana_programa:
             data=pdf_bytes, 
             file_name=f"Reunion_{f_cab.replace(' ', '_')}.pdf", 
             mime="application/pdf", 
-            key="down_pdf_live"
+            key="down_pdf_live",
+            use_container_width=True
         )
 
 # =========================================================================
