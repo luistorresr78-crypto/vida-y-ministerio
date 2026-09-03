@@ -7,6 +7,7 @@ import requests
 # --- CONFIGURACIÓN DE PÁGINA ÚNICA INDEPENDIENTE ---
 st.set_page_config(page_title="Programa de Reunión", page_icon="📋", layout="wide")
 
+# FIJAMOS LA URL BASE MAESTRA DIRECTA CON SU RUTA DE CONSULTA POSTGREST
 URL_BASE = "https://supabase.co"
 HEADERS_NUBE = {
     "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0cnhkemRodmdmbXJuZnRtdm52Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTI4MzM2MCwiZXhwIjoyMDQwODU5MzYwfQ.jRPh_3C65GzZ_r2Z6tU1jD6V_T11_354Jv_t11VvT-w",
@@ -31,16 +32,17 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
 
 def cargar_hermanos_cloud():
     try:
+        # Forzamos la consulta directa con barra limpia /hermanos
         res = requests.get(f"{URL_BASE}/hermanos?select=*", headers=HEADERS_NUBE, timeout=10)
         if res.status_code == 200:
             lista = []
             for h in res.json():
                 lista.append({
                     "id": h.get("id"),
-                    "nombre": h.get("nombre", h.get("Nombre", "")).strip().title(),
-                    "apellido": h.get("apellido", h.get("Apellido", "")).strip().title(),
-                    "sexo": h.get("sexo", h.get("Sexo", "Varón")),
-                    "aptitudes": str(h.get("aptitudes", h.get("Aptitudes", "")))
+                    "nombre": h.get("nombre", "").strip().title(),
+                    "apellido": h.get("apellido", "").strip().title(),
+                    "sexo": h.get("sexo", "Varón"),
+                    "aptitudes": str(h.get("aptitudes", ""))
                 })
             return sorted(lista, key=lambda x: (x.get("nombre", "").lower(), x.get("apellido", "").lower()))
     except Exception: pass
@@ -217,7 +219,7 @@ elif st.session_state.pagina_actual == "👥 Gestión de Hermanos":
                 st.error("🚨 Error obligatorio: ¡No puede dejar los casilleros de Nombre o Apellido vacíos!")
             else:
                 cadena_plana_aptitudes = ", ".join(ap) if ap else ""
-                # ENVIAMOS LAS LLAVES FÍSICAS EN MINÚSCULAS STRICTAS A LA TABLA hermanos
+                # ADAPTACIÓN DEFINITIVA A TU BASE DE DATOS REAL DE SUPABASE
                 payload_nuevo = {"nombre": n.strip().title(), "apellido": a.strip().title(), "sexo": s, "aptitudes": cadena_plana_aptitudes}
                 res_post = requests.post(f"{URL_BASE}/hermanos", headers=HEADERS_NUBE, json=payload_nuevo)
                 
