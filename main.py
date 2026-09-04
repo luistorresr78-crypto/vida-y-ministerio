@@ -1,244 +1,278 @@
+import streamlit as st
 import json
 import os
 import re
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib import colors
+import reglas
 
-FICHERO_REUNIONES = "reuniones.json"
+# Configuracion adaptativa de la pagina web para celulares, iPads y laptops
+st.set_page_config(page_title="Mesa de Asignaciones Teocraticas", page_icon="📝", layout="wide")
+
 FICHERO_HERMANOS = "hermanos.json"
 
-def obtener_nombre_coordinador():
-    return "Luis"
-
-def calcular_participaciones_mes(mes_activo):
-    conteo = {}
-    if not os.path.exists(FICHERO_REUNIONES): return conteo
-    try:
-        with open(FICHERO_REUNIONES, "r", encoding="utf-8") as f:
-            datos = json.load(f)
-        semanas_mes = datos.get(mes_activo, {})
-        for semana in semanas_mes.values():
-            for hermano in semana.get("asignados", {}).values():
-                if hermano and isinstance(hermano, str):
-                    nombre_limpio = hermano.split(" ->")[0].split("(")[0].strip()
-                    conteo[nombre_limpio] = conteo.get(nombre_limpio, 0) + 1
-    except: pass
-    return conteo
-
-def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtro):
-    mapeo_aptitudes = {
-        "Tesoros": "Tesoros", "Lectura": "Lectura",
-        "Seamos Mejores Maestros": "Seamos Mejores Maestros",
-        "Presidencia": "Presidencia", "Oración": "Oración",
-        "Vida Cristiana": "Vida Cristiana"
-    }
-    aptit_f = aptitud_filtro.replace("Tesoros de la Biblia", "Tesoros").replace("Vida Cristiana", "Vida Cristiana")
-    aptitud_real = mapeo_aptitudes.get(aptit_f, aptit_f)
-    
-    mes_detectado = "SEPTIEMBRE"
-    historial_mes = calcular_participaciones_mes(mes_detectado)
-    
-    candidatos = []
-    if not hermano_titular:
-        for h in lista_hermanos:
-            apts_h = [str(a).lower() for a in h.get("aptitudes", [])] if isinstance(h.get("aptitudes", []), list) else str(h.get("aptitudes", "")).lower()
-            if aptitud_real.lower() in apts_h or ("maestros" in aptitud_real.lower() and "maestros" in str(apts_h)):
-                candidatos.append(h)
-    else:
-        titular_limpio = hermano_titular.split(" ->")[0].split("(")[0].strip()
-        sexo_tit = "Varón"
-        apellido_tit = titular_limpio.split(" ")[-1] if " " in titular_limpio else ""
-        for h in lista_hermanos:
-            if f"{h.get('nombre', '')} {h.get('apellido', '')}" == titular_limpio:
-                sexo_tit = h.get("sexo", "Varón")
-        
-        for h in lista_hermanos:
-            nombre_h = f"{h.get('nombre', '')} {h.get('apellido', '')}"
-            if nombre_h == titular_limpio: continue
-            
-            apts_h = [str(a).lower() for a in h.get("aptitudes", [])] if isinstance(h.get("aptitudes", []), list) else str(h.get("aptitudes", "")).lower()
-            if "seamos mejores maestros" in apts_h or "maestros" in str(apts_h):
-                if sexo_tit == "Mujer" and h.get("sexo") == "Mujer":
-                    candidatos.append(h)
-                elif sexo_tit == "Varón":
-                    if h.get("sexo") == "Varón" or (h.get("sexo") == "Mujer" and h.get("apellido", "").lower() == apellido_tit.lower()):
-                        candidatos.append(h)
-                        
-    lista_ordenada = []
-    for h in candidatos:
-        nombre_h = f"{h.get('nombre', '')} {h.get('apellido', '')}"
-        v = historial_mes.get(nombre_h, 0)
-        etiqueta = nombre_h if v == 0 else (f"{nombre_h} (1 asignación)" if v == 1 else f"{nombre_h} (⚠️ REPETIDO x{v})")
-        lista_ordenada.append({"h": h, "etiqueta": etiqueta, "v": v})
-        
-    lista_ordenada.sort(key=lambda x: x["v"])
-    
-    hermanos_listos = []
-    for idx, item in enumerate(lista_ordenada):
-        h_copia = dict(item["h"])
-        h_copia["nombre"] = f"{item['etiqueta']} -> [Firma]" if idx == 0 else item["etiqueta"]
-        h_copia["apellido"] = ""
-        hermanos_listos.append(h_copia)
-        
-    return hermanos_listos
-def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
-    # Nombre físico unificado para la pasarela directa de descarga
-    nombre_pdf = "reunion_actual.pdf"
-    
-    doc = SimpleDocTemplate(
-        nombre_pdf, pagesize=letter,
-        rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36
-    )
-    
-    # --- Paleta y Estilos Tipográficos de Lujo Oficiales de Agosto ---
-    est_fecha = ParagraphStyle('EF', fontName='Helvetica-Bold', fontSize=12, textColor=colors.HexColor("#2D3748"))
-    est_lectura = ParagraphStyle('EL', fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor("#1A365D"))
-    est_letra_blank = ParagraphStyle('ELB', fontName='Helvetica-Bold', fontSize=10, textColor=colors.white, alignment=0)
-    
-    # Estilos de Título Coloreados por Sección para cada Punto
-    est_t_tesoros = ParagraphStyle('ETT', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor("#3A7885"), leading=13)
-    est_t_maestros = ParagraphStyle('ETM', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor("#D08F00"), leading=13)
-    est_t_vida = ParagraphStyle('ETV', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor("#B32415"), leading=13)
-    
-    est_hnos = ParagraphStyle('TH', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor("#2D3748"))
-    est_cab_tit = ParagraphStyle('ECT', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#4A5568"))
-
-    elementos = []
-    
-    # --- 1. CABECERA PRINCIPAL (FECHA, LECTURA Y PRESIDENTE) ---
-    texto_fecha = str(semana_act).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
-    texto_lectura = str(mes_activo).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
-    
-    cab_izq = [
-        Paragraph(f"<b>{texto_fecha}</b>", est_fecha),
-        Paragraph(f"<b>{texto_lectura}</b>", est_lectura)
-    ]
-    
-    presi = asignados.get("presidente") or "Por asignar"
-    cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    t_presi = Table(cab_der, colWidths=[70, 140])
-    t_presi.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('LINEBELOW', (1,0), (1,0), 0.75, colors.HexColor("#4A5568"))
-    ]))
-    
-    t_principal = Table([[cab_izq, t_presi]], colWidths=[310, 230])
-    t_principal.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 10)
-    ]))
-    elementos.append(t_principal)
-    
-    # --- 2. FILA HORIZONTAL: CANCIÓN 01 Y ORACIÓN ---
-    ora_ini = asignados.get("oracion_inicial") or "Por asignar"
-    datos_cancion_1 = [
-        Paragraph("■ <b>Canción 01</b> y oración", est_cab_tit),
-        Paragraph("Palabras de Introducción", est_cab_tit),
-        Paragraph(f"{ora_ini}", est_hnos)
-    ]
-    t_c1 = Table([datos_cancion_1], colWidths=[180, 180, 180])
-    t_c1.setStyle(TableStyle([
-        ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
-        ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
-        ('PADDING', (0,0), (-1,-1), 5),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE')
-    ]))
-    elementos.append(t_c1)
-    elementos.append(Spacer(1, 10))
-    
-    # --- CONFIGURACIÓN DE LAS 3 GRANDES BARRAS TEOCRÁTICAS DE COLOR ---
-    secciones_mapeadas = {
-        "Tesoros": {"titulo": "TESOROS DE LA BIBLIA", "color": "#3A7885", "estilo_t": est_t_tesoros},
-        "Maestros": {"titulo": "SEAMOS MEJORES MAESTROS", "color": "#D08F00", "estilo_t": est_t_maestros},
-        "Vida": {"titulo": "NUESTRA VIDA CRISTIANA", "color": "#B32415", "estilo_t": est_t_vida}
-    }
-    
-    # --- 3. BUCLE MAESTRO DE IMPRESIÓN DE PUNTOS ---
-    for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
-        m = materias[k]
-        
-        # Determinamos la sección estrictamente basada en el número del punto original de agosto
-        num_k = int(k) if k.isdigit() else 1
-        if num_k in: sec_actual = "Tesoros"
-        elif num_k in: sec_actual = "Maestros"
-        else: sec_actual = "Vida"
-            
-        conf = secciones_mapeadas[sec_actual]
-        
-        # SI ES EL INICIO DE UNA SECCIÓN (PUNTOS 1, 4 O 7), DIBUJAMOS LA GRAN BARRA DE COLOR
-        if num_k in:
-            if num_k == 7:
-                # Fila intermedia especial para la Canción 128 antes del punto 7
-                datos_cancion_2 = [Paragraph("■ <b>Canción 128</b>", est_cab_tit), Paragraph("", est_hnos), Paragraph("", est_hnos)]
-                t_c2 = Table([datos_cancion_2], colWidths=[180, 180, 180])
-                t_c2.setStyle(TableStyle([
-                    ('LINEABOVE', (0,0), (-1,-1), 0.5, colors.HexColor("#718096")),
-                    ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#718096")),
-                    ('PADDING', (0,0), (-1,-1), 4)
-                ]))
-                elementos.append(t_c2)
-                elementos.append(Spacer(1, 8))
-                
-            t_tit = Table([[Paragraph(f"<b>{conf['titulo']}</b>", est_letra_blank)]], colWidths=[540])
-            t_tit.setStyle(TableStyle([
-                ('BACKGROUND', (0,0), (-1,-1), colors.HexColor(conf["color"])),
-                ('PADDING', (0,0), (-1,-1), 5),
-                ('BOTTOMPADDING', (0,0), (-1,-1), 6)
-            ]))
-            t_tit.hAlign = 'LEFT'
-            elementos.append(t_tit)
-            elementos.append(Spacer(1, 8))
-            
-        # Extracción y separación de Titular y Ayudante
-        titular = asignados.get(f"p{k}_t", "Por asignar")
-        ayudante = asignados.get(f"p{k}_a", "")
-        
-        # Limpieza estética del texto de las materias (separa el título de la lección larga)
-        texto_original = m.get('titulo', '')
-        texto_limpio = texto_original.replace(" — ", "<br/><font size=9 color='#4A5568'>").replace(" —", "<br/><font size=9 color='#4A5568'")
-        if "<br/>" in texto_limpio:
-            texto_limpio += "</font>"
-            
-        fila_materia = [
-            Paragraph(f"{texto_limpio}", conf["estilo_t"]),
-            Paragraph(f"{titular}", est_hnos),
-            Paragraph(f"{ayudante if ayudante and ayudante != 'Por asignar' else ''}", est_hnos)
+def cargar_hermanos_iniciales():
+    if not os.path.exists(FICHERO_HERMANOS):
+        hermanos_base = [
+            {"nombre": "Luis", "apellido": "Torres", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
+            {"nombre": "Sergio", "apellido": "Coordinador", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
+            {"nombre": "Jonathan", "apellido": "Coordinador", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]}
         ]
-        
-        t_fila = Table([fila_materia], colWidths=[320, 110, 110])
-        t_fila.setStyle(TableStyle([
-            ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E0")),
-            ('PADDING', (0,0), (-1,-1), 6),
-            ('VALIGN', (0,0), (-1,-1), 'TOP')
-        ]))
-        t_fila.hAlign = 'LEFT'
-        elementos.append(t_fila)
-        elementos.append(Spacer(1, 6))
-        
-    # --- 4. CIERRE INFERIOR DE CONCLUSIÓN ---
-    elementos.append(Spacer(1, 4))
-    datos_conclusion = [
-        Paragraph("Palabras de conclusión (3 mins.)", est_cab_tit),
-        Paragraph("■ <b>Canción 143</b> y oración", est_cab_tit),
-        Paragraph("", est_hnos)
-    ]
-    t_c_fin = Table([datos_conclusion], colWidths=[180, 180, 180])
-    t_c_fin.setStyle(TableStyle([
-        ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
-        ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
-        ('PADDING', (0,0), (-1,-1), 5),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE')
-    ]))
-    elementos.append(t_c_fin)
+        with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
+            json.dump(hermanos_base, f, ensure_ascii=False, indent=4)
+            
+    with open(FICHERO_HERMANOS, "r", encoding="utf-8") as f:
+        datos_sucios = json.load(f)
+        lista_limpia = []
+        for h in datos_sucios:
+            lista_limpia.append({
+                "nombre": h.get("nombre", h.get("Nombre", "")).strip().title(),
+                "apellido": h.get("apellido", h.get("Apellido", "")).strip().title(),
+                "sexo": h.get("sexo", h.get("Sexo", "Varón")),
+                "aptitudes": h.get("aptitudes", h.get("Aptitudes", []))
+            })
+        return lista_limpia
+
+lista_hermanos = cargar_hermanos_iniciales()
+
+def guardar_hermanos(lista):
+    with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
+        json.dump(lista, f, ensure_ascii=False, indent=4)
+
+# --- PROCESADOR EXTRACTOR UNIVERSAL PURIFICADO ---
+def procesar_texto_plano_reunion(texto_usuario):
+    materias_detectadas = {}
+    lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    # Compilación final física del lienzo
-    doc.build(elementos)
+    fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas[1] if len(lineas) > 1 else "Lectura Oficial por Cargar"
+
+    ultimo_punto = None
     
-    # Copia espejo compatible de resguardo para main.py
-    nombre_espejo = f"Reunion_PROCESADO_WEB_{texto_fecha.replace(' ', '_')}.pdf"
-    try:
-        with open(nombre_pdf, "rb") as f_orig, open(nombre_espejo, "wb") as f_dest:
-            f_dest.write(f_orig.read())
-    except: pass
+    for linea in lineas:
+        match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
+        if match_punto:
+            num_punto = match_punto.group(1)
+            contenido = match_punto.group(2)
+            
+            match_mins = re.search(r"\(\s*(\d+)\s*min", contenido)
+            minutos = match_mins.group(1) if match_mins else "5"
+            titulo_completo = contenido.strip()
+            
+            if num_punto in ["1", "2", "3"]: seccion_real = "Tesoros"
+            elif num_punto in ["4", "5", "6"]: seccion_real = "Maestros"
+            else: seccion_real = "Vida"
+                
+            # CORRECCIÓN EN LÍNEA 66: SANEADO EL MAPEO DE MINUTOS SIN ASIGNACIONES DOBLES
+            materias_detectadas[num_punto] = {
+                "titulo": titulo_completo,
+                "minutos": minutos,
+                "seccion": seccion_real
+            }
+            ultimo_punto = num_punto
+        else:
+            if ultimo_punto and ultimo_punto in materias_detectadas:
+                if not (linea.startswith("31 ") or "JEREMÍAS" in linea.upper() or "A de " in linea):
+                    materias_detectadas[ultimo_punto]["titulo"] += " — " + linea.strip()
+            
+    if not materias_detectadas:
+        materias_detectadas = {
+            "1": {"titulo": "1. Discurso de apertura", "minutos": "10", "seccion": "Tesoros"},
+            "2": {"titulo": "2. Busquemos perlas escondidas", "minutos": "10", "seccion": "Tesoros"},
+            "3": {"titulo": "3. Lectura de la Biblia", "minutos": "4", "seccion": "Tesoros"}
+        }
+    return fecha_cab, lectura_cab, materias_detectadas
+
+pestana_programa, pestana_hermanos = st.tabs([
+    "🚀 Fabricador en Caliente de Folletos", 
+    "👥 Gestión de Hermanos (Nómina)"
+])
+
+with pestana_programa:
+    st.header("⚡ Generador Instantáneo de Folletos Oficiales")
+    st.markdown("Copia la Guía de Actividades completa desde **JW.org**, pégala abajo y presiona el botón para procesar.")
+
+    texto_jw_entrada = st.text_area(
+        "Pega aquí el texto completo copiado de JW.org:", 
+        height=180, 
+        placeholder="1ra línea: Rango de Fecha\n2da línea: Lectura de la Semana\nSiguientes líneas: Los puntos de la reunión...",
+        key="txt_jw_live"
+    )
+
+    boton_armar_pdf = st.button("⚙️ Procesar Datos para Descarga (Paso 1)", use_container_width=True)
+
+    f_cab, l_cab, materias_dinamicas = procesar_texto_plano_reunion(texto_jw_entrada)
+
+    st.markdown("---")
+    st.subheader(f"📅 Vista Previa de la Semana: {f_cab}")
+    st.info(f"📖 Lectura Bíblica Extraída: **{l_cab}**")
+
+    with st.sidebar:
+        st.header("⚙️ Control de Operation")
+        coordinador_activo = st.selectbox("¿Quién está asignando hoy?", ["Sergio", "Jonathan", "Luis"], key="coord_act_live")
+        
+        st.subheader("♻️ Registro de Reemplazos")
+        with st.expander("Ver panel de Reemplazos"):
+            h_ausente = st.text_input("Hermano Ausente", key="aus_live")
+            h_sustituto = st.text_input("Hermano que Reemplaza", key="sust_live")
+            if st.button("Guardar Reemplazo en Bitácora", key="btn_remp_live"):
+                if h_ausente and h_sustituto:
+                    st.success(f"Sustitución guardada: {h_sustituto} cubre a {h_ausente}")
+
+    st.markdown("### 🎚️ Asignar Privilegios para el Folleto PDF")
+    
+    col_p1, col_p2 = st.columns(2)
+    with col_p1:
+        opciones_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia")
+        nom_presi = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in opciones_presi] if opciones_presi else [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
+        presidente = st.selectbox("Presidente de la Reunión", nom_presi, key="p_presi_live")
+        
+    with col_p2:
+        opciones_ora = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Oración")
+        nom_ora = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in opciones_ora] if opciones_ora else [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
+        oracion_inicial = st.selectbox("Oración Inicial", nom_ora, key="p_ora_live")
+
+    st.markdown("---")
+    
+    asignados_en_vivo = {"presidente": presidente, "oracion_inicial": oracion_inicial}
+    
+    for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
+        m = materias_dinamicas[k]
+        tipo_seccion = m.get("seccion", "Tesoros")
+        
+        if tipo_seccion == "Maestros":
+            emoji, color_sub = "🌾", "Seamos Mejores Maestros"
+        elif tipo_seccion == "Vida":
+            emoji, color_sub = "🐑", "Vida Cristiana"
+        else:
+            emoji, color_sub = "💎", "Tesoros de la Biblia"
+            
+        st.markdown(f"**{emoji} {k}. {m.get('titulo', '')}** ({m.get('minutos', '')} min.)")
+        
+        opciones_materia = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, color_sub)
+        nombres_materia = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in opciones_materia] if opciones_materia else [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
+        if "" not in nombres_materia: nombres_materia.insert(0, "")
+            
+        c1, c2 = st.columns(2)
+        with c1:
+            titular = st.selectbox(f"Asignado punto {k}", nombres_materia, key=f"live_t_{k}")
+            asignados_en_vivo[f"p{k}_t"] = titular if titular else "Por asignar"
+            
+        with c2:
+            if tipo_seccion == "Maestros":
+                opciones_ayudante = reglas.filtrar_ayudantes_inteligente(titular, lista_hermanos, "Seamos Mejores Maestros")
+                nombres_ayudante = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in opciones_ayudante] if opciones_ayudante else [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
+                if "" not in nombres_ayudante: nombres_ayudante.insert(0, "")
+                ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
+                asignados_en_vivo[f"p{k}_a"] = ayudante if ayudante else "Por asignar"
+
+    st.markdown("---")
+    
+    nombre_archivo_final = "reunion_actual.pdf"
+
+    if boton_armar_pdf:
+        try:
+            reglas.generar_pdf_estilo_oficial("PROCESADO_WEB", f_cab, materias_dinamicas, asignados_en_vivo)
+            
+            nombre_reportlab_1 = f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"
+            nombre_reportlab_2 = f"Reunion_PROCESADO_WEB_{f_cab}.pdf"
+            
+            if os.path.exists(nombre_reportlab_1):
+                with open(nombre_reportlab_1, "rb") as f_origen, open(nombre_archivo_final, "wb") as f_destino:
+                    f_destino.write(f_origen.read())
+            elif os.path.exists(nombre_reportlab_2):
+                with open(nombre_reportlab_2, "rb") as f_origen, open(nombre_archivo_final, "wb") as f_destino:
+                    f_destino.write(f_origen.read())
+            else:
+                for arc in os.listdir("."):
+                    if arc.startswith("Reunion_PROCESADO_WEB_") and arc.endswith(".pdf"):
+                        with open(arc, "rb") as f_origen, open(nombre_archivo_final, "wb") as f_destino:
+                            f_destino.write(f_origen.read())
+                        break
+        except Exception:
+            pass
+        st.success(f"¡Folleto procesado con éxito por {coordinador_activo}! El botón morado de abajo está listo con los datos reales.")
+
+    st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
+
+    archivo_encontrado_fisco = ""
+    nombre_reportlab_1 = f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"
+    nombre_reportlab_2 = f"Reunion_PROCESADO_WEB_{f_cab}.pdf"
+
+    if os.path.exists(nombre_archivo_final):
+        archivo_encontrado_fisco = nombre_archivo_final
+    elif os.path.exists(nombre_reportlab_1):
+        archivo_encontrado_fisco = nombre_reportlab_1
+    elif os.path.exists(nombre_reportlab_2):
+        archivo_encontrado_fisco = nombre_reportlab_2
+    else:
+        for f_nom in os.listdir("."):
+            if f_nom.startswith("Reunion_PROCESADO_WEB_") and f_nom.endswith(".pdf"):
+                archivo_encontrado_fisco = f_nom; break
+
+    if archivo_encontrado_fisco and os.path.exists(archivo_encontrado_fisco):
+        with open(archivo_encontrado_fisco, "rb") as pdf_file:
+            pdf_bytes = pdf_file.read()
+        st.download_button(
+            label="🟣 Descargar Folleto Oficial en PDF", 
+            data=pdf_bytes, 
+            file_name=f"Reunion_{f_cab.replace(' ', '_')}.pdf", 
+            mime="application/pdf", 
+            key="down_pdf_live",
+            use_container_width=True
+        )
+    else:
+        st.warning("⚠️ No se ha detectado el archivo en el sistema. Presione el botón gris 'Procesar Datos (Paso 1)' arriba para compilar el PDF de ReportLab.")
+
+with pestana_hermanos:
+    st.header("👥 Control de la Nómina de la Congregación")
+    col_add, col_del = st.columns(2)
+    
+    with col_add:
+        st.subheader("➕ Agregar Nuevo Hermano/a")
+        with st.form("form_alta_hermano_live"):
+            nuevo_nom = st.text_input("Nombre:")
+            nuevo_ape = st.text_input("Apellido:")
+            nuevo_sexo = st.selectbox("Sexo:", ["Varón", "Mujer"])
+            nuevas_apt = st.multiselect("Asignar Aptitudes/Secciones:", ["Tesoros", "Lectura", "Seamos Mejores Maestros", "Presidencia", "Oración", "Vida Cristiana"])
+            btn_dar_alta = st.form_submit_button("Añadir Publicador")
+            
+            if btn_dar_alta:
+                if nuevo_nom.strip() and nuevo_ape.strip():
+                    nuevo_h = {
+                        "nombre": nuevo_nom.strip().title(), 
+                        "apellido": nuevo_ape.strip().title(), 
+                        "sexo": nuevo_sexo, 
+                        "aptitudes": nuevas_apt
+                    }
+                    lista_hermanos.append(nuevo_h)
+                    guardar_hermanos(lista_hermanos)
+                    st.success(f"¡{nuevo_nom.strip().title()} {nuevo_ape.strip().title()} ha sido añadido con éxito!")
+                    st.rerun()
+                else:
+                    st.error("Por favor ingresa Nombre y Apellido.")
+
+    with col_del:
+        st.subheader("❌ Dar de Baja Publicador")
+        if lista_hermanos:
+            nombres_baja = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
+            hermano_a_eliminar = st.selectbox("Seleccione quién se muda o da de baja:", nombres_baja, key="baja_sel_live")
+            if st.button("Confirmar Eliminación Permanente", type="primary", key="btn_baja_live"):
+                lista_hermanos = [h for h in lista_hermanos if f"{h.get('nombre', '')} {h.get('apellido', '')}" != hermano_a_eliminar]
+                guardar_hermanos(lista_hermanos)
+                st.warning(f"¡{hermano_a_eliminar} ha sido eliminado de la base de datos!")
+                st.rerun()
+        else:
+            st.info("La nómina se encuentra vacía actualmente.")
+
+    st.markdown("---")
+    st.subheader("📜 Listado Completo de Hermanos Registrados")
+    if lista_hermanos:
+        tabla_visual = []
+        for h in lista_hermanos:
+            tabla_visual.append({
+                "Nombre Completo": f"{h.get('nombre', '')} {h.get('apellido', '')}",
+                "Sexo": h.get("sexo", "Varón"),
+                "Aptitudes": ", ".join(h.get("aptitudes", [])) if isinstance(h.get("aptitudes", []), list) else str(h.get("aptitudes", ""))
+            })
+        st.table(tabla_visual)
+    else:
+        st.info("No hay publicadores registrados en el fichero hermanos.json.")
