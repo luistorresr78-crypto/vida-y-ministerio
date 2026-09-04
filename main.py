@@ -37,7 +37,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR EXTRACTOR UNIVERSAL BLINDADO ---
+# --- PROCESADOR EXTRACTOR UNIVERSAL PURIFICADO ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
@@ -61,16 +61,15 @@ def procesar_texto_plano_reunion(texto_usuario):
             elif num_punto in ["4", "5", "6"]: seccion_real = "Maestros"
             else: seccion_real = "Vida"
                 
+            # CORRECCIÓN EN LÍNEA 66: SANEADO EL MAPEO DE MINUTOS SIN ASIGNACIONES DOBLES
             materias_detectadas[num_punto] = {
                 "titulo": titulo_completo,
-                "minutos": minutes = minutos,
+                "minutos": minutos,
                 "seccion": seccion_real
             }
             ultimo_punto = num_punto
         else:
-            # CAPTURA INTERACTIVA: AGREGA LAS LECCIONES Y PARÉNTESIS EN LAS 3 SECCIONES POR IGUAL
             if ultimo_punto and ultimo_punto in materias_detectadas:
-                # Evitamos duplicar las líneas que son claramente cabeceras generales
                 if not (linea.startswith("31 ") or "JEREMÍAS" in linea.upper() or "A de " in linea):
                     materias_detectadas[ultimo_punto]["titulo"] += " — " + linea.strip()
             
@@ -107,7 +106,7 @@ with pestana_programa:
     st.info(f"📖 Lectura Bíblica Extraída: **{l_cab}**")
 
     with st.sidebar:
-        st.header("⚙️ Control de Operación")
+        st.header("⚙️ Control de Operation")
         coordinador_activo = st.selectbox("¿Quién está asignando hoy?", ["Sergio", "Jonathan", "Luis"], key="coord_act_live")
         
         st.subheader("♻️ Registro de Reemplazos")
