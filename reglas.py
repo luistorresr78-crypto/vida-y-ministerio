@@ -116,13 +116,13 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     presi = asignados.get("presidente") or "Por asignar"
     cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    t_presi = Table(cab_der, colWidths=[100, 140])
+    t_presi = Table(cab_der, colWidths=[140, 220])
     t_presi.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LINEBELOW', (1,0), (1,0), 0.75, colors.HexColor("#4A5568"))
     ]))
     
-    t_principal = Table([[cab_izq, t_presi]], colWidths=[300, 240])
+    t_principal = Table([[cab_izq, t_presi]], colWidths=[180, 360])
     t_principal.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 10)
@@ -136,7 +136,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         Paragraph("Palabras de Introducción", est_cab_tit),
         Paragraph(f"{ora_ini}", est_hnos)
     ]
-    t_c1 = Table([datos_cancion_1], colWidths=[200, 160, 180])
+    t_c1 = Table([datos_cancion_1], colWidths=[180, 180, 180])
     t_c1.setStyle(TableStyle([
         ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
         ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
@@ -168,7 +168,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         if num_k in:
             if num_k == 7:
                 datos_cancion_2 = [Paragraph("■ <b>Canción 128</b>", est_cab_tit), Paragraph("", est_hnos), Paragraph("", est_hnos)]
-                t_c2 = Table([datos_cancion_2], colWidths=[200, 160, 180])
+                t_c2 = Table([datos_cancion_2], colWidths=[360, 100, 100])
                 t_c2.setStyle(TableStyle([
                     ('LINEABOVE', (0,0), (-1,-1), 0.5, colors.HexColor("#718096")),
                     ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#718096")),
@@ -201,7 +201,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             Paragraph(f"{ayudante if ayudante and ayudante != 'Por asignar' else ''}", est_hnos)
         ]
         
-        t_fila = Table([fila_materia], colWidths=[330, 110, 100])
+        t_fila = Table([fila_materia], colWidths=[360, 100, 100])
         t_fila.setStyle(TableStyle([
             ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E0")),
             ('PADDING', (0,0), (-1,-1), 6),
@@ -218,7 +218,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         Paragraph("■ <b>Canción 143</b> y oración", est_cab_tit),
         Paragraph("", est_hnos)
     ]
-    t_c_fin = Table([datos_conclusion], colWidths=[200, 160, 180])
+    t_c_fin = Table([datos_conclusion], colWidths=[180, 180, 180])
     t_c_fin.setStyle(TableStyle([
         ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
         ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
