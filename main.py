@@ -37,7 +37,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR EXTRACTOR MULTILÍNEA ACUMULATIVO ---
+# --- PROCESADOR EXTRACTOR UNIVERSAL BLINDADO ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
@@ -63,15 +63,16 @@ def procesar_texto_plano_reunion(texto_usuario):
                 
             materias_detectadas[num_punto] = {
                 "titulo": titulo_completo,
-                "minutos": minutos,
+                "minutos": minutes = minutos,
                 "seccion": seccion_real
             }
             ultimo_punto = num_punto
         else:
-            # SI LA LÍNEA NO EMPIEZA CON NÚMERO, SE LA PEGAMOS COMO REFERENCIA AL PUNTO ANTERIOR
+            # CAPTURA INTERACTIVA: AGREGA LAS LECCIONES Y PARÉNTESIS EN LAS 3 SECCIONES POR IGUAL
             if ultimo_punto and ultimo_punto in materias_detectadas:
-                if not linea.startswith("7-") and not linea.startswith("31 ") and "JEREMÍAS" not in linea:
-                    materias_detectadas[ultimo_punto]["titulo"] += " " + linea.strip()
+                # Evitamos duplicar las líneas que son claramente cabeceras generales
+                if not (linea.startswith("31 ") or "JEREMÍAS" in linea.upper() or "A de " in linea):
+                    materias_detectadas[ultimo_punto]["titulo"] += " — " + linea.strip()
             
     if not materias_detectadas:
         materias_detectadas = {
@@ -222,7 +223,7 @@ with pestana_programa:
     else:
         st.warning("⚠️ No se ha detectado el archivo en el sistema. Presione el botón gris 'Procesar Datos (Paso 1)' arriba para compilar el PDF de ReportLab.")
 
-with st.session_state.get("pestana_hermanos", pestana_hermanos):
+with pestana_hermanos:
     st.header("👥 Control de la Nómina de la Congregación")
     col_add, col_del = st.columns(2)
     
