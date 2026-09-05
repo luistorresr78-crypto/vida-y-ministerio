@@ -105,7 +105,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
 
     elementos = []
     
-    # --- 1. CABECERA PRINCIPAL SIMÉTRICA ---
+    # --- 1. CABECERA PRINCIPAL ---
     texto_fecha = str(semana_act).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
     texto_lectura = str(mes_activo).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
     
@@ -116,20 +116,20 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     presi = asignados.get("presidente") or "Por asignar"
     cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    t_presi = Table(cab_der, colWidths=[100, 140])
+    t_presi = Table(cab_der, colWidths=[80, 140])
     t_presi.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LINEBELOW', (1,0), (1,0), 0.75, colors.HexColor("#4A5568"))
     ]))
     
-    t_principal = Table([[cab_izq, t_presi]], colWidths=[300, 240])
+    t_principal = Table([[cab_izq, t_presi]], colWidths=[320, 220])
     t_principal.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 10)
     ]))
     elementos.append(t_principal)
     
-    # --- 2. FILA HORIZONTAL ASIMÉTRICA: CANCIÓN DE INICIO ---
+    # --- 2. FILA HORIZONTAL: CANCIÓN DE INICIO ---
     ora_ini = asignados.get("oracion_inicial") or "Por asignar"
     datos_cancion_1 = [
         Paragraph("■ <b>Canción 01</b> y oración", est_cab_tit),
@@ -146,7 +146,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     elementos.append(t_c1)
     elementos.append(Spacer(1, 10))
     
-    # --- CONFIGURACIÓN DE SECCIONES ADAPTATIVAS ---
+    # --- CONFIGURACIÓN DE SECCIONES INTELIGENTES ADAPTATIVAS ---
     secciones_mapeadas = {
         "Tesoros": {"titulo": "TESOROS DE LA BIBLIA", "color": "#3A7885", "estilo_t": est_t_tesoros},
         "Maestros": {"titulo": "SEAMOS MEJORES MAESTROS", "color": "#D08F00", "estilo_t": est_t_maestros},
@@ -155,11 +155,12 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     seccion_actual = ""
     
-    # --- 3. BUCLE DE INTERPRETACIÓN CON TRES COLUMNAS FIJAS ---
+    # --- 3. BUCLE DE INTERPRETACIÓN INTELIGENTE ---
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias[k]
         sec_materia = m.get("seccion", "Tesoros")
         
+        # SI CAMBIA LA SECCIÓN LEÍDA DE JW.ORG, SE DIBUJA AUTOMÁTICAMENTE LA BARRA DE COLOR CORRESPONDIENTE
         if sec_materia != seccion_actual:
             seccion_actual = sec_materia
             conf = secciones_mapeadas.get(seccion_actual, secciones_mapeadas["Tesoros"])
@@ -188,6 +189,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         titular = asignados.get(f"p{k}_t", "Por asignar")
         ayudante = asignados.get(f"p{k}_a", "")
         
+        # Procesador tipográfico inteligente: formatea las referencias — en un segundo renglón estilizado
         texto_original = m.get('titulo', '')
         texto_limpio = texto_original.replace(" — ", "<br/><font size=9 color='#4A5568'>").replace(" —", "<br/><font size=9 color='#4A5568'")
         if "<br/>" in texto_limpio:
@@ -195,7 +197,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             
         conf_sec = secciones_mapeadas.get(seccion_actual, secciones_mapeadas["Tesoros"])
         
-        # DEFINICIÓN MILIMÉTRICA DE TRES COLUMNAS PARA FORZAR CONTRACCIÓN VERTICAL
+        # SE CORRIGEN LOS CORCHETES DOBLES EXTERIORES PARA FORZAR LAS 3 COLUMNAS ASIMÉTRICAS
         fila_materia = [
             Paragraph(f"{texto_limpio}", conf_sec["estilo_t"]),
             Paragraph(f"{titular}", est_hnos),
@@ -212,7 +214,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         elementos.append(t_fila)
         elementos.append(Spacer(1, 6))
         
-    # --- 4. CIERRE INFERIOR ESTILIZADO COMPACTO ---
+    # --- 4. CIERRE INFERIOR AUTO-AJUSTABLE ---
     elementos.append(Spacer(1, 4))
     datos_conclusion = [
         Paragraph("Palabras de conclusión (3 mins.)", est_cab_tit),
