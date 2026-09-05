@@ -42,15 +42,13 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    fecha_cab = lineas if len(lineas) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas if len(lineas) > 1 else "Lectura Oficial por Cargar"
+    fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas[1] if len(lineas) > 1 else "Lectura Oficial por Cargar"
 
-    # Bandera de memoria para saber en qué sección estamos parados realmente en el texto
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
 
     for linea in lineas:
-        # Monitoreamos si la línea del texto es un cambio de sección oficial de JW.org
         linea_up = linea.upper()
         if "SEAMOS MEJORES MAESTROS" in linea_up or "HAGA DISCÍPULOS" in linea_up:
             seccion_actual_texto = "Maestros"
@@ -64,18 +62,15 @@ def procesar_texto_plano_reunion(texto_usuario):
             num_punto = match_punto.group(1)
             contenido = match_punto.group(2)
             
-            # Buscamos el tiempo real en minutos
             match_mins = re.search(r"\(\s*(\d+)\s*min", contenido)
             minutos = match_mins.group(1) if match_mins else ""
             
-            # Limpiamos el título base quitando los paréntesis de minutos duplicados
-            titulo_limpio = contenido.split("(").strip()
+            # SANADO LÍNEA 72: Añadimos [0] para limpiar el texto antes del paréntesis de forma segura
+            titulo_limpio = contenido.split("(")[0].strip()
             
-            # Capturamos la lección o capítulo que venga al lado
             match_ref = re.search(r"\(\s*\d+\s*min\s*\)\.?\s*(.*)", contenido)
             ref_extraida = match_ref.group(1).strip() if match_ref else ""
             
-            # Armamos el texto final en dos renglones limpios (Sana la duplicidad de minutos)
             if minutos:
                 if ref_extraida:
                     texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>({minutos} min.) {ref_extraida}</font>"
@@ -87,11 +82,10 @@ def procesar_texto_plano_reunion(texto_usuario):
             materias_detectadas[num_punto] = {
                 "titulo": texto_formateado,
                 "minutos": minutos if minutos else "5",
-                "seccion": seccion_actual_texto  # Asigna la sección real leída del encabezado
+                "seccion": seccion_actual_texto
             }
             ultimo_punto = num_punto
         else:
-            # Si abajo viene una lección suelta corta, se la acoplamos de forma segura
             if ultimo_punto and ultimo_punto in materias_detectadas:
                 texto_linea = linea.strip()
                 if ("LECCIÓN" in texto_linea.upper() or "CAP." in texto_linea.upper() or "TH " in texto_linea.lower()) and len(texto_linea) < 50:
@@ -172,7 +166,7 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        # Limpieza segura para mostrar de forma amigable en Streamlit
+        # Limpieza segura de etiquetas HTML para que Streamlit dibuje la vista previa sin colapsar
         titulo_preview = m.get('titulo', '')
         if "<br/>" in titulo_preview:
             titulo_preview = titulo_preview.split("<br/>")[0].replace("<b>", "").replace("</b>", "").strip()
