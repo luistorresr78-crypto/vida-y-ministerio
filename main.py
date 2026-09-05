@@ -42,8 +42,8 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    fecha_cab = lineas if len(lineas) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas if len(lineas) > 1 else "Lectura Oficial por Cargar"
+    fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas[1] if len(lineas) > 1 else "Lectura Oficial por Cargar"
 
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
@@ -62,26 +62,22 @@ def procesar_texto_plano_reunion(texto_usuario):
             num_punto = match_punto.group(1)
             contenido = match_punto.group(2)
             
-            # Capturamos el digito exacto de los minutos antes de que el split lo rompa
             match_mins = re.search(r"\(\s*(\d+)\s*min", contenido)
             minutos = match_mins.group(1) if match_mins else ""
             
-            # Cortamos el titulo base de forma segura
-            titulo_limpio = contenido.split("(").strip()
+            # SANADO LÍNEA 70: Añadimos [0] para limpiar de forma segura el fragmento antes del paréntesis
+            titulo_limpio = contenido.split("(")[0].strip()
             
-            # Buscamos si viene una leccion o capitulo despues del parentesis original
             match_ref = re.search(r"\(\s*\d+\s*min\s*\)\.?\s*(.*)", contenido)
             ref_extraida = match_ref.group(1).strip() if match_ref else ""
             
-            # CONSERVADOR CORREGIDO: Inyecta los minutos de forma obligatoria en el segundo renglon plomo abajo del titulo
             if minutos:
-                texto_mins = f"({minutos} min.)" if "min" not in str(minutos) else str(minutos)
+                texto_mins = f"({minutos} min.)"
                 if ref_extraida:
                     texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins} {ref_extraida}</font>"
                 else:
                     texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
             else:
-                # Salvaguarda por si viene escrito de otra forma en la guia (como 5 mins o 4 min)
                 match_alt = re.search(r"\(\s*(\d+\s*min[s]*)\s*\)", contenido)
                 if match_alt:
                     texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>({match_alt.group(1)})</font>"
@@ -109,6 +105,7 @@ def procesar_texto_plano_reunion(texto_usuario):
         }
     return fecha_cab, lectura_cab, materias_detectadas
 
+# Definición de pestañas principales de la interfaz
 pestana_programa, pestana_hermanos = st.tabs([
     "🚀 Fabricador en Caliente de Folletos", 
     "👥 Gestión de Hermanos (Nómina)"
@@ -175,9 +172,10 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
+        # Limpieza segura de etiquetas HTML para que Streamlit dibuje la vista previa sin colapsar
         titulo_preview = m.get('titulo', '')
         if "<br/>" in titulo_preview:
-            titulo_preview = titulo_preview.split("<br/>")[0].replace("<b>", "").replace("</b>", "").strip()
+            titulo_preview = titulo_preview.split("<br/>").replace("<b>", "").replace("</b>", "").strip()
             
         st.markdown(f"**{emoji} {k}. {titulo_preview}**")
         
@@ -222,7 +220,7 @@ with pestana_programa:
                         break
         except Exception:
             pass
-        st.success(f"¡Folleto processed con éxito por {coordinador_activo}! El botón morado de abajo está listo con los datos reales.")
+        st.success(f"¡Folleto procesado con éxito por {coordinador_activo}! El botón morado de abajo está listo con los datos reales.")
 
     archivo_encontrado_fisco = ""
     texto_fecha_limpio = str(f_cab).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
@@ -232,7 +230,7 @@ with pestana_programa:
     if os.path.exists(nombre_archivo_final):
         archivo_encontrado_fisco = nombre_archivo_final
     elif os.path.exists(nombre_reportlab_1):
-        archivo_encontrado_fisco = nombre_reportlab_1
+        archivo_encontrado_fisco = reportlab_1
     elif os.path.exists(nombre_reportlab_2):
         archivo_encontrado_fisco = nombre_reportlab_2
     else:
