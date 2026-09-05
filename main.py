@@ -62,18 +62,18 @@ def procesar_texto_plano_reunion(texto_usuario):
             num_punto = match_punto.group(1)
             contenido = match_punto.group(2)
             
-            # Capturamos los minutos exactos del texto pegado sin romper la linea con splits destructivos
+            # Capturamos los minutos reales pegados de JW.org de forma segura
             match_mins = re.search(r"\(\s*(\d+\s*min[s]*)\s*\)", contenido)
             texto_mins = f"({match_mins.group(1)})" if match_mins else ""
             
-            # Limpiamos el titulo base removiendo unicamente el bloque de minutos
+            # Extraemos el titulo base limpio removiendo el parentesis del tiempo
             titulo_limpio = re.sub(r"\s*\(\s*\d+\s*min[s]*\s*\).*", "", contenido).strip()
             
-            # Capturamos la leccion o referencia corrida que viene al lado
+            # Jalamos la referencia o lección corrida que viene al lado
             match_ref = re.search(r"\(\s*\d+\s*min[s]*\s*\)\s*\.?\s*(.*)", contenido)
             ref_extraida = match_ref.group(1).strip() if match_ref else ""
             
-            # Construimos la variable completa enriquecida de ReportLab con salto de línea nativo
+            # Construimos la variable completa enriquecida en dos renglones perfectos
             if texto_mins:
                 if ref_extraida:
                     texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins} {ref_extraida}</font>"
@@ -89,18 +89,13 @@ def procesar_texto_plano_reunion(texto_usuario):
             }
             ultimo_punto = num_punto
         else:
+            # Acoplador continuo por si la lección viene escrita en el renglón inmediato inferior
             if ultimo_punto and ultimo_punto in materias_detectadas:
                 texto_linea = linea.strip()
                 if ("LECCIÓN" in texto_linea.upper() or "CAP." in texto_linea.upper() or "TH " in texto_linea.lower()) and len(texto_linea) < 55:
                     if "font" in materias_detectadas[ultimo_punto]["titulo"]:
                         materias_detectadas[ultimo_punto]["titulo"] = materias_detectadas[ultimo_punto]["titulo"].replace("</font>", f" {texto_linea}</font>")
             
-    if not materias_detectadas:
-        materias_detectadas = {
-            "1": {"titulo": "<b>Discurso de apertura</b><br/><font size=9 color='#4A5568'>(10 min.)</font>", "minutos": "10", "seccion": "Tesoros"},
-            "2": {"titulo": "<b>Busquemos perlas escondidas</b><br/><font size=9 color='#4A5568'>(10 min.)</font>", "minutos": "10", "seccion": "Tesoros"},
-            "3": {"titulo": "<b>Lectura de la Biblia</b><br/><font size=9 color='#4A5568'>(4 min.) Jer 32:6-18</font>", "minutos": "4", "seccion": "Tesoros"}
-        }
     return fecha_cab, lectura_cab, materias_detectadas
 
 pestana_programa, pestana_hermanos = st.tabs([
@@ -169,11 +164,10 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        # Protegemos el m['titulo'] intacto para ReportLab y limpiamos de forma segura para la Preview web
-        titulo_preview = m.get('titulo', '')
-        if "<br/>" in titulo_preview:
-            partes_t = titulo_preview.split("<br/>")
-            titulo_preview = partes_t[0].replace("<b>", "").replace("</b>", "").strip()
+        # Limpieza segura sin tocar la variable original que va al PDF
+        titulo_bruto = m.get('titulo', '')
+        titulo_preview = titulo_bruto.split("<br/>")[0] if "<br/>" in titulo_bruto else titulo_bruto
+        titulo_preview = titulo_preview.replace("<b>", "").replace("</b>", "").strip()
             
         st.markdown(f"**{emoji} {k}. {titulo_preview}**")
         
@@ -230,7 +224,7 @@ with pestana_programa:
     elif os.path.exists(nombre_reportlab_1):
         archivo_encontrado_fisco = nombre_reportlab_1
     elif os.path.exists(nombre_reportlab_2):
-        archivo_encontrado_fisco = nombre_reportlab_2
+        archivo_encontrado_fisco = reportlab_2
     else:
         for f_nom in os.listdir("."):
             if f_nom.startswith("Reunion_PROCESADO_WEB_") and f_nom.endswith(".pdf"):
