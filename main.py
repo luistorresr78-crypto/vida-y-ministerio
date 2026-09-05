@@ -1,4 +1,4 @@
-import streamlit st
+import streamlit as st
 import json
 import os
 import re
@@ -42,8 +42,8 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    fecha_cab = lineas[0] if len(lineas) > 0 else "14-20 de septiembre"
-    lectura_cab = lineas[1] if len(lineas) > 1 else "JEREMÍAS 34, 35"
+    fecha_cab = lineas if len(lineas) > 0 else "14-20 de septiembre"
+    lectura_cab = lineas if len(lineas) > 1 else "JEREMÍAS 34, 35"
 
     ultimo_punto = None
     
@@ -64,7 +64,7 @@ def procesar_texto_plano_reunion(texto_usuario):
             match_mins = re.search(r"\(\s*(\d+)\s*min", contenido)
             minutos = match_mins.group(1) if match_mins else "5"
             
-            titulo_limpio = contenido.split("(")[0].strip()
+            titulo_limpio = contenido.split("(").strip()
             
             match_ref = re.search(r"\(\s*\d+\s*min\s*\)\.?\s*(.*)", contenido)
             ref_extraida = match_ref.group(1).strip() if match_ref else ""
@@ -169,9 +169,9 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
+        # Limpieza segura de etiquetas HTML para que Streamlit dibuje la vista previa sin colapsar
         titulo_preview = m.get('titulo', '')
         if "<br/>" in titulo_preview:
-            # Saneado seguro de etiquetas para la vista previa limpia en el monitor web
             titulo_preview = titulo_preview.split("<br/>")[0].replace("<b>", "").replace("</b>", "").strip()
             
         st.markdown(f"**{emoji} {k}. {titulo_preview}**")
@@ -199,7 +199,6 @@ with pestana_programa:
         try:
             reglas.generar_pdf_estilo_oficial("PROCESADO_WEB", f_cab, materias_dinamicas, asignados_en_vivo)
             
-            # SANEADO DEFINITIVO DE ATRIBUTO: Forzamos f_cab a texto plano para evitar choques en la pasarela
             texto_fecha_limpio = str(f_cab).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
             nombre_reportlab_1 = f"Reunion_PROCESADO_WEB_{texto_fecha_limpio.replace(' ', '_')}.pdf"
             nombre_reportlab_2 = f"Reunion_PROCESADO_WEB_{texto_fecha_limpio}.pdf"
