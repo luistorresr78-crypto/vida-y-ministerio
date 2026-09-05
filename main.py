@@ -37,13 +37,13 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR CON RECORTE DE REFERENCIAS CORTAS Y DETECCIÓN AUTOMÁTICA DE SECCIÓN ---
+# --- PROCESADOR INTELIGENTE QUE JUNTA TÍTULO Y LECCIÓN EN DOS RENGLONES ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas[1] if len(lineas) > 1 else "Lectura Oficial por Cargar"
+    fecha_cab = lineas[0] if len(lineas) > 0 else "14-20 de septiembre"
+    lectura_cab = lineas[1] if len(lineas) > 1 else "JEREMÍAS 34, 35"
 
     ultimo_punto = None
     
@@ -64,12 +64,18 @@ def procesar_texto_plano_reunion(texto_usuario):
             match_mins = re.search(r"\(\s*(\d+)\s*min", contenido)
             minutos = match_mins.group(1) if match_mins else "5"
             
-            texto_formateado = contenido.strip()
-            match_corte = re.search(r"\(\s*\d+\s*min\s*\)\.?\s*(.*?)(?=\.|$|—)", contenido)
-            if match_corte and match_corte.group(1).strip():
-                ref_corta = match_corte.group(1).strip()
-                titulo_base = contenido.split("(")[0].strip()
-                texto_formateado = f"{titulo_base} — ({minutos} min.) {ref_corta}"
+            # Extraemos el título limpio quitando los paréntesis originales
+            titulo_limpio = contenido.split("(")[0].strip()
+            
+            # Capturamos la referencia o lección que viene inmediatamente después
+            match_ref = re.search(r"\(\s*\d+\s*min\s*\)\.?\s*(.*)", contenido)
+            ref_extraida = match_ref.group(1).strip() if match_ref else ""
+            
+            # Unificamos en la misma variable usando un salto de línea compatible con ReportLab
+            if ref_extraida:
+                texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>({minutos} min.) {ref_extraida}</font>"
+            else:
+                texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>({minutos} min.)</font>"
             
             val_num = int(num_punto)
             if val_num <= 3:
@@ -86,14 +92,18 @@ def procesar_texto_plano_reunion(texto_usuario):
             }
             ultimo_punto = num_punto
         else:
+            # Si la línea de abajo trae un dato corto de lección suelto, se lo sumamos al segundo renglón
             if ultimo_punto and ultimo_punto in materias_detectadas:
-                pass
+                texto_linea = linea.strip()
+                if ("LECCIÓN" in texto_linea.upper() or "CAP." in texto_linea.upper() or "TH " in texto_linea.lower()) and len(texto_linea) < 50:
+                    if "font" in materias_detectadas[ultimo_punto]["titulo"]:
+                        materias_detectadas[ultimo_punto]["titulo"] = materias_detectadas[ultimo_punto]["titulo"].replace("</font>", f" {texto_linea}</font>")
             
     if not materias_detectadas:
         materias_detectadas = {
-            "1": {"titulo": "1. Discurso de apertura — (10 min.)", "minutos": "10", "seccion": "Tesoros"},
-            "2": {"titulo": "2. Busquemos perlas escondidas — (10 min.)", "minutos": "10", "seccion": "Tesoros"},
-            "3": {"titulo": "3. Lectura de la Biblia — (4 min.)", "minutos": "4", "seccion": "Tesoros"}
+            "1": {"titulo": "<b>Discurso de apertura</b><br/><font size=9 color='#4A5568'>(10 min.)</font>", "minutos": "10", "seccion": "Tesoros"},
+            "2": {"titulo": "<b>Busquemos perlas escondidas</b><br/><font size=9 color='#4A5568'>(10 min.)</font>", "minutos": "10", "seccion": "Tesoros"},
+            "3": {"titulo": "<b>Lectura de la Biblia</b><br/><font size=9 color='#4A5568'>(4 min.)</font>", "minutos": "4", "seccion": "Tesoros"}
         }
     return fecha_cab, lectura_cab, materias_detectadas
 
@@ -163,7 +173,7 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        st.markdown(f"**{emoji} {k}. {m.get('titulo', '')}**")
+        st.markdown(f"**{emoji} {k}. {m.get('titulo', '').split('<br/>').strip()}**")
         
         opciones_materia = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, color_sub)
         nombres_materia = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in opciones_materia] if opciones_materia else [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
