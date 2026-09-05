@@ -22,7 +22,7 @@ def calcular_participaciones_mes(mes_activo):
         for semana in semanas_mes.values():
             for hermano in semana.get("asignados", {}).values():
                 if hermano and isinstance(hermano, str):
-                    nombre_limpio = hermano.split(" ->")[0].split("(")[0].strip()
+                    nombre_limpio = hermano.split(" ->").split("(").strip()
                     conteo[nombre_limpio] = conteo.get(nombre_limpio, 0) + 1
     except: pass
     return conteo
@@ -47,7 +47,7 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
             if aptitud_real.lower() in apts_h or ("maestros" in aptitud_real.lower() and "maestros" in str(apts_h)):
                 candidatos.append(h)
     else:
-        titular_limpio = hermano_titular.split(" ->")[0].split("(")[0].strip()
+        titular_limpio = hermano_titular.split(" ->").split("(").strip()
         sexo_tit = "Varón"
         apellido_tit = titular_limpio.split(" ")[-1] if " " in titular_limpio else ""
         for h in lista_hermanos:
@@ -105,7 +105,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
 
     elementos = []
     
-    # --- 1. CABECERA PRINCIPAL SIMÉTRICA ---
+    # --- 1. CABECERA PRINCIPAL ---
     texto_fecha = str(semana_act).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
     texto_lectura = str(mes_activo).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
     
@@ -115,14 +115,14 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     ]
     
     presi = asignados.get("presidente") or "Por asignar"
-    cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)] Willis]]
-    t_presi = Table(cab_der, colWidths=[120, 120])
+    cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
+    t_presi = Table(cab_der, colWidths=[60, 120])
     t_presi.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LINEBELOW', (1,0), (1,0), 0.75, colors.HexColor("#4A5568"))
     ]))
     
-    t_principal = Table([[cab_izq, t_presi]], colWidths=[300, 240])
+    t_principal = Table([[cab_izq, t_presi]], colWidths=[200, 340])
     t_principal.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 10)
@@ -136,7 +136,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         Paragraph("Palabras de Introducción", est_cab_tit),
         Paragraph(f"{ora_ini}", est_hnos)
     ]
-    t_c1 = Table([datos_cancion_1], colWidths=[200, 220, 120])
+    t_c1 = Table([datos_cancion_1], colWidths=[180, 200, 160])
     t_c1.setStyle(TableStyle([
         ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
         ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
@@ -155,11 +155,12 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     seccion_actual = ""
     
-    # --- 3. BUCLE DE INTERPRETACIÓN CON CORCHETES DE MATRIZ CORREGIDOS ---
+    # --- 3. BUCLE DE INTERPRETACIÓN INTELIGENTE ---
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias[k]
         sec_materia = m.get("seccion", "Tesoros")
         
+        # SI CAMBIA LA SECCIÓN LEÍDA DE JW.ORG, SE DIBUJA AUTOMÁTICAMENTE LA BARRA DE COLOR CORRESPONDIENTE
         if sec_materia != seccion_actual:
             seccion_actual = sec_materia
             conf = secciones_mapeadas.get(seccion_actual, secciones_mapeadas["Tesoros"])
@@ -188,6 +189,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         titular = asignados.get(f"p{k}_t", "Por asignar")
         ayudante = asignados.get(f"p{k}_a", "")
         
+        # Procesador tipográfico inteligente: formatea las referencias — en un segundo renglón estilizado
         texto_original = m.get('titulo', '')
         texto_limpio = texto_original.replace(" — ", "<br/><font size=9 color='#4A5568'>").replace(" —", "<br/><font size=9 color='#4A5568'")
         if "<br/>" in texto_limpio:
@@ -201,7 +203,6 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             Paragraph(f"{ayudante if ayudante and ayudante != 'Por asignar' else ''}", est_hnos)
         ]
         
-        # INYECCIÓN FIJA DE MATRIZ DE 3 COLUMNAS ASIMÉTRICAS REALES
         t_fila = Table([fila_materia], colWidths=[300, 120, 120])
         t_fila.setStyle(TableStyle([
             ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E0")),
@@ -219,7 +220,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         Paragraph("■ <b>Canción 143</b> y oración", est_cab_tit),
         Paragraph("", est_hnos)
     ]
-    t_c_fin = Table([datos_conclusion], colWidths=[200, 220, 120])
+    t_c_fin = Table([datos_conclusion], colWidths=[180, 200, 160])
     t_c_fin.setStyle(TableStyle([
         ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
         ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
