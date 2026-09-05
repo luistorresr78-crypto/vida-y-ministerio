@@ -62,18 +62,14 @@ def procesar_texto_plano_reunion(texto_usuario):
             num_punto = match_punto.group(1)
             contenido = match_punto.group(2)
             
-            # Capturamos los minutos reales pegados de JW.org de forma segura
             match_mins = re.search(r"\(\s*(\d+\s*min[s]*)\s*\)", contenido)
             texto_mins = f"({match_mins.group(1)})" if match_mins else ""
             
-            # Extraemos el titulo base limpio removiendo el parentesis del tiempo
             titulo_limpio = re.sub(r"\s*\(\s*\d+\s*min[s]*\s*\).*", "", contenido).strip()
             
-            # Jalamos la referencia o lección corrida que viene al lado
             match_ref = re.search(r"\(\s*\d+\s*min[s]*\s*\)\s*\.?\s*(.*)", contenido)
             ref_extraida = match_ref.group(1).strip() if match_ref else ""
             
-            # Construimos la variable completa enriquecida en dos renglones perfectos
             if texto_mins:
                 if ref_extraida:
                     texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins} {ref_extraida}</font>"
@@ -89,7 +85,6 @@ def procesar_texto_plano_reunion(texto_usuario):
             }
             ultimo_punto = num_punto
         else:
-            # Acoplador continuo por si la lección viene escrita en el renglón inmediato inferior
             if ultimo_punto and ultimo_punto in materias_detectadas:
                 texto_linea = linea.strip()
                 if ("LECCIÓN" in texto_linea.upper() or "CAP." in texto_linea.upper() or "TH " in texto_linea.lower()) and len(texto_linea) < 55:
@@ -164,10 +159,13 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        # Limpieza segura sin tocar la variable original que va al PDF
+        # SANADO DE RAÍZ: Extraemos el fragmento de la posición 0 de la lista antes del replace
         titulo_bruto = m.get('titulo', '')
-        titulo_preview = titulo_bruto.split("<br/>")[0] if "<br/>" in titulo_bruto else titulo_bruto
-        titulo_preview = titulo_preview.replace("<b>", "").replace("</b>", "").strip()
+        if "<br/>" in titulo_bruto:
+            partes_t = titulo_bruto.split("<br/>")
+            titulo_preview = partes_t[0].replace("<b>", "").replace("</b>", "").strip()
+        else:
+            titulo_preview = titulo_bruto.replace("<b>", "").replace("</b>", "").strip()
             
         st.markdown(f"**{emoji} {k}. {titulo_preview}**")
         
@@ -224,7 +222,7 @@ with pestana_programa:
     elif os.path.exists(nombre_reportlab_1):
         archivo_encontrado_fisco = nombre_reportlab_1
     elif os.path.exists(nombre_reportlab_2):
-        archivo_encontrado_fisco = reportlab_2
+        archivo_encontrado_fisco = nombre_reportlab_2
     else:
         for f_nom in os.listdir("."):
             if f_nom.startswith("Reunion_PROCESADO_WEB_") and f_nom.endswith(".pdf"):
