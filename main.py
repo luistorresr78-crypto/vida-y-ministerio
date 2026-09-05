@@ -37,7 +37,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ADAPTATIVO SIN NÚMEROS FIJOS PARA CLASIFICAR LAS 3 SECCIONES ---
+# --- PROCESADOR CON RECORTE DE REFERENCIAS CORTAS Y DETECCIÓN AUTOMÁTICA DE SECCIÓN ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
@@ -47,7 +47,6 @@ def procesar_texto_plano_reunion(texto_usuario):
 
     ultimo_punto = None
     
-    # Primero barremos para saber cuántos puntos numéricos reales trae esta semana de JW.org
     puntos_numericos = []
     for linea in lineas:
         match_p = re.match(r"^([1-9]|10)\.\s*(.*)", linea)
@@ -65,7 +64,6 @@ def procesar_texto_plano_reunion(texto_usuario):
             match_mins = re.search(r"\(\s*(\d+)\s*min", contenido)
             minutos = match_mins.group(1) if match_mins else "5"
             
-            # FILTRADO QUIRÚRGICO EXTRAER REFERENCIA CORTA
             texto_formateado = contenido.strip()
             match_corte = re.search(r"\(\s*\d+\s*min\s*\)\.?\s*(.*?)(?=\.|$|—)", contenido)
             if match_corte and match_corte.group(1).strip():
@@ -73,7 +71,6 @@ def procesar_texto_plano_reunion(texto_usuario):
                 titulo_base = contenido.split("(")[0].strip()
                 texto_formateado = f"{titulo_base} — ({minutos} min.) {ref_corta}"
             
-            # DETERMINACIÓN AUTOMÁTICA ADAPTATIVA DE SECCIÓN (SANA LA LÍNEA 68)
             val_num = int(num_punto)
             if val_num <= 3:
                 seccion_real = "Tesoros"
@@ -89,7 +86,6 @@ def procesar_texto_plano_reunion(texto_usuario):
             }
             ultimo_punto = num_punto
         else:
-            # DESCARTAR TEXTOS LARGOS: Las explicaciones de videos y lecturas masivas se omiten por completo
             if ultimo_punto and ultimo_punto in materias_detectadas:
                 pass
             
@@ -122,6 +118,8 @@ with pestana_programa:
     f_cab, l_cab, materias_dinamicas = procesar_texto_plano_reunion(texto_jw_entrada)
 
     st.markdown("---")
+    nombre_archivo_final = "reunion_actual.pdf"
+
     st.subheader(f"📅 Vista Previa de la Semana: {f_cab}")
     st.info(f"📖 Lectura Bíblica Extraída: **{l_cab}**")
 
