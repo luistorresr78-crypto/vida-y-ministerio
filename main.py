@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit st
 import json
 import os
 import re
@@ -42,8 +42,8 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    fecha_cab = lineas if len(lineas) > 0 else "14-20 de septiembre"
-    lectura_cab = lineas if len(lineas) > 1 else "JEREMÍAS 34, 35"
+    fecha_cab = lineas[0] if len(lineas) > 0 else "14-20 de septiembre"
+    lectura_cab = lineas[1] if len(lineas) > 1 else "JEREMÍAS 34, 35"
 
     ultimo_punto = None
     
@@ -64,14 +64,11 @@ def procesar_texto_plano_reunion(texto_usuario):
             match_mins = re.search(r"\(\s*(\d+)\s*min", contenido)
             minutos = match_mins.group(1) if match_mins else "5"
             
-            # SANEADO LÍNEA 67: Ponemos [0] para limpiar solo el texto antes del paréntesis
             titulo_limpio = contenido.split("(")[0].strip()
             
-            # Capturamos la referencia o lección que viene inmediatamente después
             match_ref = re.search(r"\(\s*\d+\s*min\s*\)\.?\s*(.*)", contenido)
             ref_extraida = match_ref.group(1).strip() if match_ref else ""
             
-            # Unificamos en la misma variable usando un salto de línea compatible con ReportLab
             if ref_extraida:
                 texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>({minutos} min.) {ref_extraida}</font>"
             else:
@@ -172,9 +169,9 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        # Limpieza segura de etiquetas HTML para que Streamlit dibuje la vista previa sin colapsar
         titulo_preview = m.get('titulo', '')
         if "<br/>" in titulo_preview:
+            # Saneado seguro de etiquetas para la vista previa limpia en el monitor web
             titulo_preview = titulo_preview.split("<br/>")[0].replace("<b>", "").replace("</b>", "").strip()
             
         st.markdown(f"**{emoji} {k}. {titulo_preview}**")
@@ -202,8 +199,10 @@ with pestana_programa:
         try:
             reglas.generar_pdf_estilo_oficial("PROCESADO_WEB", f_cab, materias_dinamicas, asignados_en_vivo)
             
-            nombre_reportlab_1 = f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"
-            nombre_reportlab_2 = f"Reunion_PROCESADO_WEB_{f_cab}.pdf"
+            # SANEADO DEFINITIVO DE ATRIBUTO: Forzamos f_cab a texto plano para evitar choques en la pasarela
+            texto_fecha_limpio = str(f_cab).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
+            nombre_reportlab_1 = f"Reunion_PROCESADO_WEB_{texto_fecha_limpio.replace(' ', '_')}.pdf"
+            nombre_reportlab_2 = f"Reunion_PROCESADO_WEB_{texto_fecha_limpio}.pdf"
             
             if os.path.exists(nombre_reportlab_1):
                 with open(nombre_reportlab_1, "rb") as f_origen, open(nombre_archivo_final, "wb") as f_destino:
@@ -222,8 +221,9 @@ with pestana_programa:
         st.success(f"¡Folleto procesado con éxito por {coordinador_activo}! El botón morado de abajo está listo con los datos reales.")
 
     archivo_encontrado_fisco = ""
-    nombre_reportlab_1 = f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"
-    nombre_reportlab_2 = f"Reunion_PROCESADO_WEB_{f_cab}.pdf"
+    texto_fecha_limpio = str(f_cab).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
+    nombre_reportlab_1 = f"Reunion_PROCESADO_WEB_{texto_fecha_limpio.replace(' ', '_')}.pdf"
+    nombre_reportlab_2 = f"Reunion_PROCESADO_WEB_{texto_fecha_limpio}.pdf"
 
     if os.path.exists(nombre_archivo_final):
         archivo_encontrado_fisco = nombre_archivo_final
@@ -242,7 +242,7 @@ with pestana_programa:
         st.download_button(
             label="🟣 Descargar Folleto Oficial en PDF", 
             data=pdf_bytes, 
-            file_name=f"Reunion_{f_cab.replace(' ', '_')}.pdf", 
+            file_name=f"Reunion_{texto_fecha_limpio.replace(' ', '_')}.pdf", 
             mime="application/pdf", 
             key="down_pdf_live",
             use_container_width=True
