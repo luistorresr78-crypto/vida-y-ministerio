@@ -24,10 +24,10 @@ def cargar_hermanos_iniciales():
         lista_limpia = []
         for h in datos_sucios:
             lista_limpia.append({
-                "nombre": h.get("nombre", h.get("Nombre", "")).strip().title(),
-                "apellido": h.get("apellido", h.get("Apellido", "")).strip().title(),
-                "sexo": h.get("sexo", h.get("Sexo", "Varón")),
-                "aptitudes": h.get("aptitudes", h.get("Aptitudes", []))
+                "nombre": h.get("nombre", "").strip().title(),
+                "apellido": h.get("apellido", "").strip().title(),
+                "sexo": h.get("sexo", "Varón"),
+                "aptitudes": h.get("aptitudes", [])
             })
         return lista_limpia
 
@@ -37,7 +37,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR EXTRACTOR UNIVERSAL PURIFICADO ---
+# --- PROCESADOR CON FILTRADO RECORTE DE REFERENCIAS CORTAS ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
@@ -48,36 +48,43 @@ def procesar_texto_plano_reunion(texto_usuario):
     ultimo_punto = None
     
     for linea in lineas:
-        match_punto = re.match(r"^([1-8])\.\s*(.*)", linea)
+        match_punto = re.match(r"^([1-9]|10)\.\s*(.*)", linea)
         if match_punto:
             num_punto = match_punto.group(1)
             contenido = match_punto.group(2)
             
             match_mins = re.search(r"\(\s*(\d+)\s*min", contenido)
             minutos = match_mins.group(1) if match_mins else "5"
-            titulo_completo = contenido.strip()
             
-            if num_punto in ["1", "2", "3"]: seccion_real = "Tesoros"
-            elif num_punto in ["4", "5", "6"]: seccion_real = "Maestros"
+            # FILTRADO ABSOLUTO: Si hay minutos entre paréntesis, buscamos la referencia corta que sigue inmediatamente
+            texto_formateado = contenido.strip()
+            match_corte = re.search(r"\(\s*\d+\s*min\s*\)\.?\s*(.*?)(?=\.|$|—)", contenido)
+            if match_corte and match_corte.group(1).strip():
+                ref_corta = match_corte.group(1).strip()
+                # Limpiamos el título quitando todo el texto largo sobrante posterior
+                titulo_base = contenido.split("(")[0].strip()
+                texto_formateado = f"{titulo_base} ({minutos} min.) {ref_corta}"
+            
+            if int(num_punto) in: seccion_real = "Tesoros"
+            elif int(num_punto) in: seccion_real = "Maestros"
             else: seccion_real = "Vida"
                 
-            # CORRECCIÓN EN LÍNEA 66: SANEADO EL MAPEO DE MINUTOS SIN ASIGNACIONES DOBLES
             materias_detectadas[num_punto] = {
-                "titulo": titulo_completo,
+                "titulo": texto_formateado,
                 "minutos": minutos,
                 "seccion": seccion_real
             }
             ultimo_punto = num_punto
         else:
+            # BLOQUEO DE TEXTO LARGO: Si la línea es texto suelto o preguntas de video, se descarta por completo
             if ultimo_punto and ultimo_punto in materias_detectadas:
-                if not (linea.startswith("31 ") or "JEREMÍAS" in linea.upper() or "A de " in linea):
-                    materias_detectadas[ultimo_punto]["titulo"] += " — " + linea.strip()
+                pass
             
     if not materias_detectadas:
         materias_detectadas = {
-            "1": {"titulo": "1. Discurso de apertura", "minutos": "10", "seccion": "Tesoros"},
-            "2": {"titulo": "2. Busquemos perlas escondidas", "minutos": "10", "seccion": "Tesoros"},
-            "3": {"titulo": "3. Lectura de la Biblia", "minutos": "4", "seccion": "Tesoros"}
+            "1": {"titulo": "1. Discurso de apertura (10 min.)", "minutos": "10", "seccion": "Tesoros"},
+            "2": {"titulo": "2. Busquemos perlas escondidas (10 min.)", "minutos": "10", "seccion": "Tesoros"},
+            "3": {"titulo": "3. Lectura de la Biblia (4 min.)", "minutos": "4", "seccion": "Tesoros"}
         }
     return fecha_cab, lectura_cab, materias_detectadas
 
@@ -106,7 +113,7 @@ with pestana_programa:
     st.info(f"📖 Lectura Bíblica Extraída: **{l_cab}**")
 
     with st.sidebar:
-        st.header("⚙️ Control de Operation")
+        st.header("⚙️ Control de Operación")
         coordinador_activo = st.selectbox("¿Quién está asignando hoy?", ["Sergio", "Jonathan", "Luis"], key="coord_act_live")
         
         st.subheader("♻️ Registro de Reemplazos")
@@ -145,7 +152,7 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        st.markdown(f"**{emoji} {k}. {m.get('titulo', '')}** ({m.get('minutos', '')} min.)")
+        st.markdown(f"**{emoji} {k}. {m.get('titulo', '')}**")
         
         opciones_materia = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, color_sub)
         nombres_materia = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in opciones_materia] if opciones_materia else [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
