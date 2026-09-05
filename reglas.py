@@ -44,7 +44,8 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
     if not hermano_titular:
         for h in lista_hermanos:
             apts_h = [str(a).lower() for a in h.get("aptitudes", [])] if isinstance(h.get("aptitudes", []), list) else str(h.get("aptitudes", "")).lower()
-            if aptitud_real.lower() in apts_h or ("maestros" in aptitud_real.lower() and "maestros" in str(apts_h)):
+            aptid_real = aptitud_real.lower()
+            if aptid_real in apts_h or ("maestros" in aptid_real and "maestros" in str(apts_h)):
                 candidatos.append(h)
     else:
         titular_limpio = hermano_titular.split(" ->").split("(").strip()
@@ -96,9 +97,10 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     est_lectura = ParagraphStyle('EL', fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor("#1A365D"))
     est_letra_blank = ParagraphStyle('ELB', fontName='Helvetica-Bold', fontSize=10, textColor=colors.white, alignment=0)
     
-    est_t_tesoros = ParagraphStyle('ETT', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor("#3A7885"), leading=13)
-    est_t_maestros = ParagraphStyle('ETM', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor("#D08F00"), leading=13)
-    est_t_vida = ParagraphStyle('ETV', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor("#B32415"), leading=13)
+    # Estilos base con leading adecuado para que el salto de línea no encime los textos
+    est_t_tesoros = ParagraphStyle('ETT', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#3A7885"), leading=14)
+    est_t_maestros = ParagraphStyle('ETM', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#D08F00"), leading=14)
+    est_t_vida = ParagraphStyle('ETV', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#B32415"), leading=14)
     
     est_hnos = ParagraphStyle('TH', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor("#2D3748"))
     est_cab_tit = ParagraphStyle('ECT', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#4A5568"))
@@ -116,13 +118,13 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     presi = asignados.get("presidente") or "Por asignar"
     cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    t_presi = Table(cab_der, colWidths=[60, 120])
+    t_presi = Table(cab_der, colWidths=[65, 135])
     t_presi.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LINEBELOW', (1,0), (1,0), 0.75, colors.HexColor("#4A5568"))
     ]))
     
-    t_principal = Table([[cab_izq, t_presi]], colWidths=[200, 340])
+    t_principal = Table([[cab_izq, t_presi]], colWidths=[340, 200])
     t_principal.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 10)
@@ -136,7 +138,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         Paragraph("Palabras de Introducción", est_cab_tit),
         Paragraph(f"{ora_ini}", est_hnos)
     ]
-    t_c1 = Table([datos_cancion_1], colWidths=[180, 200, 160])
+    t_c1 = Table([datos_cancion_1], colWidths=[300, 120, 120])
     t_c1.setStyle(TableStyle([
         ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
         ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
@@ -146,7 +148,6 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     elementos.append(t_c1)
     elementos.append(Spacer(1, 10))
     
-    # --- CONFIGURACIÓN DE SECCIONES INTELIGENTES ADAPTATIVAS ---
     secciones_mapeadas = {
         "Tesoros": {"titulo": "TESOROS DE LA BIBLIA", "color": "#3A7885", "estilo_t": est_t_tesoros},
         "Maestros": {"titulo": "SEAMOS MEJORES MAESTROS", "color": "#D08F00", "estilo_t": est_t_maestros},
@@ -155,12 +156,11 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     seccion_actual = ""
     
-    # --- 3. BUCLE DE INTERPRETACIÓN INTELIGENTE ---
+    # --- 3. BUCLE DE INTERPRETACIÓN INTELIGENTE CON ANCHOS ASIMÉTRICOS ---
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias[k]
         sec_materia = m.get("seccion", "Tesoros")
         
-        # SI CAMBIA LA SECCIÓN LEÍDA DE JW.ORG, SE DIBUJA AUTOMÁTICAMENTE LA BARRA DE COLOR CORRESPONDIENTE
         if sec_materia != seccion_actual:
             seccion_actual = sec_materia
             conf = secciones_mapeadas.get(seccion_actual, secciones_mapeadas["Tesoros"])
@@ -189,16 +189,13 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         titular = asignados.get(f"p{k}_t", "Por asignar")
         ayudante = asignados.get(f"p{k}_a", "")
         
-        # Procesador tipográfico inteligente: formatea las referencias — en un segundo renglón estilizado
-        texto_original = m.get('titulo', '')
-        texto_limpio = texto_original.replace(" — ", "<br/><font size=9 color='#4A5568'>").replace(" —", "<br/><font size=9 color='#4A5568'")
-        if "<br/>" in texto_limpio:
-            texto_limpio += "</font>"
-            
+        # SANEADO DE DIBUJO: Dejamos pasar intactas las etiquetas <b> y <br/> enviadas por main.py
+        texto_html_final = f"{k}. {m.get('titulo', '')}"
+        
         conf_sec = secciones_mapeadas.get(seccion_actual, secciones_mapeadas["Tesoros"])
         
         fila_materia = [
-            Paragraph(f"{texto_limpio}", conf_sec["estilo_t"]),
+            Paragraph(texto_html_final, conf_sec["estilo_t"]),
             Paragraph(f"{titular}", est_hnos),
             Paragraph(f"{ayudante if ayudante and ayudante != 'Por asignar' else ''}", est_hnos)
         ]
@@ -213,14 +210,14 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         elementos.append(t_fila)
         elementos.append(Spacer(1, 4))
         
-    # --- 4. CIERRE INFERIOR AUTO-AJUSTABLE ---
+    # --- 4. CIERRE INFERIOR ---
     elementos.append(Spacer(1, 4))
     datos_conclusion = [
         Paragraph("Palabras de conclusión (3 mins.)", est_cab_tit),
         Paragraph("■ <b>Canción 143</b> y oración", est_cab_tit),
         Paragraph("", est_hnos)
     ]
-    t_c_fin = Table([datos_conclusion], colWidths=[180, 200, 160])
+    t_c_fin = Table([datos_conclusion], colWidths=[300, 120, 120])
     t_c_fin.setStyle(TableStyle([
         ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
         ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
