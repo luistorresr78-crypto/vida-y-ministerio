@@ -118,24 +118,24 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     presi = asignados.get("presidente") or "Por asignar"
     cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    t_presi = Table(cab_der, colWidths=[65, 135])
+    t_presi = Table(cab_der, colWidths=[80, 140])
     t_presi.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LINEBELOW', (1,0), (1,0), 0.75, colors.HexColor("#4A5568"))
     ]))
     
-    t_principal = Table([[cab_izq, t_presi]], colWidths=[340, 200])
+    t_principal = Table([[cab_izq, t_presi]], colWidths=[320, 220])
     t_principal.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 10)
     ]))
     elementos.append(t_principal)
     
-    # --- 2. FILA HORIZONTAL: CANCIÓN DE INICIO ---
+    # --- 2. FILA HORIZONTAL CORREGIDA SANA (SE QUITA 'PALABRAS DE INTRODUCCIÓN' DE AQUÍ) ---
     ora_ini = asignados.get("oracion_inicial") or "Por asignar"
     datos_cancion_1 = [
-        Paragraph("■ <b>Canción 01</b> y oración", est_cab_tit),
-        Paragraph("Palabras de Introducción", est_cab_tit),
+        Paragraph("■ <b>Canción 01</b> oración", est_cab_tit),
+        Paragraph("", est_cab_tit), # Se deja completamente blanco y vacío tal como exige tu Foto 2
         Paragraph(f"{ora_ini}", est_hnos)
     ]
     t_c1 = Table([datos_cancion_1], colWidths=[300, 120, 120])
@@ -156,7 +156,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     seccion_actual = ""
     
-    # --- 3. BUCLE DE INTERPRETACIÓN INTELIGENTE CON ANCHOS ASIMÉTRICOS ---
+    # --- 3. BUCLE DE INTERPRETACIÓN INTELIGENTE ---
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias[k]
         sec_materia = m.get("seccion", "Tesoros")
@@ -189,7 +189,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         titular = asignados.get(f"p{k}_t", "Por asignar")
         ayudante = asignados.get(f"p{k}_a", "")
         
-        # SANEADO DE DIBUJO: Dejamos pasar intactas las etiquetas <b> y <br/> enviadas por main.py
+        # Mantenemos intacto el formato de dos renglones que manda main.py
         texto_html_final = f"{k}. {m.get('titulo', '')}"
         
         conf_sec = secciones_mapeadas.get(seccion_actual, secciones_mapeadas["Tesoros"])
