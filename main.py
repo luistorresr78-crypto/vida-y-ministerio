@@ -37,13 +37,13 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR INTELIGENTE QUE JUNTA TÍTULO Y LECCIÓN EN DOS RENGLONES ---
+# --- PROCESADOR INTELIGENTE CORREGIDO CON FILTRADO DE POSICIÓN [0] ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    fecha_cab = lineas if len(lineas) > 0 else "14-20 de septiembre"
-    lectura_cab = lineas if len(lineas) > 1 else "JEREMÍAS 34, 35"
+    fecha_cab = lineas[0] if len(lineas) > 0 else "14-20 de septiembre"
+    lectura_cab = lineas[1] if len(lineas) > 1 else "JEREMÍAS 34, 35"
 
     ultimo_punto = None
     
@@ -64,8 +64,10 @@ def procesar_texto_plano_reunion(texto_usuario):
             match_mins = re.search(r"\(\s*(\d+)\s*min", contenido)
             minutos = match_mins.group(1) if match_mins else "5"
             
-            titulo_limpio = contenido.split("(").strip()
+            # SOLUCIÓN FIJA: Agregamos el [0] para limpiar el texto antes del paréntesis de forma correcta
+            titulo_limpio = contenido.split("(")[0].strip()
             
+            # Capturamos la referencia o lección que viene inmediatamente después
             match_ref = re.search(r"\(\s*\d+\s*min\s*\)\.?\s*(.*)", contenido)
             ref_extraida = match_ref.group(1).strip() if match_ref else ""
             
