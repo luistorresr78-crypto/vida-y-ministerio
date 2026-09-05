@@ -84,3 +84,152 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
         hermanos_listos.append(h_copia)
         
     return hermanos_listos
+def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
+    nombre_pdf = "reunion_actual.pdf"
+    
+    doc = SimpleDocTemplate(
+        nombre_pdf, pagesize=letter,
+        rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36
+    )
+    
+    # --- Paleta y Estilos Tipográficos de Lujo Oficiales ---
+    est_fecha = ParagraphStyle('EF', fontName='Helvetica-Bold', fontSize=12, textColor=colors.HexColor("#2D3748"))
+    est_lectura = ParagraphStyle('EL', fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor("#1A365D"))
+    est_letra_blank = ParagraphStyle('ELB', fontName='Helvetica-Bold', fontSize=10, textColor=colors.white, alignment=0)
+    
+    # Estilos base con leading adecuado para que el salto de línea no encime los textos
+    est_t_tesoros = ParagraphStyle('ETT', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#3A7885"), leading=14)
+    est_t_maestros = ParagraphStyle('ETM', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#D08F00"), leading=14)
+    est_t_vida = ParagraphStyle('ETV', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#B32415"), leading=14)
+    
+    est_hnos = ParagraphStyle('TH', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor("#2D3748"))
+    est_cab_tit = ParagraphStyle('ECT', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#4A5568"))
+
+    elementos = []
+    
+    # --- 1. CABECERA PRINCIPAL ---
+    texto_fecha = str(semana_act).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
+    texto_lectura = str(mes_activo).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
+    
+    cab_izq = [
+        Paragraph(f"<b>{texto_fecha}</b>", est_fecha),
+        Paragraph(f"<b>{texto_lectura}</b>", est_lectura)
+    ]
+    
+    presi = asignados.get("presidente") or "Por asignar"
+    cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
+    t_presi = Table(cab_der, colWidths=[80, 140])
+    t_presi.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('LINEBELOW', (1,0), (1,0), 0.75, colors.HexColor("#4A5568"))
+    ]))
+    
+    t_principal = Table([[cab_izq, t_presi]], colWidths=[320, 220])
+    t_principal.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 10)
+    ]))
+    elementos.append(t_principal)
+    
+    # --- 2. FILA HORIZONTAL CORREGIDA SANA (SE QUITA 'PALABRAS DE INTRODUCCIÓN' DE AQUÍ) ---
+    ora_ini = asignados.get("oracion_inicial") or "Por asignar"
+    datos_cancion_1 = [
+        Paragraph("■ <b>Canción 01</b> oración", est_cab_tit),
+        Paragraph("", est_cab_tit), # Se deja completamente blanco y vacío tal como exige tu Foto 2
+        Paragraph(f"{ora_ini}", est_hnos)
+    ]
+    t_c1 = Table([datos_cancion_1], colWidths=[300, 120, 120])
+    t_c1.setStyle(TableStyle([
+        ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
+        ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
+        ('PADDING', (0,0), (-1,-1), 5),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE')
+    ]))
+    elementos.append(t_c1)
+    elementos.append(Spacer(1, 10))
+    
+    secciones_mapeadas = {
+        "Tesoros": {"titulo": "TESOROS DE LA BIBLIA", "color": "#3A7885", "estilo_t": est_t_tesoros},
+        "Maestros": {"titulo": "SEAMOS MEJORES MAESTROS", "color": "#D08F00", "estilo_t": est_t_maestros},
+        "Vida": {"titulo": "NUESTRA VIDA CRISTIANA", "color": "#B32415", "estilo_t": est_t_vida}
+    }
+    
+    seccion_actual = ""
+    
+    # --- 3. BUCLE DE INTERPRETACIÓN INTELIGENTE ---
+    for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
+        m = materias[k]
+        sec_materia = m.get("seccion", "Tesoros")
+        
+        if sec_materia != seccion_actual:
+            seccion_actual = sec_materia
+            conf = secciones_mapeadas.get(seccion_actual, secciones_mapeadas["Tesoros"])
+            
+            if seccion_actual == "Vida":
+                datos_cancion_2 = [Paragraph("■ <b>Canción 128</b>", est_cab_tit), Paragraph("", est_hnos), Paragraph("", est_hnos)]
+                t_c2 = Table([datos_cancion_2], colWidths=[300, 120, 120])
+                t_c2.setStyle(TableStyle([
+                    ('LINEABOVE', (0,0), (-1,-1), 0.5, colors.HexColor("#718096")),
+                    ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#718096")),
+                    ('PADDING', (0,0), (-1,-1), 4)
+                ]))
+                elementos.append(t_c2)
+                elementos.append(Spacer(1, 8))
+                
+            t_tit = Table([[Paragraph(f"<b>{conf['titulo']}</b>", est_letra_blank)]], colWidths=[540])
+            t_tit.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,-1), colors.HexColor(conf["color"])),
+                ('PADDING', (0,0), (-1,-1), 5),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 6)
+            ]))
+            t_tit.hAlign = 'LEFT'
+            elementos.append(t_tit)
+            elementos.append(Spacer(1, 8))
+            
+        titular = asignados.get(f"p{k}_t", "Por asignar")
+        ayudante = asignados.get(f"p{k}_a", "")
+        
+        # Mantenemos intacto el formato de dos renglones que manda main.py
+        texto_html_final = f"{k}. {m.get('titulo', '')}"
+        
+        conf_sec = secciones_mapeadas.get(seccion_actual, secciones_mapeadas["Tesoros"])
+        
+        fila_materia = [
+            Paragraph(texto_html_final, conf_sec["estilo_t"]),
+            Paragraph(f"{titular}", est_hnos),
+            Paragraph(f"{ayudante if ayudante and ayudante != 'Por asignar' else ''}", est_hnos)
+        ]
+        
+        t_fila = Table([fila_materia], colWidths=[300, 120, 120])
+        t_fila.setStyle(TableStyle([
+            ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E0")),
+            ('PADDING', (0,0), (-1,-1), 6),
+            ('VALIGN', (0,0), (-1,-1), 'TOP')
+        ]))
+        t_fila.hAlign = 'LEFT'
+        elementos.append(t_fila)
+        elementos.append(Spacer(1, 4))
+        
+    # --- 4. CIERRE INFERIOR ---
+    elementos.append(Spacer(1, 4))
+    datos_conclusion = [
+        Paragraph("Palabras de conclusión (3 mins.)", est_cab_tit),
+        Paragraph("■ <b>Canción 143</b> y oración", est_cab_tit),
+        Paragraph("", est_hnos)
+    ]
+    t_c_fin = Table([datos_conclusion], colWidths=[300, 120, 120])
+    t_c_fin.setStyle(TableStyle([
+        ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
+        ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
+        ('PADDING', (0,0), (-1,-1), 5),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE')
+    ]))
+    elementos.append(t_c_fin)
+    
+    doc.build(elementos)
+    
+    nombre_espejo = f"Reunion_PROCESADO_WEB_{texto_fecha.replace(' ', '_')}.pdf"
+    try:
+        with open(nombre_pdf, "rb") as f_orig, open(nombre_espejo, "wb") as f_dest:
+            f_dest.write(f_orig.read())
+    except: pass
