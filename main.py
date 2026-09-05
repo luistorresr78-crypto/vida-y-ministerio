@@ -37,7 +37,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ADAPTATIVO EXTACTO COMPACTADOR DE TEXTO ---
+# --- PROCESADOR ADAPTATIVO CON PRESERVACIÓN TOTAL DE FORMATO MULTILÍNEA ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
@@ -62,18 +62,18 @@ def procesar_texto_plano_reunion(texto_usuario):
             num_punto = match_punto.group(1)
             contenido = match_punto.group(2)
             
-            # Buscador del tiempo real sin romper con splits destructivos
+            # Capturamos los minutos exactos del texto pegado sin romper la linea
             match_mins = re.search(r"\(\s*(\d+\s*min[s]*)\s*\)", contenido)
             texto_mins = f"({match_mins.group(1)})" if match_mins else ""
             
-            # Extraemos el titulo limpiando solo los bloques de parentesis del final
+            # Limpiamos el titulo base removiendo unicamente el bloque de minutos
             titulo_limpio = re.sub(r"\s*\(\s*\d+\s*min[s]*\s*\).*", "", contenido).strip()
             
-            # Jalamos la referencia o lección de corrido completa que viene al lado
+            # Capturamos la leccion o referencia corrida que viene al lado
             match_ref = re.search(r"\(\s*\d+\s*min[s]*\s*\)\s*\.?\s*(.*)", contenido)
             ref_extraida = match_ref.group(1).strip() if match_ref else ""
             
-            # Ensamblado impecable de dos renglones idéntico a tu modelo de gala
+            # Construimos la variable completa enriquecida de ReportLab con salto de línea nativo
             if texto_mins:
                 if ref_extraida:
                     texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins} {ref_extraida}</font>"
@@ -89,7 +89,6 @@ def procesar_texto_plano_reunion(texto_usuario):
             }
             ultimo_punto = num_punto
         else:
-            # Acoplador continuo por si la lección viene escrita en el renglón inmediato inferior
             if ultimo_punto and ultimo_punto in materias_detectadas:
                 texto_linea = linea.strip()
                 if ("LECCIÓN" in texto_linea.upper() or "CAP." in texto_linea.upper() or "TH " in texto_linea.lower()) and len(texto_linea) < 55:
@@ -170,7 +169,7 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        # Limpieza segura de etiquetas HTML para que Streamlit dibuje la vista previa sin colapsar
+        # Protegemos el m['titulo'] intacto para ReportLab y limpiamos solo para la Preview web de Streamlit
         titulo_preview = m.get('titulo', '')
         if "<br/>" in titulo_preview:
             titulo_preview = titulo_preview.split("<br/>")[0].replace("<b>", "").replace("</b>", "").strip()
