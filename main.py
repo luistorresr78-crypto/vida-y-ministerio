@@ -37,7 +37,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR CON FILTRADO RECORTE DE REFERENCIAS CORTAS ---
+# --- PROCESADOR ADAPTATIVO SIN NÚMEROS FIJOS PARA CLASIFICAR LAS 3 SECCIONES ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
@@ -47,6 +47,15 @@ def procesar_texto_plano_reunion(texto_usuario):
 
     ultimo_punto = None
     
+    # Primero barremos para saber cuántos puntos numéricos reales trae esta semana de JW.org
+    puntos_numericos = []
+    for linea in lineas:
+        match_p = re.match(r"^([1-9]|10)\.\s*(.*)", linea)
+        if match_p:
+            puntos_numericos.append(int(match_p.group(1)))
+            
+    total_puntos = max(puntos_numericos) if puntos_numericos else 8
+
     for linea in lineas:
         match_punto = re.match(r"^([1-9]|10)\.\s*(.*)", linea)
         if match_punto:
@@ -56,18 +65,22 @@ def procesar_texto_plano_reunion(texto_usuario):
             match_mins = re.search(r"\(\s*(\d+)\s*min", contenido)
             minutos = match_mins.group(1) if match_mins else "5"
             
-            # FILTRADO ABSOLUTO: Si hay minutos entre paréntesis, buscamos la referencia corta que sigue inmediatamente
+            # FILTRADO QUIRÚRGICO EXTRAER REFERENCIA CORTA
             texto_formateado = contenido.strip()
             match_corte = re.search(r"\(\s*\d+\s*min\s*\)\.?\s*(.*?)(?=\.|$|—)", contenido)
             if match_corte and match_corte.group(1).strip():
                 ref_corta = match_corte.group(1).strip()
-                # Limpiamos el título quitando todo el texto largo sobrante posterior
                 titulo_base = contenido.split("(")[0].strip()
-                texto_formateado = f"{titulo_base} ({minutos} min.) {ref_corta}"
+                texto_formateado = f"{titulo_base} — ({minutos} min.) {ref_corta}"
             
-            if int(num_punto) in: seccion_real = "Tesoros"
-            elif int(num_punto) in: seccion_real = "Maestros"
-            else: seccion_real = "Vida"
+            # DETERMINACIÓN AUTOMÁTICA ADAPTATIVA DE SECCIÓN (SANA LA LÍNEA 68)
+            val_num = int(num_punto)
+            if val_num <= 3:
+                seccion_real = "Tesoros"
+            elif val_num >= (total_puntos - 2) if total_puntos > 5 else 7:
+                seccion_real = "Vida"
+            else:
+                seccion_real = "Maestros"
                 
             materias_detectadas[num_punto] = {
                 "titulo": texto_formateado,
@@ -76,15 +89,15 @@ def procesar_texto_plano_reunion(texto_usuario):
             }
             ultimo_punto = num_punto
         else:
-            # BLOQUEO DE TEXTO LARGO: Si la línea es texto suelto o preguntas de video, se descarta por completo
+            # DESCARTAR TEXTOS LARGOS: Las explicaciones de videos y lecturas masivas se omiten por completo
             if ultimo_punto and ultimo_punto in materias_detectadas:
                 pass
             
     if not materias_detectadas:
         materias_detectadas = {
-            "1": {"titulo": "1. Discurso de apertura (10 min.)", "minutos": "10", "seccion": "Tesoros"},
-            "2": {"titulo": "2. Busquemos perlas escondidas (10 min.)", "minutos": "10", "seccion": "Tesoros"},
-            "3": {"titulo": "3. Lectura de la Biblia (4 min.)", "minutos": "4", "seccion": "Tesoros"}
+            "1": {"titulo": "1. Discurso de apertura — (10 min.)", "minutos": "10", "seccion": "Tesoros"},
+            "2": {"titulo": "2. Busquemos perlas escondidas — (10 min.)", "minutos": "10", "seccion": "Tesoros"},
+            "3": {"titulo": "3. Lectura de la Biblia — (4 min.)", "minutos": "4", "seccion": "Tesoros"}
         }
     return fecha_cab, lectura_cab, materias_detectadas
 
@@ -171,9 +184,7 @@ with pestana_programa:
                 ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
                 asignados_en_vivo[f"p{k}_a"] = ayudante if ayudante else "Por asignar"
 
-    st.markdown("---")
-    
-    nombre_archivo_final = "reunion_actual.pdf"
+    st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
 
     if boton_armar_pdf:
         try:
@@ -197,8 +208,6 @@ with pestana_programa:
         except Exception:
             pass
         st.success(f"¡Folleto procesado con éxito por {coordinador_activo}! El botón morado de abajo está listo con los datos reales.")
-
-    st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
 
     archivo_encontrado_fisco = ""
     nombre_reportlab_1 = f"Reunion_PROCESADO_WEB_{f_cab.replace(' ', '_')}.pdf"
