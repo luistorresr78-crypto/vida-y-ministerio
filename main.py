@@ -42,8 +42,8 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    fecha_cab = lineas[0] if len(lineas) > 0 else "14-20 de septiembre"
-    lectura_cab = lineas[1] if len(lineas) > 1 else "JEREMÍAS 34, 35"
+    fecha_cab = lineas if len(lineas) > 0 else "14-20 de septiembre"
+    lectura_cab = lineas if len(lineas) > 1 else "JEREMÍAS 34, 35"
 
     ultimo_punto = None
     
@@ -64,14 +64,11 @@ def procesar_texto_plano_reunion(texto_usuario):
             match_mins = re.search(r"\(\s*(\d+)\s*min", contenido)
             minutos = match_mins.group(1) if match_mins else "5"
             
-            # Extraemos el título limpio quitando los paréntesis originales
-            titulo_limpio = contenido.split("(")[0].strip()
+            titulo_limpio = contenido.split("(").strip()
             
-            # Capturamos la referencia o lección que viene inmediatamente después
             match_ref = re.search(r"\(\s*\d+\s*min\s*\)\.?\s*(.*)", contenido)
             ref_extraida = match_ref.group(1).strip() if match_ref else ""
             
-            # Unificamos en la misma variable usando un salto de línea compatible con ReportLab
             if ref_extraida:
                 texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>({minutos} min.) {ref_extraida}</font>"
             else:
@@ -92,7 +89,6 @@ def procesar_texto_plano_reunion(texto_usuario):
             }
             ultimo_punto = num_punto
         else:
-            # Si la línea de abajo trae un dato corto de lección suelto, se lo sumamos al segundo renglón
             if ultimo_punto and ultimo_punto in materias_detectadas:
                 texto_linea = linea.strip()
                 if ("LECCIÓN" in texto_linea.upper() or "CAP." in texto_linea.upper() or "TH " in texto_linea.lower()) and len(texto_linea) < 50:
@@ -173,7 +169,12 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        st.markdown(f"**{emoji} {k}. {m.get('titulo', '').split('<br/>').strip()}**")
+        # SANEADO DE SINTAXIS LÍNEA 176: Limpia las etiquetas HTML para mostrar la vista previa en Streamlit
+        titulo_preview = m.get('titulo', '')
+        if "<br/>" in titulo_preview:
+            titulo_preview = titulo_preview.split("<br/>")[0].replace("<b>", "").replace("</b>", "").strip()
+            
+        st.markdown(f"**{emoji} {k}. {titulo_preview}**")
         
         opciones_materia = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, color_sub)
         nombres_materia = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in opciones_materia] if opciones_materia else [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
