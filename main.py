@@ -37,7 +37,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR QUE CONSERVA LOS MINUTOS EN EL SEGUNDO RENGLÓN PLOMO ---
+# --- PROCESADOR QUE JALA LOS MINUTOS REALES EN CALIENDE DE JW.ORG ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
@@ -62,31 +62,35 @@ def procesar_texto_plano_reunion(texto_usuario):
             num_punto = match_punto.group(1)
             contenido = match_punto.group(2)
             
-            match_mins = re.search(r"\(\s*(\d+)\s*min", contenido)
-            minutos = match_mins.group(1) if match_mins else ""
+            # Buscador del tiempo real pegado (ej: 10 min, 4 mins, 30 min)
+            match_mins = re.search(r"\(\s*(\d+\s*min[s]*)\s*\)", contenido)
+            texto_mins = f"({match_mins.group(1)})" if match_mins else ""
             
-            # SANADO LÍNEA 70: Añadimos [0] para limpiar de forma segura el fragmento antes del paréntesis
+            # Si no viene con paréntesis pero dice min al final (ej: "Discurso 10 min")
+            if not texto_mins:
+                match_alt = re.search(r"(\d+)\s*min", contenido)
+                if match_alt:
+                    texto_mins = f"({match_alt.group(1)} min.)"
+            
+            # Cortamos el titulo limpio quitando cualquier parentesis del texto
             titulo_limpio = contenido.split("(")[0].strip()
             
-            match_ref = re.search(r"\(\s*\d+\s*min\s*\)\.?\s*(.*)", contenido)
+            # Jalamos la referencia o lección que sigue después del tiempo
+            match_ref = re.search(r"\(\s*\d+\s*min[s]*\s*\)\.?\s*(.*)", contenido)
             ref_extraida = match_ref.group(1).strip() if match_ref else ""
             
-            if minutos:
-                texto_mins = f"({minutos} min.)"
+            # Estructuramos en dos renglones: Título arriba, tiempo y lección abajo
+            if texto_mins:
                 if ref_extraida:
                     texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins} {ref_extraida}</font>"
                 else:
                     texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
             else:
-                match_alt = re.search(r"\(\s*(\d+\s*min[s]*)\s*\)", contenido)
-                if match_alt:
-                    texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>({match_alt.group(1)})</font>"
-                else:
-                    texto_formateado = f"<b>{titulo_limpio}</b>"
+                texto_formateado = f"<b>{titulo_limpio}</b>"
                 
             materias_detectadas[num_punto] = {
                 "titulo": texto_formateado,
-                "minutos": minutos if minutos else "5",
+                "minutos": match_mins.group(1) if match_mins else "5",
                 "seccion": seccion_actual_texto
             }
             ultimo_punto = num_punto
@@ -105,7 +109,6 @@ def procesar_texto_plano_reunion(texto_usuario):
         }
     return fecha_cab, lectura_cab, materias_detectadas
 
-# Definición de pestañas principales de la interfaz
 pestana_programa, pestana_hermanos = st.tabs([
     "🚀 Fabricador en Caliente de Folletos", 
     "👥 Gestión de Hermanos (Nómina)"
@@ -175,7 +178,7 @@ with pestana_programa:
         # Limpieza segura de etiquetas HTML para que Streamlit dibuje la vista previa sin colapsar
         titulo_preview = m.get('titulo', '')
         if "<br/>" in titulo_preview:
-            titulo_preview = titulo_preview.split("<br/>").replace("<b>", "").replace("</b>", "").strip()
+            titulo_preview = titulo_preview.split("<br/>")[0].replace("<b>", "").replace("</b>", "").strip()
             
         st.markdown(f"**{emoji} {k}. {titulo_preview}**")
         
@@ -230,7 +233,7 @@ with pestana_programa:
     if os.path.exists(nombre_archivo_final):
         archivo_encontrado_fisco = nombre_archivo_final
     elif os.path.exists(nombre_reportlab_1):
-        archivo_encontrado_fisco = reportlab_1
+        archivo_encontrado_fisco = nombre_reportlab_1
     elif os.path.exists(nombre_reportlab_2):
         archivo_encontrado_fisco = nombre_reportlab_2
     else:
