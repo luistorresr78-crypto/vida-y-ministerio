@@ -37,60 +37,61 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR INTELIGENTE CORREGIDO CON FILTRADO DE POSICIÓN [0] ---
+# --- PROCESADOR INTELIGENTE POR DETECCIÓN DE ENCABEZADOS REALES DE JW.ORG ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    fecha_cab = lineas[0] if len(lineas) > 0 else "14-20 de septiembre"
-    lectura_cab = lineas[1] if len(lineas) > 1 else "JEREMÍAS 34, 35"
+    fecha_cab = lineas if len(lineas) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas if len(lineas) > 1 else "Lectura Oficial por Cargar"
 
+    # Bandera de memoria para saber en qué sección estamos parados realmente en el texto
+    seccion_actual_texto = "Tesoros"
     ultimo_punto = None
-    
-    puntos_numericos = []
-    for linea in lineas:
-        match_p = re.match(r"^([1-9]|10)\.\s*(.*)", linea)
-        if match_p:
-            puntos_numericos.append(int(match_p.group(1)))
-            
-    total_puntos = max(puntos_numericos) if puntos_numericos else 8
 
     for linea in lineas:
+        # Monitoreamos si la línea del texto es un cambio de sección oficial de JW.org
+        linea_up = linea.upper()
+        if "SEAMOS MEJORES MAESTROS" in linea_up or "HAGA DISCÍPULOS" in linea_up:
+            seccion_actual_texto = "Maestros"
+            continue
+        elif "NUESTRA VIDA CRISTIANA" in linea_up:
+            seccion_actual_texto = "Vida"
+            continue
+            
         match_punto = re.match(r"^([1-9]|10)\.\s*(.*)", linea)
         if match_punto:
             num_punto = match_punto.group(1)
             contenido = match_punto.group(2)
             
+            # Buscamos el tiempo real en minutos
             match_mins = re.search(r"\(\s*(\d+)\s*min", contenido)
-            minutos = match_mins.group(1) if match_mins else "5"
+            minutos = match_mins.group(1) if match_mins else ""
             
-            # SOLUCIÓN FIJA: Agregamos el [0] para limpiar el texto antes del paréntesis de forma correcta
-            titulo_limpio = contenido.split("(")[0].strip()
+            # Limpiamos el título base quitando los paréntesis de minutos duplicados
+            titulo_limpio = contenido.split("(").strip()
             
-            # Capturamos la referencia o lección que viene inmediatamente después
+            # Capturamos la lección o capítulo que venga al lado
             match_ref = re.search(r"\(\s*\d+\s*min\s*\)\.?\s*(.*)", contenido)
             ref_extraida = match_ref.group(1).strip() if match_ref else ""
             
-            if ref_extraida:
-                texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>({minutos} min.) {ref_extraida}</font>"
+            # Armamos el texto final en dos renglones limpios (Sana la duplicidad de minutos)
+            if minutos:
+                if ref_extraida:
+                    texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>({minutos} min.) {ref_extraida}</font>"
+                else:
+                    texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>({minutos} min.)</font>"
             else:
-                texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>({minutos} min.)</font>"
-            
-            val_num = int(num_punto)
-            if val_num <= 3:
-                seccion_real = "Tesoros"
-            elif val_num >= (total_puntos - 2) if total_puntos > 5 else 7:
-                seccion_real = "Vida"
-            else:
-                seccion_real = "Maestros"
+                texto_formateado = f"<b>{titulo_limpio}</b>"
                 
             materias_detectadas[num_punto] = {
                 "titulo": texto_formateado,
-                "minutos": minutos,
-                "seccion": seccion_real
+                "minutos": minutos if minutos else "5",
+                "seccion": seccion_actual_texto  # Asigna la sección real leída del encabezado
             }
             ultimo_punto = num_punto
         else:
+            # Si abajo viene una lección suelta corta, se la acoplamos de forma segura
             if ultimo_punto and ultimo_punto in materias_detectadas:
                 texto_linea = linea.strip()
                 if ("LECCIÓN" in texto_linea.upper() or "CAP." in texto_linea.upper() or "TH " in texto_linea.lower()) and len(texto_linea) < 50:
@@ -171,7 +172,7 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        # Limpieza segura de etiquetas HTML para que Streamlit dibuje la vista previa sin colapsar
+        # Limpieza segura para mostrar de forma amigable en Streamlit
         titulo_preview = m.get('titulo', '')
         if "<br/>" in titulo_preview:
             titulo_preview = titulo_preview.split("<br/>")[0].replace("<b>", "").replace("</b>", "").strip()
