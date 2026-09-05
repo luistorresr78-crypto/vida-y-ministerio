@@ -44,8 +44,7 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
     if not hermano_titular:
         for h in lista_hermanos:
             apts_h = [str(a).lower() for a in h.get("aptitudes", [])] if isinstance(h.get("aptitudes", []), list) else str(h.get("aptitudes", "")).lower()
-            aptid_real = aptitud_real.lower()
-            if aptid_real in apts_h or ("maestros" in aptid_real and "maestros" in str(apts_h)):
+            if aptitud_real.lower() in apts_h or ("maestros" in aptitud_real.lower() and "maestros" in str(apts_h)):
                 candidatos.append(h)
     else:
         titular_limpio = hermano_titular.split(" ->")[0].split("(")[0].strip()
@@ -117,13 +116,13 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     presi = asignados.get("presidente") or "Por asignar"
     cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    t_presi = Table(cab_der, colWidths=[100, 140])
+    t_presi = Table(cab_der, colWidths=[60, 140])
     t_presi.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LINEBELOW', (1,0), (1,0), 0.75, colors.HexColor("#4A5568"))
     ]))
     
-    t_principal = Table([[cab_izq, t_presi]], colWidths=[300, 240])
+    t_principal = Table([[cab_izq, t_presi]], colWidths=[340, 200])
     t_principal.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 10)
@@ -137,7 +136,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         Paragraph("Palabras de Introducción", est_cab_tit),
         Paragraph(f"{ora_ini}", est_hnos)
     ]
-    t_c1 = Table([datos_cancion_1], colWidths=[200, 200, 140])
+    t_c1 = Table([datos_cancion_1], colWidths=[180, 160, 200])
     t_c1.setStyle(TableStyle([
         ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
         ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
@@ -161,14 +160,14 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         m = materias[k]
         sec_materia = m.get("seccion", "Tesoros")
         
-        # SI CAMBIA LA SECCIÓN EN LA GUÍA, SE DIBUJA AUTOMÁTICAMENTE LA FRANJA DE COLOR CORRESPONDIENTE
+        # SI CAMBIA LA SECCIÓN LEÍDA DE JW.ORG, SE DIBUJA AUTOMÁTICAMENTE LA BARRA DE COLOR CORRESPONDIENTE
         if sec_materia != seccion_actual:
             seccion_actual = sec_materia
             conf = secciones_mapeadas.get(seccion_actual, secciones_mapeadas["Tesoros"])
             
             if seccion_actual == "Vida":
                 datos_cancion_2 = [Paragraph("■ <b>Canción 128</b>", est_cab_tit), Paragraph("", est_hnos), Paragraph("", est_hnos)]
-                t_c2 = Table([datos_cancion_2], colWidths=[200, 200, 140])
+                t_c2 = Table([datos_cancion_2], colWidths=[180, 160, 200])
                 t_c2.setStyle(TableStyle([
                     ('LINEABOVE', (0,0), (-1,-1), 0.5, colors.HexColor("#718096")),
                     ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#718096")),
@@ -204,7 +203,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             Paragraph(f"{ayudante if ayudante and ayudante != 'Por asignar' else ''}", est_hnos)
         ]
         
-        t_fila = Table(fila_materia, colWidths=[324, 108, 108])
+        t_fila = Table(fila_materia, colWidths=[340, 100, 100])
         t_fila.setStyle(TableStyle([
             ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E0")),
             ('PADDING', (0,0), (-1,-1), 6),
@@ -214,14 +213,14 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         elementos.append(t_fila)
         elementos.append(Spacer(1, 6))
         
-    # --- 4. CIERRE INFERIOR ---
+    # --- 4. CIERRE INFERIOR AUTO-AJUSTABLE ---
     elementos.append(Spacer(1, 4))
     datos_conclusion = [
         Paragraph("Palabras de conclusión (3 mins.)", est_cab_tit),
         Paragraph("■ <b>Canción 143</b> y oración", est_cab_tit),
         Paragraph("", est_hnos)
     ]
-    t_c_fin = Table([datos_conclusion], colWidths=[200, 200, 140])
+    t_c_fin = Table([datos_conclusion], colWidths=[180, 160, 200])
     t_c_fin.setStyle(TableStyle([
         ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
         ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
