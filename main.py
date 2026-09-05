@@ -62,7 +62,7 @@ def procesar_texto_plano_reunion(texto_usuario):
             num_punto = match_punto.group(1)
             contenido = match_punto.group(2)
             
-            # Capturamos los minutos exactos del texto pegado sin romper la linea
+            # Capturamos los minutos exactos del texto pegado sin romper la linea con splits destructivos
             match_mins = re.search(r"\(\s*(\d+\s*min[s]*)\s*\)", contenido)
             texto_mins = f"({match_mins.group(1)})" if match_mins else ""
             
@@ -169,10 +169,11 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        # Protegemos el m['titulo'] intacto para ReportLab y limpiamos solo para la Preview web de Streamlit
+        # Protegemos el m['titulo'] intacto para ReportLab y limpiamos de forma segura para la Preview web
         titulo_preview = m.get('titulo', '')
         if "<br/>" in titulo_preview:
-            titulo_preview = titulo_preview.split("<br/>")[0].replace("<b>", "").replace("</b>", "").strip()
+            partes_t = titulo_preview.split("<br/>")
+            titulo_preview = partes_t[0].replace("<b>", "").replace("</b>", "").strip()
             
         st.markdown(f"**{emoji} {k}. {titulo_preview}**")
         
@@ -248,6 +249,9 @@ with pestana_programa:
         )
     else:
         st.warning("⚠️ No se ha detectado el archivo en el sistema. Presione el botón gris 'Procesar Datos (Paso 1)' arriba para compilar el PDF de ReportLab.")
+
+with st.sidebar:
+    st.markdown("---")
 
 with pestana_hermanos:
     st.header("👥 Control de la Nómina de la Congregación")
