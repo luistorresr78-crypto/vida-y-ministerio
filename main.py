@@ -64,11 +64,14 @@ def procesar_texto_plano_reunion(texto_usuario):
             match_mins = re.search(r"\(\s*(\d+)\s*min", contenido)
             minutos = match_mins.group(1) if match_mins else "5"
             
-            titulo_limpio = contenido.split("(").strip()
+            # SANEADO LÍNEA 67: Ponemos [0] para limpiar solo el texto antes del paréntesis
+            titulo_limpio = contenido.split("(")[0].strip()
             
+            # Capturamos la referencia o lección que viene inmediatamente después
             match_ref = re.search(r"\(\s*\d+\s*min\s*\)\.?\s*(.*)", contenido)
             ref_extraida = match_ref.group(1).strip() if match_ref else ""
             
+            # Unificamos en la misma variable usando un salto de línea compatible con ReportLab
             if ref_extraida:
                 texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>({minutos} min.) {ref_extraida}</font>"
             else:
@@ -169,7 +172,7 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        # SANEADO DE SINTAXIS LÍNEA 176: Limpia las etiquetas HTML para mostrar la vista previa en Streamlit
+        # Limpieza segura de etiquetas HTML para que Streamlit dibuje la vista previa sin colapsar
         titulo_preview = m.get('titulo', '')
         if "<br/>" in titulo_preview:
             titulo_preview = titulo_preview.split("<br/>")[0].replace("<b>", "").replace("</b>", "").strip()
