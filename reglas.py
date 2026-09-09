@@ -31,8 +31,7 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
     mapeo_aptitudes = {
         "Tesoros": "Tesoros", "Lectura": "Lectura",
         "Seamos Mejores Maestros": "Seamos Mejores Maestros",
-        "Presidencia": "Presidencia", "Oración": "Oración",
-        "Vida Cristiana": "Vida Cristiana"
+        "Presidencia": "Presidencia", "Oración", "Vida Cristiana"
     }
     aptit_f = aptitud_filtro.replace("Tesoros de la Biblia", "Tesoros").replace("Vida Cristiana", "Vida Cristiana")
     aptitud_real = mapeo_aptitudes.get(aptit_f, aptit_f)
@@ -44,8 +43,7 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
     if not hermano_titular:
         for h in lista_hermanos:
             apts_h = [str(a).lower() for a in h.get("aptitudes", [])] if isinstance(h.get("aptitudes", []), list) else str(h.get("aptitudes", "")).lower()
-            aptid_real = aptitud_real.lower()
-            if aptid_real in apts_h or ("maestros" in aptid_real and "maestros" in str(apts_h)):
+            if aptitud_real.lower() in apts_h or ("maestros" in aptitud_real.lower() and "maestros" in str(apts_h)):
                 candidatos.append(h)
     else:
         titular_limpio = hermano_titular.split(" ->").split("(").strip()
@@ -97,7 +95,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     est_lectura = ParagraphStyle('EL', fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor("#1A365D"))
     est_letra_blank = ParagraphStyle('ELB', fontName='Helvetica-Bold', fontSize=10, textColor=colors.white, alignment=0)
     
-    # Estilos base con leading adecuado para que el salto de línea no encime los textos
+    # Estilos con leading corregido para evitar que el título se encime con los minutos plomos de abajo
     est_t_tesoros = ParagraphStyle('ETT', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#3A7885"), leading=14)
     est_t_maestros = ParagraphStyle('ETM', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#D08F00"), leading=14)
     est_t_vida = ParagraphStyle('ETV', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#B32415"), leading=14)
@@ -118,24 +116,24 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     presi = asignados.get("presidente") or "Por asignar"
     cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    t_presi = Table(cab_der, colWidths=[80, 140])
+    t_presi = Table(cab_der, colWidths=[80, 160])
     t_presi.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LINEBELOW', (1,0), (1,0), 0.75, colors.HexColor("#4A5568"))
     ]))
     
-    t_principal = Table([[cab_izq, t_presi]], colWidths=[320, 220])
+    t_principal = Table([[cab_izq, t_presi]], colWidths=[300, 240])
     t_principal.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 10)
     ]))
     elementos.append(t_principal)
     
-    # --- 2. FILA HORIZONTAL CORREGIDA SANA (SE QUITA 'PALABRAS DE INTRODUCCIÓN' DE AQUÍ) ---
+    # --- 2. FILA HORIZONTAL: CANCIÓN DE INICIO ---
     ora_ini = asignados.get("oracion_inicial") or "Por asignar"
     datos_cancion_1 = [
-        Paragraph("■ <b>Canción 01</b> oración", est_cab_tit),
-        Paragraph("", est_cab_tit), # Se deja completamente blanco y vacío tal como exige tu Foto 2
+        Paragraph("■ <b>Canción 01</b> y oración", est_cab_tit),
+        Paragraph("", est_cab_tit),
         Paragraph(f"{ora_ini}", est_hnos)
     ]
     t_c1 = Table([datos_cancion_1], colWidths=[300, 120, 120])
@@ -156,7 +154,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     seccion_actual = ""
     
-    # --- 3. BUCLE DE INTERPRETACIÓN INTELIGENTE ---
+    # --- 3. BUCLE DE INTERPRETACIÓN DE MATERIAS CON FORMATO ENRIQUECIDO ---
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias[k]
         sec_materia = m.get("seccion", "Tesoros")
@@ -189,8 +187,10 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         titular = asignados.get(f"p{k}_t", "Por asignar")
         ayudante = asignados.get(f"p{k}_a", "")
         
-        # Mantenemos intacto el formato de dos renglones que manda main.py
-        texto_html_final = f"{k}. {m.get('titulo', '')}"
+        # INYECTOR COMPATIBLE: Pasa la cadena HTML íntegra sin romper las etiquetas <b>, <br/> ni <font>
+        texto_html_final = str(m.get('titulo', ''))
+        if not texto_html_final.startswith(f"{k}."):
+            texto_html_final = f"{k}. {texto_html_final}"
         
         conf_sec = secciones_mapeadas.get(seccion_actual, secciones_mapeadas["Tesoros"])
         
