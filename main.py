@@ -37,13 +37,13 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR INTELIGENTE QUE JALA LOS MINUTOS REALES EN CALIENTE DE JW.ORG ---
+# --- PROCESADOR ADAPTATIVO CON EXTRACCIÓN PURA DE MINUTOS ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas[1] if len(lineas) > 1 else "JEREMÍAS 32, 33"
+    fecha_cab = lineas if len(lineas) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas if len(lineas) > 1 else "JEREMÍAS 32, 33"
 
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
@@ -62,18 +62,15 @@ def procesar_texto_plano_reunion(texto_usuario):
             num_punto = match_punto.group(1)
             contenido = match_punto.group(2)
             
-            # Buscador del tiempo real en minutos pegado (ej: 10 mins, 4 min, 15 mins)
+            # Captura de minutos exacta sin romper la variable original con cortes destructivos
             match_mins = re.search(r"\(\s*(\d+\s*min[s]*)\s*\)", contenido)
             texto_mins = f"({match_mins.group(1)})" if match_mins else ""
             
-            # Limpiamos el titulo base removiendo unicamente el bloque de parentesis de tiempo
             titulo_limpio = re.sub(r"\s*\(\s*\d+\s*min[s]*\s*\).*", "", contenido).strip()
             
-            # Jalamos la referencia o lección corrida completa que viene al lado
             match_ref = re.search(r"\(\s*\d+\s*min[s]*\s*\)\s*\.?\s*(.*)", contenido)
             ref_extraida = match_ref.group(1).strip() if match_ref else ""
             
-            # Ensamblado impecable de dos renglones: Título arriba, tiempo y lección abajo
             if texto_mins:
                 if ref_extraida:
                     texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins} {ref_extraida}</font>"
@@ -89,7 +86,6 @@ def procesar_texto_plano_reunion(texto_usuario):
             }
             ultimo_punto = num_punto
         else:
-            # Acoplador continuo por si la lección viene escrita en el renglón inmediato inferior
             if ultimo_punto and ultimo_punto in materias_detectadas:
                 texto_linea = linea.strip()
                 if ("LECCIÓN" in texto_linea.upper() or "CAP." in texto_linea.upper() or "TH " in texto_linea.lower()) and len(texto_linea) < 55:
@@ -164,7 +160,7 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        # CORRECCIÓN DE RAÍZ: Limpiamos aplicando el replace sobre la posición [0] de la lista
+        # CORRECCIÓN DE RAÍZ: Limpiamos aplicando el replace sobre la posición [0] de la lista partes_t
         titulo_bruto = m.get('titulo', '')
         if "<br/>" in titulo_bruto:
             partes_t = titulo_bruto.split("<br/>")
@@ -190,7 +186,6 @@ with pestana_programa:
                 if "" not in nombres_ayudante: nombres_ayudante.insert(0, "")
                 ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
                 asignados_en_vivo[f"p{k}_a"] = ayudante if ayudante else "Por asignar"
-
     st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
 
     if boton_armar_pdf:
