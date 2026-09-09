@@ -91,12 +91,12 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36
     )
     
-    # --- Paleta y Estilos Tipográficos de Lujo Oficiales ---
+    # --- Paleta y Estilos Tipográficos Oficiales ---
     est_fecha = ParagraphStyle('EF', fontName='Helvetica-Bold', fontSize=12, textColor=colors.HexColor("#2D3748"))
     est_lectura = ParagraphStyle('EL', fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor("#1A365D"))
     est_letra_blank = ParagraphStyle('ELB', fontName='Helvetica-Bold', fontSize=10, textColor=colors.white, alignment=0)
     
-    # Estilos con leading amplio obligatorio para que el segundo renglón plomo no se amontone
+    # Estilos con interlineado amplio obligatorio para abrir el segundo renglón plomo
     est_t_tesoros = ParagraphStyle('ETT', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#3A7885"), leading=14)
     est_t_maestros = ParagraphStyle('ETM', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#D08F00"), leading=14)
     est_t_vida = ParagraphStyle('ETV', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#B32415"), leading=14)
@@ -106,7 +106,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
 
     elementos = []
     
-    # --- 1. CABECERA PRINCIPAL ---
+    # --- 1. CABECERA PRINCIPAL (MEDIDAS COMPLETAS EN PUNTOS) ---
     texto_fecha = str(semana_act).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
     texto_lectura = str(mes_activo).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
     
@@ -130,7 +130,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     ]))
     elementos.append(t_principal)
     
-    # --- 2. FILA HORIZONTAL: CANCIÓN DE INICIO ---
+    # --- 2. CANCIÓN DE INICIO (MEDIDAS COMPLETAS EN PUNTOS) ---
     ora_ini = asignados.get("oracion_inicial") or "Por asignar"
     datos_cancion_1 = [
         Paragraph("■ <b>Canción 01</b> y oración", est_cab_tit),
@@ -155,7 +155,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     seccion_actual = ""
     
-    # --- 3. BUCLE DE INTERPRETACIÓN CON MEDIDAS DE CELDAS FIJAS CORREGIDAS ---
+    # --- 3. BUCLE PRINCIPAL CON MEDIDAS DE CELDAS COMPLETADAS ---
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias[k]
         sec_materia = m.get("seccion", "Tesoros")
@@ -188,7 +188,6 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         titular = asignados.get(f"p{k}_t", "Por asignar")
         ayudante = asignados.get(f"p{k}_a", "")
         
-        # INYECTOR COMPATIBLE: Traspasa la cadena íntegra con las etiquetas HTML sin alteración
         texto_html_final = str(m.get('titulo', ''))
         if not texto_html_final.startswith(f"{k}."):
             texto_html_final = f"{k}. {texto_html_final}"
@@ -201,7 +200,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             Paragraph(f"{ayudante if ayudante and ayudante != 'Por asignar' else ''}", est_hnos)
         ]
         
-        # Inyectamos las medidas oficiales exactas en puntos para papel carta: 320, 110, 110
+        # INYECCIÓN FINAL DE LAS MEDIDAS PERFECTAS: 320 puntos para el tema, 110 para el titular y 110 para ayudante
         t_fila = Table([fila_materia], colWidths=[320, 110, 110])
         t_fila.setStyle(TableStyle([
             ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E0")),
@@ -229,9 +228,3 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     elementos.append(t_c_fin)
     
     doc.build(elementos)
-    
-    nombre_espejo = f"Reunion_PROCESADO_WEB_{texto_fecha.replace(' ', '_')}.pdf"
-    try:
-        with open(nombre_pdf, "rb") as f_orig, open(nombre_espejo, "wb") as f_dest:
-            f_dest.write(f_orig.read())
-    except: pass
