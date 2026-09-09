@@ -42,8 +42,8 @@ def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    fecha_cab = lineas if len(lineas) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas if len(lineas) > 1 else "JEREMÍAS 32, 33"
+    fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas[1] if len(lineas) > 1 else "JEREMÍAS 32, 33"
 
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
@@ -136,13 +136,13 @@ with pestana_programa:
     
     col_p1, col_p2 = st.columns(2)
     with col_p1:
-        opciones_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia")
-        nom_presi = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in opciones_presi] if opciones_presi else [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
+        options_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia")
+        nom_presi = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in options_presi] if options_presi else [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
         presidente = st.selectbox("Presidente de la Reunión", nom_presi, key="p_presi_live")
         
     with col_p2:
-        opciones_ora = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Oración")
-        nom_ora = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in opciones_ora] if opciones_ora else [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
+        options_ora = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Oración")
+        nom_ora = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in options_ora] if options_ora else [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
         oracion_inicial = st.selectbox("Oración Inicial", nom_ora, key="p_ora_live")
 
     st.markdown("---")
@@ -160,11 +160,11 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        # CORRECCIÓN DE RAÍZ: Limpiamos aplicando el replace sobre la posición [0] de la lista partes_t
-        titulo_bruto = m.get('titulo', '')
+        # PROCESADOR SEGURO DE PREVIEW: Limpia aplicando el replace sobre la cadena de texto convertida de forma estable
+        titulo_bruto = str(m.get('titulo', ''))
         if "<br/>" in titulo_bruto:
-            partes_t = titulo_bruto.split("<br/>")
-            titulo_preview = partes_t[0].replace("<b>", "").replace("</b>", "").strip()
+            partes_t = titulo_bruto.split("<br/>")[0]
+            titulo_preview = partes_t.replace("<b>", "").replace("</b>", "").strip()
         else:
             titulo_preview = titulo_bruto.replace("<b>", "").replace("</b>", "").strip()
             
