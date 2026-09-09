@@ -22,7 +22,7 @@ def calcular_participaciones_mes(mes_activo):
         for semana in semanas_mes.values():
             for hermano in semana.get("asignados", {}).values():
                 if hermano and isinstance(hermano, str):
-                    nombre_limpio = hermano.split(" ->")[0].split("(")[0].strip()
+                    nombre_limpio = hermano.split(" ->").split("(").strip()
                     conteo[nombre_limpio] = conteo.get(nombre_limpio, 0) + 1
     except: pass
     return conteo
@@ -47,7 +47,7 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
             if aptitud_real.lower() in apts_h or ("maestros" in aptitud_real.lower() and "maestros" in str(apts_h)):
                 candidatos.append(h)
     else:
-        titular_limpio = hermano_titular.split(" ->")[0].split("(")[0].strip()
+        titular_limpio = hermano_titular.split(" ->").split("(").strip()
         sexo_tit = "Varón"
         apellido_tit = titular_limpio.split(" ")[-1] if " " in titular_limpio else ""
         for h in lista_hermanos:
@@ -96,7 +96,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     est_lectura = ParagraphStyle('EL', fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor("#1A365D"))
     est_letra_blank = ParagraphStyle('ELB', fontName='Helvetica-Bold', fontSize=10, textColor=colors.white, alignment=0)
     
-    # Estilos con interlineado amplio obligatorio para abrir el segundo renglón plomo
+    # Estilos con leading amplio obligatorio para abrir el segundo renglón plomo
     est_t_tesoros = ParagraphStyle('ETT', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#3A7885"), leading=14)
     est_t_maestros = ParagraphStyle('ETM', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#D08F00"), leading=14)
     est_t_vida = ParagraphStyle('ETV', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#B32415"), leading=14)
@@ -106,9 +106,20 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
 
     elementos = []
     
-    # --- 1. CABECERA PRINCIPAL (MEDIDAS COMPLETAS EN PUNTOS) ---
-    texto_fecha = str(semana_act).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
-    texto_lectura = str(mes_activo).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
+    # --- 1. CABECERA PRINCIPAL (DESPAQUETADO FIJO SEGURO) ---
+    # Limpiamos de forma estricta las listas si llegan crudas desde main.py
+    if isinstance(semana_act, list):
+        texto_fecha = str(semana_act[0]) if len(semana_act) > 0 else "7-13 de septiembre"
+    else:
+        texto_fecha = str(semana_act)
+        
+    if isinstance(mes_activo, list):
+        texto_lectura = str(mes_activo[1]) if len(mes_activo) > 1 else (str(mes_activo[0]) if len(mes_activo) > 0 else "JEREMÍAS 32, 33")
+    else:
+        texto_lectura = str(mes_activo)
+        
+    texto_fecha = texto_fecha.replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
+    texto_lectura = texto_lectura.replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
     
     cab_izq = [
         Paragraph(f"<b>{texto_fecha}</b>", est_fecha),
@@ -117,7 +128,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     presi = asignados.get("presidente") or "Por asignar"
     cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    t_presi = Table(cab_der, colWidths=[110, 110])
+    t_presi = Table(cab_der, colWidths=[80, 140])
     t_presi.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LINEBELOW', (1,0), (1,0), 0.75, colors.HexColor("#4A5568"))
@@ -130,7 +141,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     ]))
     elementos.append(t_principal)
     
-    # --- 2. CANCIÓN DE INICIO (MEDIDAS COMPLETAS EN PUNTOS) ---
+    # --- 2. CANCIÓN DE INICIO ---
     ora_ini = asignados.get("oracion_inicial") or "Por asignar"
     datos_cancion_1 = [
         Paragraph("■ <b>Canción 01</b> y oración", est_cab_tit),
@@ -155,7 +166,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     seccion_actual = ""
     
-    # --- 3. BUCLE PRINCIPAL CON MEDIDAS DE CELDAS COMPLETADAS ---
+    # --- 3. BUCLE PRINCIPAL ORDENADO CON MÁGICA CONSERVACIÓN MULTILÍNEA ---
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias[k]
         sec_materia = m.get("seccion", "Tesoros")
@@ -200,7 +211,6 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             Paragraph(f"{ayudante if ayudante and ayudante != 'Por asignar' else ''}", est_hnos)
         ]
         
-        # INYECCIÓN FINAL DE LAS MEDIDAS PERFECTAS: 320 puntos para el tema, 110 para el titular y 110 para ayudante
         t_fila = Table([fila_materia], colWidths=[320, 110, 110])
         t_fila.setStyle(TableStyle([
             ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E0")),
