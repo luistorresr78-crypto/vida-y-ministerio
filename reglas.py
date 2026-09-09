@@ -22,7 +22,7 @@ def calcular_participaciones_mes(mes_activo):
         for semana in semanas_mes.values():
             for hermano in semana.get("asignados", {}).values():
                 if hermano and isinstance(hermano, str):
-                    nombre_limpio = hermano.split(" ->").split("(").strip()
+                    nombre_limpio = hermano.split(" ->")[0].split("(")[0].strip()
                     conteo[nombre_limpio] = conteo.get(nombre_limpio, 0) + 1
     except: pass
     return conteo
@@ -31,7 +31,8 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
     mapeo_aptitudes = {
         "Tesoros": "Tesoros", "Lectura": "Lectura",
         "Seamos Mejores Maestros": "Seamos Mejores Maestros",
-        "Presidencia": "Presidencia", "Oración", "Vida Cristiana"
+        "Presidencia": "Presidencia", "Oración": "Oración",
+        "Vida Cristiana": "Vida Cristiana"
     }
     aptit_f = aptitud_filtro.replace("Tesoros de la Biblia", "Tesoros").replace("Vida Cristiana", "Vida Cristiana")
     aptitud_real = mapeo_aptitudes.get(aptit_f, aptit_f)
@@ -46,7 +47,7 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
             if aptitud_real.lower() in apts_h or ("maestros" in aptitud_real.lower() and "maestros" in str(apts_h)):
                 candidatos.append(h)
     else:
-        titular_limpio = hermano_titular.split(" ->").split("(").strip()
+        titular_limpio = hermano_titular.split(" ->")[0].split("(")[0].strip()
         sexo_tit = "Varón"
         apellido_tit = titular_limpio.split(" ")[-1] if " " in titular_limpio else ""
         for h in lista_hermanos:
@@ -95,7 +96,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     est_lectura = ParagraphStyle('EL', fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor("#1A365D"))
     est_letra_blank = ParagraphStyle('ELB', fontName='Helvetica-Bold', fontSize=10, textColor=colors.white, alignment=0)
     
-    # Estilos con leading corregido para evitar que el título se encime con los minutos plomos de abajo
+    # Estilos con leading amplio obligatorio para que el segundo renglón plomo no se amontone
     est_t_tesoros = ParagraphStyle('ETT', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#3A7885"), leading=14)
     est_t_maestros = ParagraphStyle('ETM', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#D08F00"), leading=14)
     est_t_vida = ParagraphStyle('ETV', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#B32415"), leading=14)
@@ -116,13 +117,13 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     presi = asignados.get("presidente") or "Por asignar"
     cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    t_presi = Table(cab_der, colWidths=[80, 160])
+    t_presi = Table(cab_der, colWidths=[70, 150])
     t_presi.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LINEBELOW', (1,0), (1,0), 0.75, colors.HexColor("#4A5568"))
     ]))
     
-    t_principal = Table([[cab_izq, t_presi]], colWidths=[300, 240])
+    t_principal = Table([[cab_izq, t_presi]], colWidths=[320, 220])
     t_principal.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 10)
@@ -136,7 +137,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         Paragraph("", est_cab_tit),
         Paragraph(f"{ora_ini}", est_hnos)
     ]
-    t_c1 = Table([datos_cancion_1], colWidths=[300, 120, 120])
+    t_c1 = Table([datos_cancion_1], colWidths=[180, 160, 200])
     t_c1.setStyle(TableStyle([
         ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
         ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
@@ -154,7 +155,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     seccion_actual = ""
     
-    # --- 3. BUCLE DE INTERPRETACIÓN DE MATERIAS CON FORMATO ENRIQUECIDO ---
+    # --- 3. BUCLE DE INTERPRETACIÓN CON CONSERVACIÓN DE FORMATO ---
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias[k]
         sec_materia = m.get("seccion", "Tesoros")
@@ -165,7 +166,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             
             if seccion_actual == "Vida":
                 datos_cancion_2 = [Paragraph("■ <b>Canción 128</b>", est_cab_tit), Paragraph("", est_hnos), Paragraph("", est_hnos)]
-                t_c2 = Table([datos_cancion_2], colWidths=[300, 120, 120])
+                t_c2 = Table([datos_cancion_2], colWidths=[180, 160, 200])
                 t_c2.setStyle(TableStyle([
                     ('LINEABOVE', (0,0), (-1,-1), 0.5, colors.HexColor("#718096")),
                     ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#718096")),
@@ -187,7 +188,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         titular = asignados.get(f"p{k}_t", "Por asignar")
         ayudante = asignados.get(f"p{k}_a", "")
         
-        # INYECTOR COMPATIBLE: Pasa la cadena HTML íntegra sin romper las etiquetas <b>, <br/> ni <font>
+        # INYECTOR PROTEGIDO: Traspasa la cadena con las etiquetas de minutos y fuentes intactas
         texto_html_final = str(m.get('titulo', ''))
         if not texto_html_final.startswith(f"{k}."):
             texto_html_final = f"{k}. {texto_html_final}"
@@ -200,7 +201,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             Paragraph(f"{ayudante if ayudante and ayudante != 'Por asignar' else ''}", est_hnos)
         ]
         
-        t_fila = Table([fila_materia], colWidths=[300, 120, 120])
+        t_fila = Table(fila_materia, colWidths=[340, 100, 100])
         t_fila.setStyle(TableStyle([
             ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E0")),
             ('PADDING', (0,0), (-1,-1), 6),
@@ -217,7 +218,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         Paragraph("■ <b>Canción 143</b> y oración", est_cab_tit),
         Paragraph("", est_hnos)
     ]
-    t_c_fin = Table([datos_conclusion], colWidths=[300, 120, 120])
+    t_c_fin = Table([datos_conclusion], colWidths=[180, 160, 200])
     t_c_fin.setStyle(TableStyle([
         ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
         ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
