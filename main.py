@@ -62,6 +62,7 @@ def procesar_texto_plano_reunion(texto_usuario):
             num_punto = match_punto.group(1)
             contenido = match_punto.group(2)
             
+            # Captura de minutos exacta sin romper la variable original
             match_mins = re.search(r"\(\s*(\d+\s*min[s]*)\s*\)", contenido)
             texto_mins = f"({match_mins.group(1)})" if match_mins else ""
             
