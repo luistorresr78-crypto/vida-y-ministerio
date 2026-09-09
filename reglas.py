@@ -106,8 +106,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
 
     elementos = []
     
-    # --- 1. CABECERA PRINCIPAL (DESPAQUETADO FIJO SEGURO) ---
-    # Limpiamos de forma estricta las listas si llegan crudas desde main.py
+    # --- 1. CABECERA PRINCIPAL ---
     if isinstance(semana_act, list):
         texto_fecha = str(semana_act[0]) if len(semana_act) > 0 else "7-13 de septiembre"
     else:
@@ -128,7 +127,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     presi = asignados.get("presidente") or "Por asignar"
     cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    t_presi = Table(cab_der, colWidths=[80, 140])
+    t_presi = Table(cab_der, colWidths=[100, 120])
     t_presi.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LINEBELOW', (1,0), (1,0), 0.75, colors.HexColor("#4A5568"))
@@ -166,7 +165,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     seccion_actual = ""
     
-    # --- 3. BUCLE PRINCIPAL ORDENADO CON MÁGICA CONSERVACIÓN MULTILÍNEA ---
+    # --- 3. BUCLE PRINCIPAL CON MEDIDAS PERFECTAS EN PUNTOS ---
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias[k]
         sec_materia = m.get("seccion", "Tesoros")
@@ -211,6 +210,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             Paragraph(f"{ayudante if ayudante and ayudante != 'Por asignar' else ''}", est_hnos)
         ]
         
+        # INYECCIÓN FINAL DE LAS MEDIDAS PERFECTAS: 320 para el tema, 110 para el titular y 110 para ayudante
         t_fila = Table([fila_materia], colWidths=[320, 110, 110])
         t_fila.setStyle(TableStyle([
             ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E0")),
