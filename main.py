@@ -160,7 +160,7 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        # REPARACIÓN CON CORCHETES: Extraemos de forma obligatoria la posición 0 de la lista partes_t
+        # FIX DE RAÍZ: Ponemos [0] para limpiar la cadena de texto de la lista de forma segura sin romper los minutos
         titulo_bruto = str(m.get('titulo', ''))
         if "<br/>" in titulo_bruto:
             partes_t = titulo_bruto.split("<br/>")
@@ -186,6 +186,7 @@ with pestana_programa:
                 if "" not in nombres_ayudante: nombres_ayudante.insert(0, "")
                 ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
                 asignados_en_vivo[f"p{k}_a"] = ayudante if ayudante else "Por asignar"
+
     st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
 
     if boton_armar_pdf:
