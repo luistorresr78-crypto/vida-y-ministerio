@@ -155,7 +155,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     seccion_actual = ""
     
-    # --- 3. BUCLE DE INTERPRETACIÓN CON MEDIDAS DE CELDAS REALES ---
+    # --- 3. BUCLE DE INTERPRETACIÓN CON MEDIDAS DE CELDAS FIJAS CORREGIDAS ---
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias[k]
         sec_materia = m.get("seccion", "Tesoros")
@@ -188,7 +188,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         titular = asignados.get(f"p{k}_t", "Por asignar")
         ayudante = asignados.get(f"p{k}_a", "")
         
-        # INYECTOR COMPATIBLE: Traspasa la cadena íntegra sin romper etiquetas HTML
+        # INYECTOR COMPATIBLE: Traspasa la cadena íntegra con las etiquetas HTML sin alteración
         texto_html_final = str(m.get('titulo', ''))
         if not texto_html_final.startswith(f"{k}."):
             texto_html_final = f"{k}. {texto_html_final}"
@@ -201,7 +201,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             Paragraph(f"{ayudante if ayudante and ayudante != 'Por asignar' else ''}", est_hnos)
         ]
         
-        # Inyectamos los anchos exactos calculados para papel carta: 320, 110, 110
+        # Inyectamos las medidas oficiales exactas en puntos para papel carta: 320, 110, 110
         t_fila = Table([fila_materia], colWidths=[320, 110, 110])
         t_fila.setStyle(TableStyle([
             ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E0")),
