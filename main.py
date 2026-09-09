@@ -37,13 +37,16 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR INTELIGENTE QUE JALA LOS MINUTOS REALES EN CALIENTE DE JW.ORG ---
+# --- PROCESADOR ADAPTATIVO CON DESGLOSE PUNTO POR PUNTO ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    fecha_cab = lineas if len(lineas) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas if len(lineas) > 1 else "JEREMÍAS 32, 33"
+    fecha_cab = "7-13 de septiembre"
+    lectura_cab = "JEREMÍAS 32, 33"
+    
+    if len(lineas) > 0: fecha_cab = lineas[0]
+    if len(lineas) > 1: lectura_cab = lineas[1]
 
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
@@ -62,18 +65,14 @@ def procesar_texto_plano_reunion(texto_usuario):
             num_punto = match_punto.group(1)
             contenido = match_punto.group(2)
             
-            # Buscador del tiempo real en minutos pegado (ej: 10 mins, 4 min, 15 mins)
             match_mins = re.search(r"\(\s*(\d+\s*min[s]*)\s*\)", contenido)
             texto_mins = f"({match_mins.group(1)})" if match_mins else ""
             
-            # Limpiamos el titulo base removiendo unicamente el bloque de parentesis de tiempo
             titulo_limpio = re.sub(r"\s*\(\s*\d+\s*min[s]*\s*\).*", "", contenido).strip()
             
-            # Jalamos la referencia o lección corrida completa que viene al lado
             match_ref = re.search(r"\(\s*\d+\s*min[s]*\s*\)\s*\.?\s*(.*)", contenido)
             ref_extraida = match_ref.group(1).strip() if match_ref else ""
             
-            # Ensamblado impecable de dos renglones: Título arriba, tiempo y lección abajo
             if texto_mins:
                 if ref_extraida:
                     texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins} {ref_extraida}</font>"
@@ -163,7 +162,7 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        # BLINDAJE ABSOLUTO: Limpiamos las etiquetas HTML con re.sub de forma 100% segura para la Preview web
+        # BLINDAJE: Limpiamos etiquetas HTML con re.sub de forma 100% segura para evitar choques en la Preview web
         titulo_bruto = str(m.get('titulo', ''))
         titulo_preview = re.sub(r"<[^>]*>", "", titulo_bruto).strip()
             
@@ -185,11 +184,11 @@ with pestana_programa:
                 if "" not in nombres_ayudante: nombres_ayudante.insert(0, "")
                 ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
                 asignados_en_vivo[f"p{k}_a"] = ayudante if ayudante else "Por asignar"
-
     st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
 
     if boton_armar_pdf:
         try:
+            # Enviamos el desglose limpio ordenado a reglas.py
             reglas.generar_pdf_estilo_oficial(l_cab, f_cab, materias_dinamicas, asignados_en_vivo)
             st.success(f"¡Folleto procesado con éxito por {coordinador_activo}! El botón morado de abajo está listo con los datos reales.")
         except Exception as e:
