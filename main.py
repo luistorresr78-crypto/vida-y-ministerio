@@ -4,7 +4,7 @@ import os
 import re
 import reglas
 
-# Configuracion adaptativa de la pagina web para celulares, iPads and laptops
+# Configuracion adaptativa de la pagina web para celulares, iPads y laptops
 st.set_page_config(page_title="Mesa de Asignaciones Teocraticas", page_icon="📝", layout="wide")
 
 FICHERO_HERMANOS = "hermanos.json"
@@ -51,7 +51,7 @@ def procesar_texto_plano_reunion(texto_usuario):
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
 
-    # Bloque 1: Agrupamos las líneas continuas de JW.org para romper saltos invisibles
+    # Bloque 1: Agrupamos las líneas continuas de JW.org
     puntos_crudos = {}
     for linea in lineas:
         linea_up = linea.upper()
@@ -73,11 +73,10 @@ def procesar_texto_plano_reunion(texto_usuario):
             if ultimo_punto and ultimo_punto in puntos_crudos:
                 puntos_crudos[ultimo_punto]["lineas"].append(linea)
 
-    # Bloque 2: Aplicamos las reglas exactas de recorte para compactar en 1 sola pagina
+    # Bloque 2: Aplicamos las reglas exactas de recorte quirúrgico
     for num_punto, info in puntos_crudos.items():
         texto_completo = " ".join(info["lineas"]).strip()
         
-        # Extraemos el tiempo en minutos de forma limpia
         match_mins = re.search(r"\(\s*(\d+\s*min[s]?\.?)\s*\)", texto_completo)
         texto_mins = f"({match_mins.group(1)})" if match_mins else ""
         
@@ -108,7 +107,7 @@ def procesar_texto_plano_reunion(texto_usuario):
             else:
                 texto_formateado = f"<b>{titulo_limpio}</b>"
                 
-        # PREFERENCIA 3: Los puntos 3 (Lectura), 4, 5, 6 (Maestros) y 8 (Estudio Bíblico) van enteros de corrido
+        # PREFERENCIA 3: Los puntos 3, 4, 5, 6 y 8 van enteros de corrido
         else:
             if texto_mins:
                 if ref_extraida:
@@ -149,8 +148,12 @@ with pestana_programa:
     st.markdown("---")
     nombre_archivo_final = "reunion_actual.pdf"
 
-    st.subheader(f"📅 Vista Previa de la Semana: {f_cab}")
-    st.info(f"📖 Lectura Bíblica Extraída: **{l_cab}**")
+    # SANADO VISUAL DE PANTALLA: Limpiamos los corchetes de las variables antes de mostrarlas en la web
+    f_cab_clean = str(f_cab).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
+    l_cab_clean = str(l_cab).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
+
+    st.subheader(f"📅 Vista Previa de la Semana: {f_cab_clean}")
+    st.info(f"📖 Lectura Bíblica Extraída: **{l_cab_clean}**")
 
     with st.sidebar:
         st.header("⚙️ Control de Operación")
@@ -192,7 +195,6 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        # BLINDAJE: Limpiamos etiquetas HTML con re.sub de forma 100% segura para evitar choques visuales
         titulo_bruto = str(m.get('titulo', ''))
         titulo_preview = re.sub(r"<[^>]*>", "", titulo_bruto).strip()
             
@@ -206,7 +208,6 @@ with pestana_programa:
         with c1:
             titular = st.selectbox(f"Asignado punto {k}", nombres_materia, key=f"live_t_{k}")
             asignados_en_vivo[f"p{k}_t"] = titular if titular else "Por asignar"
-            
         with c2:
             if tipo_seccion == "Maestros":
                 opciones_ayudante = reglas.filtrar_ayudantes_inteligente(titular, lista_hermanos, "Seamos Mejores Maestros")
@@ -218,9 +219,9 @@ with pestana_programa:
 
     if boton_armar_pdf:
         try:
-            # Enviamos el acumulado desglosado ordenadamente punto por punto a reglas.py
-            reglas.generar_pdf_estilo_oficial(l_cab, f_cab, materias_dinamicas, asignados_en_vivo)
-            st.success(f"¡Folleto procesado con éxito por {coordinador_activo}! El botón morado de abajo está listo con los datos reales.")
+            # Compilamos pasándole a reglas.py las variables sanadas sin listas ni corchetes
+            reglas.generar_pdf_estilo_oficial(l_cab_clean, f_cab_clean, materias_dinamicas, asignados_en_vivo)
+            st.success(f"¡Folleto processed con éxito por {coordinador_activo}! El botón morado de abajo está listo con los datos reales.")
         except Exception as e:
             st.error(f"Error interno al compilar: {e}")
 
@@ -230,11 +231,10 @@ with pestana_programa:
         with open(archivo_encontrado_fisco, "rb") as pdf_file:
             pdf_bytes = pdf_file.read()
             
-        texto_fecha_limpio = str(f_cab).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
         st.download_button(
             label="🟣 Descargar Folleto Oficial en PDF", 
             data=pdf_bytes, 
-            file_name=f"Reunion_{texto_fecha_limpio.replace(' ', '_')}.pdf", 
+            file_name=f"Reunion_{f_cab_clean.replace(' ', '_')}.pdf", 
             mime="application/pdf", 
             key="down_pdf_live",
             use_container_width=True
