@@ -210,7 +210,6 @@ with pestana_programa:
         )
     else:
         st.warning("⚠️ No se ha detectado el archivo en el sistema. Presione el botón gris 'Procesar Datos (Paso 1)' arriba para compilar el PDF de ReportLab.")
-
 with st.sidebar:
     st.markdown("---")
 
