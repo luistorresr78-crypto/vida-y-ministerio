@@ -37,7 +37,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ADAPTATIVO CON DESGLOSE PUNTO POR PUNTO ---
+# --- PROCESADOR CON SEGUIMIENTO Y UNIFICACIÓN DE LÍNEAS DE MINUTOS ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
@@ -51,6 +51,8 @@ def procesar_texto_plano_reunion(texto_usuario):
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
 
+    # Bloque 1: Agrupamos las líneas que pertenecen a cada punto de forma unificada
+    puntos_crudos = {}
     for linea in lineas:
         linea_up = linea.upper()
         if "SEAMOS MEJORES MAESTROS" in linea_up or "HAGA DISCÍPULOS" in linea_up:
@@ -62,38 +64,41 @@ def procesar_texto_plano_reunion(texto_usuario):
             
         match_punto = re.match(r"^([1-9]|10)\.\s*(.*)", linea)
         if match_punto:
-            num_punto = match_punto.group(1)
-            contenido = match_punto.group(2)
-            
-            match_mins = re.search(r"\(\s*(\d+\s*min[s]*)\s*\)", contenido)
-            texto_mins = f"({match_mins.group(1)})" if match_mins else ""
-            
-            titulo_limpio = re.sub(r"\s*\(\s*\d+\s*min[s]*\s*\).*", "", contenido).strip()
-            
-            match_ref = re.search(r"\(\s*\d+\s*min[s]*\s*\)\s*\.?\s*(.*)", contenido)
-            ref_extraida = match_ref.group(1).strip() if match_ref else ""
-            
-            if texto_mins:
-                if ref_extraida:
-                    texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins} {ref_extraida}</font>"
-                else:
-                    texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
-            else:
-                texto_formateado = f"<b>{titulo_limpio}</b>"
-                
-            materias_detectadas[num_punto] = {
-                "titulo": texto_formateado,
-                "minutos": "5",
+            ultimo_punto = match_punto.group(1)
+            puntos_crudos[ultimo_punto] = {
+                "lineas": [match_punto.group(2)],
                 "seccion": seccion_actual_texto
             }
-            ultimo_punto = num_punto
         else:
-            if ultimo_punto and ultimo_punto in materias_detectadas:
-                texto_linea = linea.strip()
-                if ("LECCIÓN" in texto_linea.upper() or "CAP." in texto_linea.upper() or "TH " in texto_linea.lower()) and len(texto_linea) < 55:
-                    if "font" in materias_detectadas[ultimo_punto]["titulo"]:
-                        materias_detectadas[ultimo_punto]["titulo"] = materias_detectadas[ultimo_punto]["titulo"].replace("</font>", f" {texto_linea}</font>")
+            if ultimo_punto and ultimo_punto in puntos_crudos:
+                puntos_crudos[ultimo_punto]["lineas"].append(linea)
+
+    # Bloque 2: Procesamos el texto acumulado extrayendo minutos e instrucciones continuas
+    for num_punto, info in puntos_crudos.items():
+        texto_completo = " ".join(info["lineas"]).strip()
+        
+        match_mins = re.search(r"\(\s*(\d+\s*min[s]?\.?)\s*\)", texto_completo)
+        texto_mins = f"({match_mins.group(1)})" if match_mins else ""
+        
+        titulo_limpio = re.sub(r"\s*\(\s*\d+\s*min[s]?\.?\s*\).*", "", texto_completo).strip()
+        
+        match_ref = re.search(r"\(\s*\d+\s*min[s]?\.?\s*\)\s*\.?\s*(.*)", texto_completo)
+        ref_extraida = match_ref.group(1).strip() if match_ref else ""
+        
+        if texto_mins:
+            if ref_extraida:
+                texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins} {ref_extraida}</font>"
+            else:
+                texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
+        else:
+            texto_formateado = f"<b>{texto_completo}</b>"
             
+        materias_detectadas[num_punto] = {
+            "titulo": texto_formateado,
+            "minutos": "5",
+            "seccion": info["seccion"]
+        }
+        
     return fecha_cab, lectura_cab, materias_detectadas
 
 pestana_programa, pestana_hermanos = st.tabs([
@@ -162,7 +167,7 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        # BLINDAJE: Limpiamos etiquetas HTML con re.sub de forma 100% segura para evitar choques en la Preview web
+        # BLINDAJE DE PANTALLA: Limpiamos etiquetas HTML con re.sub de forma 100% segura para evitar choques visuales
         titulo_bruto = str(m.get('titulo', ''))
         titulo_preview = re.sub(r"<[^>]*>", "", titulo_bruto).strip()
             
@@ -184,11 +189,12 @@ with pestana_programa:
                 if "" not in nombres_ayudante: nombres_ayudante.insert(0, "")
                 ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
                 asignados_en_vivo[f"p{k}_a"] = ayudante if ayudante else "Por asignar"
+
     st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
 
     if boton_armar_pdf:
         try:
-            # Enviamos el desglose limpio ordenado a reglas.py
+            # Enviamos el acumulado desglosado ordenadamente punto por punto a reglas.py
             reglas.generar_pdf_estilo_oficial(l_cab, f_cab, materias_dinamicas, asignados_en_vivo)
             st.success(f"¡Folleto procesado con éxito por {coordinador_activo}! El botón morado de abajo está listo con los datos reales.")
         except Exception as e:
