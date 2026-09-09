@@ -37,21 +37,19 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR CON SEGUIMIENTO, FILTRADO Y RECORTE EXIGIDO POR LUIS ---
+# --- PROCESADOR CON CONVERSIÓN OBLIGATORIA A TEXTO PLANO ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    fecha_cab = "7-13 de septiembre"
-    lectura_cab = "JEREMÍAS 32, 33"
-    
-    if len(lineas) > 0: fecha_cab = lineas
-    if len(lineas) > 1: lectura_cab = lineas
+    # Extraemos y blindamos las cabeceras como texto individual desde el inicio
+    fecha_cab = str(lineas[0]).strip() if len(lineas) > 0 else "7-13 de septiembre"
+    lectura_cab = str(lineas[1]).strip() if len(lineas) > 1 else "JEREMÍAS 32, 33"
 
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
 
-    # Bloque 1: Agrupamos las líneas continuas de JW.org
+    # Agrupamos las líneas continuas de JW.org
     puntos_crudos = {}
     for linea in lineas:
         linea_up = linea.upper()
@@ -73,7 +71,7 @@ def procesar_texto_plano_reunion(texto_usuario):
             if ultimo_punto and ultimo_punto in puntos_crudos:
                 puntos_crudos[ultimo_punto]["lineas"].append(linea)
 
-    # Bloque 2: Aplicamos las reglas exactas de recorte quirúrgico
+    # Aplicamos las reglas exactas de recorte quirúrgico compactador de Luis
     for num_punto, info in puntos_crudos.items():
         texto_completo = " ".join(info["lineas"]).strip()
         
@@ -148,7 +146,7 @@ with pestana_programa:
     st.markdown("---")
     nombre_archivo_final = "reunion_actual.pdf"
 
-    # SANADO VISUAL DE PANTALLA: Limpiamos los corchetes de las variables antes de mostrarlas en la web
+    # SANADO VISUAL ABSOLUTO: Aseguramos la limpieza de corchetes en las variables de la web
     f_cab_clean = str(f_cab).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
     l_cab_clean = str(l_cab).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
 
@@ -215,11 +213,12 @@ with pestana_programa:
                 if "" not in nombres_ayudante: nombres_ayudante.insert(0, "")
                 ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
                 asignados_en_vivo[f"p{k}_a"] = ayudante if ayudante else "Por asignar"
+
     st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
 
     if boton_armar_pdf:
         try:
-            # CORRECCIÓN DE RAÍZ: Enviamos los parámetros en el orden exacto que espera reglas.py (mes_activo, semana_act)
+            # Enviamos el orden definitivo exigido por el constructor (mes, semana)
             reglas.generar_pdf_estilo_oficial(l_cab_clean, f_cab_clean, materias_dinamicas, asignados_en_vivo)
             st.success(f"¡Folleto procesado con éxito por {coordinador_activo}! El botón morado de abajo está listo con los datos reales.")
         except Exception as e:
