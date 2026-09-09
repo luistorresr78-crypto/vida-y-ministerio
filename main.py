@@ -186,47 +186,20 @@ with pestana_programa:
 
     if boton_armar_pdf:
         try:
+            # Forzamos la compilación nativa guardando el archivo de forma fija en la raíz
             reglas.generar_pdf_estilo_oficial(l_cab, f_cab, materias_dinamicas, asignados_en_vivo)
-            
-            texto_fecha_limpio = str(f_cab).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
-            nombre_reportlab_1 = f"Reunion_PROCESADO_WEB_{texto_fecha_limpio.replace(' ', '_')}.pdf"
-            nombre_reportlab_2 = f"Reunion_PROCESADO_WEB_{texto_fecha_limpio}.pdf"
-            
-            if os.path.exists(nombre_reportlab_1):
-                with open(nombre_reportlab_1, "rb") as f_origen, open(nombre_archivo_final, "wb") as f_destino:
-                    f_destino.write(f_origen.read())
-            elif os.path.exists(nombre_reportlab_2):
-                with open(nombre_reportlab_2, "rb") as f_origen, open(nombre_archivo_final, "wb") as f_destino:
-                    f_destino.write(f_origen.read())
-            else:
-                for arc in os.listdir("."):
-                    if arc.startswith("Reunion_PROCESADO_WEB_") and arc.endswith(".pdf"):
-                        with open(arc, "rb") as f_origen, open(nombre_archivo_final, "wb") as f_destino:
-                            f_destino.write(f_origen.read())
-                        break
-        except Exception:
-            pass
-        st.success(f"¡Folleto procesado con éxito por {coordinador_activo}! El botón morado de abajo está listo con los datos reales.")
+            st.success(f"¡Folleto procesado con éxito por {coordinador_activo}! El botón morado de abajo está listo con los datos reales.")
+        except Exception as e:
+            st.error(f"Error interno al compilar: {e}")
 
-    archivo_encontrado_fisco = ""
-    texto_fecha_limpio = str(f_cab).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
-    nombre_reportlab_1 = f"Reunion_PROCESADO_WEB_{texto_fecha_limpio.replace(' ', '_')}.pdf"
-    nombre_reportlab_2 = f"Reunion_PROCESADO_WEB_{texto_fecha_limpio}.pdf"
+    # Forzamos al sistema a leer el archivo reunion_actual.pdf generado de ReportLab
+    archivo_encontrado_fisco = "reunion_actual.pdf"
 
-    if os.path.exists(nombre_archivo_final):
-        archivo_encontrado_fisco = nombre_archivo_final
-    elif os.path.exists(nombre_reportlab_1):
-        archivo_encontrado_fisco = nombre_reportlab_1
-    elif os.path.exists(nombre_reportlab_2):
-        archivo_encontrado_fisco = nombre_reportlab_2
-    else:
-        for f_nom in os.listdir("."):
-            if f_nom.startswith("Reunion_PROCESADO_WEB_") and f_nom.endswith(".pdf"):
-                archivo_encontrado_fisco = f_nom; break
-
-    if archivo_encontrado_fisco and os.path.exists(archivo_encontrado_fisco):
+    if os.path.exists(archivo_encontrado_fisco):
         with open(archivo_encontrado_fisco, "rb") as pdf_file:
             pdf_bytes = pdf_file.read()
+            
+        texto_fecha_limpio = str(f_cab).replace("['", "").replace("']", "").replace('["', "").replace('"]', "")
         st.download_button(
             label="🟣 Descargar Folleto Oficial en PDF", 
             data=pdf_bytes, 
