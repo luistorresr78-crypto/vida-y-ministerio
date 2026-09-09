@@ -160,7 +160,7 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        # SANADO DE RAÍZ: Extraemos el fragmento de la posición 0 de la lista antes del replace
+        # CORRECCIÓN DE RAÍZ: Limpiamos aplicando el replace sobre partes_t[0] de forma segura
         titulo_bruto = m.get('titulo', '')
         if "<br/>" in titulo_bruto:
             partes_t = titulo_bruto.split("<br/>")
