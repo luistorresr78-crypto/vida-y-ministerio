@@ -37,7 +37,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ADAPTATIVO EXTACTO COMPACTADOR DE MINUTOS REALES ---
+# --- PROCESADOR ADAPTATIVO CON EXTRACCIÓN PURA DE MINUTOS ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
@@ -62,7 +62,7 @@ def procesar_texto_plano_reunion(texto_usuario):
             num_punto = match_punto.group(1)
             contenido = match_punto.group(2)
             
-            # Buscador del tiempo real pegado en vivo
+            # Captura de minutos exacta sin romper la variable original con cortes destructivos
             match_mins = re.search(r"\(\s*(\d+\s*min[s]*)\s*\)", contenido)
             texto_mins = f"({match_mins.group(1)})" if match_mins else ""
             
@@ -160,9 +160,13 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        # SOLUCIÓN DEFINITIVA DE RAÍZ: Limpiamos las etiquetas HTML con re.sub de forma 100% segura para listas o texto
+        # PROCESADOR SEGURO DE PREVIEW: Limpia aplicando el replace sobre la cadena de texto de la posición 0 de la lista partes_t
         titulo_bruto = str(m.get('titulo', ''))
-        titulo_preview = re.sub(r"<[^>]*>", "", titulo_bruto).strip()
+        if "<br/>" in titulo_bruto:
+            partes_t = titulo_bruto.split("<br/>")
+            titulo_preview = partes_t[0].replace("<b>", "").replace("</b>", "").strip()
+        else:
+            titulo_preview = titulo_bruto.replace("<b>", "").replace("</b>", "").strip()
             
         st.markdown(f"**{emoji} {k}. {titulo_preview}**")
         
