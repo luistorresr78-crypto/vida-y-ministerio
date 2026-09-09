@@ -160,7 +160,7 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        # PROCESADOR SEGURO DE PREVIEW: Aplicamos el replace con corchetes [0] sobre la primera cadena de la lista
+        # SOLUCIÓN DE RAÍZ: Aplicamos el replace sobre el texto plano de la posición 0 de la lista
         titulo_bruto = m.get('titulo', '')
         if "<br/>" in titulo_bruto:
             partes_t = titulo_bruto.split("<br/>")
@@ -186,6 +186,7 @@ with pestana_programa:
                 if "" not in nombres_ayudante: nombres_ayudante.insert(0, "")
                 ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
                 asignados_en_vivo[f"p{k}_a"] = ayudante if ayudante else "Por asignar"
+
     st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
 
     if boton_armar_pdf:
