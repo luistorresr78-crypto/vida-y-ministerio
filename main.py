@@ -164,11 +164,11 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        # SOLUCIÓN FIJA DEFINTIVA: Extraemos el texto de la posición 0 antes de aplicar el replace
+        # CORRECCIÓN DE RAÍZ: Limpiamos aplicando el replace sobre la posición [0] de la lista
         titulo_bruto = m.get('titulo', '')
         if "<br/>" in titulo_bruto:
-            partes_t = titulo_bruto.split("<br/>")[0]
-            titulo_preview = partes_t.replace("<b>", "").replace("</b>", "").strip()
+            partes_t = titulo_bruto.split("<br/>")
+            titulo_preview = partes_t[0].replace("<b>", "").replace("</b>", "").strip()
         else:
             titulo_preview = titulo_bruto.replace("<b>", "").replace("</b>", "").strip()
             
@@ -190,6 +190,7 @@ with pestana_programa:
                 if "" not in nombres_ayudante: nombres_ayudante.insert(0, "")
                 ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
                 asignados_en_vivo[f"p{k}_a"] = ayudante if ayudante else "Por asignar"
+
     st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
 
     if boton_armar_pdf:
