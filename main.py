@@ -219,9 +219,9 @@ with pestana_programa:
 
     if boton_armar_pdf:
         try:
-            # Compilamos pasándole a reglas.py las variables sanadas sin listas ni corchetes
+            # CORRECCIÓN DE RAÍZ: Enviamos los parámetros en el orden exacto que espera reglas.py (mes_activo, semana_act)
             reglas.generar_pdf_estilo_oficial(l_cab_clean, f_cab_clean, materias_dinamicas, asignados_en_vivo)
-            st.success(f"¡Folleto processed con éxito por {coordinador_activo}! El botón morado de abajo está listo con los datos reales.")
+            st.success(f"¡Folleto procesado con éxito por {coordinador_activo}! El botón morado de abajo está listo con los datos reales.")
         except Exception as e:
             st.error(f"Error interno al compilar: {e}")
 
