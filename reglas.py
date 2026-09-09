@@ -117,13 +117,13 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     presi = asignados.get("presidente") or "Por asignar"
     cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    t_presi = Table(cab_der, colWidths=[70, 150])
+    t_presi = Table(cab_der, colWidths=[70, 160])
     t_presi.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LINEBELOW', (1,0), (1,0), 0.75, colors.HexColor("#4A5568"))
     ]))
     
-    t_principal = Table([[cab_izq, t_presi]], colWidths=[320, 220])
+    t_principal = Table([[cab_izq, t_presi]], colWidths=[310, 230])
     t_principal.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 10)
@@ -137,7 +137,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         Paragraph("", est_cab_tit),
         Paragraph(f"{ora_ini}", est_hnos)
     ]
-    t_c1 = Table([datos_cancion_1], colWidths=[180, 160, 200])
+    t_c1 = Table([datos_cancion_1], colWidths=[310, 10, 220])
     t_c1.setStyle(TableStyle([
         ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
         ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
@@ -155,7 +155,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     seccion_actual = ""
     
-    # --- 3. BUCLE DE INTERPRETACIÓN CON CONSERVACIÓN DE FORMATO ---
+    # --- 3. BUCLE DE INTERPRETACIÓN CON MATRIZ CORREGIDA ---
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias[k]
         sec_materia = m.get("seccion", "Tesoros")
@@ -166,7 +166,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             
             if seccion_actual == "Vida":
                 datos_cancion_2 = [Paragraph("■ <b>Canción 128</b>", est_cab_tit), Paragraph("", est_hnos), Paragraph("", est_hnos)]
-                t_c2 = Table([datos_cancion_2], colWidths=[180, 160, 200])
+                t_c2 = Table([datos_cancion_2], colWidths=[310, 110, 120])
                 t_c2.setStyle(TableStyle([
                     ('LINEABOVE', (0,0), (-1,-1), 0.5, colors.HexColor("#718096")),
                     ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#718096")),
@@ -188,7 +188,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         titular = asignados.get(f"p{k}_t", "Por asignar")
         ayudante = asignados.get(f"p{k}_a", "")
         
-        # INYECTOR PROTEGIDO: Traspasa la cadena con las etiquetas de minutos y fuentes intactas
+        # INYECTOR PROTEGIDO: Traspasa la cadena con las etiquetas de minutos intactas
         texto_html_final = str(m.get('titulo', ''))
         if not texto_html_final.startswith(f"{k}."):
             texto_html_final = f"{k}. {texto_html_final}"
@@ -201,7 +201,8 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             Paragraph(f"{ayudante if ayudante and ayudante != 'Por asignar' else ''}", est_hnos)
         ]
         
-        t_fila = Table(fila_materia, colWidths=[340, 100, 100])
+        # ENLACE DE LA VICTORIA: Metemos la fila dentro de una matriz usando corchetes bidimensionales [fila_materia]
+        t_fila = Table([fila_materia], colWidths=[310, 115, 115])
         t_fila.setStyle(TableStyle([
             ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E0")),
             ('PADDING', (0,0), (-1,-1), 6),
@@ -218,7 +219,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         Paragraph("■ <b>Canción 143</b> y oración", est_cab_tit),
         Paragraph("", est_hnos)
     ]
-    t_c_fin = Table([datos_conclusion], colWidths=[180, 160, 200])
+    t_c_fin = Table([datos_conclusion], colWidths=[200, 160, 180])
     t_c_fin.setStyle(TableStyle([
         ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
         ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
