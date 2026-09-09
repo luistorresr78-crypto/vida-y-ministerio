@@ -160,13 +160,9 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        # PROCESADOR SEGURO DE PREVIEW: Limpia aplicando el replace sobre la cadena de texto de la posición 0 de la lista partes_t
+        # SANADO DE RAÍZ: Limpiamos etiquetas HTML con re.sub de forma 100% segura para la Preview web
         titulo_bruto = str(m.get('titulo', ''))
-        if "<br/>" in titulo_bruto:
-            partes_t = titulo_bruto.split("<br/>")
-            titulo_preview = partes_t[0].replace("<b>", "").replace("</b>", "").strip()
-        else:
-            titulo_preview = titulo_bruto.replace("<b>", "").replace("</b>", "").strip()
+        titulo_preview = re.sub(r"<[^>]*>", "", titulo_bruto).strip()
             
         st.markdown(f"**{emoji} {k}. {titulo_preview}**")
         
