@@ -4,7 +4,7 @@ import os
 import re
 import reglas
 
-# Configuracion adaptativa de la pagina web para celulares, iPads y laptops
+# Configuracion adaptativa de la pagina web para celulares, iPads and laptops
 st.set_page_config(page_title="Mesa de Asignaciones Teocraticas", page_icon="📝", layout="wide")
 
 FICHERO_HERMANOS = "hermanos.json"
@@ -37,7 +37,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR CON SEGUIMIENTO Y UNIFICACIÓN DE LÍNEAS DE MINUTOS ---
+# --- PROCESADOR CON SEGUIMIENTO, FILTRADO Y RECORTE EXIGIDO POR LUIS ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
@@ -45,13 +45,13 @@ def procesar_texto_plano_reunion(texto_usuario):
     fecha_cab = "7-13 de septiembre"
     lectura_cab = "JEREMÍAS 32, 33"
     
-    if len(lineas) > 0: fecha_cab = lineas[0]
-    if len(lineas) > 1: lectura_cab = lineas[1]
+    if len(lineas) > 0: fecha_cab = lineas
+    if len(lineas) > 1: lectura_cab = lineas
 
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
 
-    # Bloque 1: Agrupamos las líneas que pertenecen a cada punto de forma unificada
+    # Bloque 1: Agrupamos las líneas continuas de JW.org para romper saltos invisibles
     puntos_crudos = {}
     for linea in lineas:
         linea_up = linea.upper()
@@ -73,10 +73,11 @@ def procesar_texto_plano_reunion(texto_usuario):
             if ultimo_punto and ultimo_punto in puntos_crudos:
                 puntos_crudos[ultimo_punto]["lineas"].append(linea)
 
-    # Bloque 2: Procesamos el texto acumulado extrayendo minutos e instrucciones continuas
+    # Bloque 2: Aplicamos las reglas exactas de recorte para compactar en 1 sola pagina
     for num_punto, info in puntos_crudos.items():
         texto_completo = " ".join(info["lineas"]).strip()
         
+        # Extraemos el tiempo en minutos de forma limpia
         match_mins = re.search(r"\(\s*(\d+\s*min[s]?\.?)\s*\)", texto_completo)
         texto_mins = f"({match_mins.group(1)})" if match_mins else ""
         
@@ -85,13 +86,37 @@ def procesar_texto_plano_reunion(texto_usuario):
         match_ref = re.search(r"\(\s*\d+\s*min[s]?\.?\s*\)\s*\.?\s*(.*)", texto_completo)
         ref_extraida = match_ref.group(1).strip() if match_ref else ""
         
-        if texto_mins:
-            if ref_extraida:
-                texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins} {ref_extraida}</font>"
-            else:
+        # PREFERENCIA 1: Para Tesoros 1 y 2, dejamos EXCLUSIVAMENTE el tiempo hasta el minuto
+        if info["seccion"] == "Tesoros" and num_punto in ["1", "2"]:
+            if texto_mins:
                 texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
+            else:
+                texto_formateado = f"<b>{titulo_limpio}</b>"
+                
+        # PREFERENCIA 2: Para la primera intervención de Vida Cristiana (Punto 7), recortamos hasta el primer punto
+        elif info["seccion"] == "Vida" and num_punto == "7":
+            if texto_mins:
+                if ref_extraida:
+                    pos_punto = ref_extraida.find(".")
+                    if pos_punto != -1:
+                        ref_recortada = ref_extraida[:pos_punto+1].strip()
+                    else:
+                        ref_recortada = ref_extraida
+                    texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins} {ref_recortada}</font>"
+                else:
+                    texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
+            else:
+                texto_formateado = f"<b>{titulo_limpio}</b>"
+                
+        # PREFERENCIA 3: Los puntos 3 (Lectura), 4, 5, 6 (Maestros) y 8 (Estudio Bíblico) van enteros de corrido
         else:
-            texto_formateado = f"<b>{texto_completo}</b>"
+            if texto_mins:
+                if ref_extraida:
+                    texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins} {ref_extraida}</font>"
+                else:
+                    texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
+            else:
+                texto_formateado = f"<b>{texto_completo}</b>"
             
         materias_detectadas[num_punto] = {
             "titulo": texto_formateado,
@@ -167,7 +192,7 @@ with pestana_programa:
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
-        # BLINDAJE DE PANTALLA: Limpiamos etiquetas HTML con re.sub de forma 100% segura para evitar choques visuales
+        # BLINDAJE: Limpiamos etiquetas HTML con re.sub de forma 100% segura para evitar choques visuales
         titulo_bruto = str(m.get('titulo', ''))
         titulo_preview = re.sub(r"<[^>]*>", "", titulo_bruto).strip()
             
@@ -189,7 +214,6 @@ with pestana_programa:
                 if "" not in nombres_ayudante: nombres_ayudante.insert(0, "")
                 ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
                 asignados_en_vivo[f"p{k}_a"] = ayudante if ayudante else "Por asignar"
-
     st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
 
     if boton_armar_pdf:
