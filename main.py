@@ -179,15 +179,17 @@ with pestana_programa:
     
     col_p1, col_p2 = st.columns(2)
     with col_p1:
+        # CORRECCIÓN DE RAÍZ: Pasamos mes_seleccionado como cuarto parámetro obligatorio
         opciones_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia", mes_seleccionado)
         nom_presi = [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in opciones_presi] if opciones_presi else [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in lista_hermanos]
-        if "" not in nom_presi: nom_presi.insert(0, "Por asignar")
+        if "Por asignar" not in nom_presi: nom_presi.insert(0, "Por asignar")
         presidente = st.selectbox("Presidente de la Reunión", nom_presi, key="p_presi_live")
         
     with col_p2:
+        # CORRECCIÓN DE RAÍZ: Pasamos mes_seleccionado como cuarto parámetro obligatorio
         opciones_ora = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Oración", mes_seleccionado)
         nom_ora = [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in opciones_ora] if opciones_ora else [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in lista_hermanos]
-        if "" not in nom_ora: nom_ora.insert(0, "Por asignar")
+        if "Por asignar" not in nom_ora: nom_ora.insert(0, "Por asignar")
         oracion_inicial = st.selectbox("Oración Inicial", nom_ora, key="p_ora_live")
 
     st.markdown("---")
@@ -211,7 +213,7 @@ with pestana_programa:
             
         st.markdown(f"**{emoji} {k}. {titulo_preview}**")
         
-        # Filtros calibrados vinculados al Mes Activo para calcular participaciones
+        # CORRECCIÓN DE RAÍZ: Pasamos mes_seleccionado como cuarto parámetro obligatorio
         opciones_materia = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, color_sub, mes_seleccionado)
         nombres_materia = [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in opciones_materia] if opciones_materia else [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in lista_hermanos]
         if "Por asignar" not in nombres_materia: nombres_materia.insert(0, "Por asignar")
@@ -223,6 +225,7 @@ with pestana_programa:
             
         with c2:
             if tipo_seccion == "Maestros":
+                # CORRECCIÓN DE RAÍZ: Pasamos mes_seleccionado como cuarto parámetro obligatorio
                 opciones_ayudante = reglas.filtrar_ayudantes_inteligente(titular, lista_hermanos, "Seamos Mejores Maestros", mes_seleccionado)
                 nombres_ayudante = [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in opciones_ayudante] if opciones_ayudante else [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in lista_hermanos]
                 if "Por asignar" not in nombres_ayudante: nombres_ayudante.insert(0, "Por asignar")
@@ -234,7 +237,6 @@ with pestana_programa:
     col_g1, col_g2 = st.columns(2)
     
     with col_g1:
-        # REPARACIÓN PUNTO 4 Y 5: Botón que congela los nombres en el PDF y graba el Historial
         btn_grabar_semana = st.button("💾 Guardar Semana e Inyectar Nombres", use_container_width=True, type="primary")
         if btn_grabar_semana:
             if not semana_seleccionada.strip():
@@ -244,14 +246,12 @@ with pestana_programa:
                 if mes_seleccionado not in historial_actual:
                     historial_actual[mes_seleccionado] = {}
                 
-                # Guardamos las asignaciones en la base de datos local
                 historial_actual[mes_seleccionado][semana_seleccionada] = {
-                    "coordinador": coordinador_activo,
+                    "coordinador": coordinator_activo if 'coordinator_activo' in locals() else coordinador_activo,
                     "asignados": asignados_en_vivo
                 }
                 guardar_historial(historial_actual)
                 
-                # Compilamos el archivo físico inyectando los datos reales
                 try:
                     reglas.generar_pdf_estilo_oficial(mes_seleccionado, semana_seleccionada, materias_dinamicas, asignados_en_vivo)
                     st.success(f"¡Semana guardada de forma permanente en {FICHERO_HISTORIAL} y nombres fijados en el PDF!")
@@ -259,7 +259,6 @@ with pestana_programa:
                     st.error(f"Fallo al inyectar ReportLab: {e}")
 
     with col_g2:
-        # REPARACIÓN PUNTO 6: Botón borrador para limpiar la mesa de trabajo
         btn_resetear_mesa = st.button("🗑️ Resetear / Limpiar Semana Actual", use_container_width=True)
         if btn_resetear_mesa:
             st.session_state["txt_jw_live"] = ""
