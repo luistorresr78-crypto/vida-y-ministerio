@@ -23,7 +23,6 @@ def calcular_participaciones_mes(mes_activo):
     except: pass
     return conteo
 
-# CORRECCIÓN PUNTO 1 Y PUNTO 2: Eliminamos el texto ->[Firma] y calibramos la aptitud de Lectura de forma estricta
 def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtro, mes_detectado="SEPTIEMBRE"):
     historial_mes = calcular_participaciones_mes(mes_detectado)
     aptitud_real = str(aptitud_filtro).strip()
@@ -66,7 +65,6 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
     hermanos_listos = []
     for item in lista_ordenada:
         h_copia = dict(item["h"])
-        # REPARACIÓN PUNTO 2: La opción se guarda con el nombre limpio de exhibición pura
         h_copia["nombre"] = item["nombre_original"]
         h_copia["apellido"] = ""
         hermanos_listos.append(h_copia)
@@ -94,7 +92,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
 
     elementos = []
     
-    # --- 1. CABECERA PRINCIPAL (DESPAQUETADO SEGURO) ---
+    # --- 1. CABECERA PRINCIPAL ---
     texto_fecha = str(semana_act).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
     texto_lectura = str(mes_activo).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
     
@@ -103,10 +101,9 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         Paragraph(f"<b>{texto_lectura}</b>", est_lectura)
     ]
     
-    # REPARACIÓN PUNTO 5: Forzamos la lectura limpia de los nombres guardados
     presi = str(asignados.get("presidente", "Por asignar")).strip()
     cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    t_presi = Table(cab_der, colWidths=[80, 140])
+    t_presi = Table(cab_der, colWidths=[65, 155])
     t_presi.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LINEBELOW', (1,0), (1,0), 0.75, colors.HexColor("#4A5568"))
@@ -143,7 +140,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     seccion_actual = ""
     
-    # --- 3. BUCLE PRINCIPAL CON MEDIDAS DE CELDAS COMPLETAS ---
+    # --- 3. BUCLE PRINCIPAL CON MEDIDAS DE CELDAS FIJAS ---
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias[k]
         sec_materia = m.get("seccion", "Tesoros")
@@ -152,17 +149,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             seccion_actual = sec_materia
             conf = secciones_mapeadas.get(seccion_actual, secciones_mapeadas["Tesoros"])
             
-            if seccion_actual == "Vida":
-                datos_cancion_2 = [Paragraph("■ <b>Canción 128</b>", est_cab_tit), Paragraph("", est_hnos), Paragraph("", est_hnos)]
-                t_c2 = Table([datos_cancion_2], colWidths=[320, 110, 110])
-                t_c2.setStyle(TableStyle([
-                    ('LINEABOVE', (0,0), (-1,-1), 0.5, colors.HexColor("#718096")),
-                    ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#718096")),
-                    ('PADDING', (0,0), (-1,-1), 4)
-                ]))
-                elementos.append(t_c2)
-                elementos.append(Spacer(1, 8))
-                
+            # ORDEN SECUENCIAL CORREGIDO: Primero dibujamos la barra de la sección
             t_tit = Table([[Paragraph(f"<b>{conf['titulo']}</b>", est_letra_blank)]], colWidths=[540])
             t_tit.setStyle(TableStyle([
                 ('BACKGROUND', (0,0), (-1,-1), colors.HexColor(conf["color"])),
@@ -171,9 +158,23 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             ]))
             t_tit.hAlign = 'LEFT'
             elementos.append(t_tit)
-            elementos.append(Spacer(1, 8))
+            elementos.append(Spacer(1, 4))
             
-        # REPARACIÓN PUNTO 5: Extracción directa de los nombres asignados reales fijos
+            # ORDEN SECUENCIAL CORREGIDO: Si es Vida Cristiana, la Canción 128 se inyecta inmediatamente DESPUÉS de la barra
+            if seccion_actual == "Vida":
+                datos_cancion_2 = [Paragraph("■ <b>Canción 128</b>", est_cab_tit), Paragraph("", est_hnos), Paragraph("", est_hnos)]
+                t_c2 = Table([datos_cancion_2], colWidths=[320, 110, 110])
+                t_c2.setStyle(TableStyle([
+                    ('LINEABOVE', (0,0), (-1,-1), 0.5, colors.HexColor("#718096")),
+                    ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#718096")),
+                    ('PADDING', (0,0), (-1,-1), 4),
+                    ('VALIGN', (0,0), (-1,-1), 'MIDDLE')
+                ]))
+                elementos.append(t_c2)
+                elementos.append(Spacer(1, 8))
+            else:
+                elementos.append(Spacer(1, 4))
+            
         titular = str(asignados.get(f"p{k}_t", "Por asignar")).strip()
         ayudante = str(asignados.get(f"p{k}_a", "")).strip()
         
