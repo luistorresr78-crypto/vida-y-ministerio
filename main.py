@@ -8,6 +8,22 @@ import reglas
 st.set_page_config(page_title="Mesa de Asignaciones Teocraticas", page_icon="📝", layout="wide")
 
 FICHERO_HERMANOS = "hermanos.json"
+FICHERO_HISTORIAL = "historial_reuniones.json"
+
+# --- CONTROLADOR DEL HISTORIAL PERMANENTE (PUNTO 4) ---
+def cargar_historial():
+    if not os.path.exists(FICHERO_HISTORIAL):
+        with open(FICHERO_HISTORIAL, "w", encoding="utf-8") as f:
+            json.dump({}, f, ensure_ascii=False, indent=4)
+    try:
+        with open(FICHERO_HISTORIAL, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return {}
+
+def guardar_historial(datos):
+    with open(FICHERO_HISTORIAL, "w", encoding="utf-8") as f:
+        json.dump(datos, f, ensure_ascii=False, indent=4)
 
 def cargar_hermanos_iniciales():
     if not os.path.exists(FICHERO_HERMANOS):
@@ -37,19 +53,16 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR CON CONVERSIÓN OBLIGATORIA A TEXTO PLANO ---
+# --- PROCESADOR CON SEGUIMIENTO, FILTRADO Y RECORTE QUIRÚRGICO DE TEXTOS ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
+    if not texto_usuario.strip():
+        return materias_detectadas
+        
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
-    
-    # Extraemos y blindamos las cabeceras como texto individual desde el inicio
-    fecha_cab = str(lineas[0]).strip() if len(lineas) > 0 else "7-13 de septiembre"
-    lectura_cab = str(lineas[1]).strip() if len(lineas) > 1 else "JEREMÍAS 32, 33"
-
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
 
-    # Agrupamos las líneas continuas de JW.org
     puntos_crudos = {}
     for linea in lineas:
         linea_up = linea.upper()
@@ -71,87 +84,84 @@ def procesar_texto_plano_reunion(texto_usuario):
             if ultimo_punto and ultimo_punto in puntos_crudos:
                 puntos_crudos[ultimo_punto]["lineas"].append(linea)
 
-    # Aplicamos las reglas exactas de recorte quirúrgico compactador de Luis
     for num_punto, info in puntos_crudos.items():
         texto_completo = " ".join(info["lineas"]).strip()
         
         match_mins = re.search(r"\(\s*(\d+\s*min[s]?\.?)\s*\)", texto_completo)
         texto_mins = f"({match_mins.group(1)})" if match_mins else ""
-        
         titulo_limpio = re.sub(r"\s*\(\s*\d+\s*min[s]?\.?\s*\).*", "", texto_completo).strip()
-        
         match_ref = re.search(r"\(\s*\d+\s*min[s]?\.?\s*\)\s*\.?\s*(.*)", texto_completo)
         ref_extraida = match_ref.group(1).strip() if match_ref else ""
         
-        # PREFERENCIA 1: Para Tesoros 1 y 2, dejamos EXCLUSIVAMENTE el tiempo hasta el minuto
+        # CORRECCIÓN PUNTO 1: El punto 3 se marca estrictamente como "Lectura" para que salgan sus hermanos asignados
+        seccion_filtrado = info["seccion"]
+        if num_punto == "3":
+            seccion_filtrado = "Lectura"
+        
         if info["seccion"] == "Tesoros" and num_punto in ["1", "2"]:
             if texto_mins:
                 texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
             else:
                 texto_formateado = f"<b>{titulo_limpio}</b>"
                 
-        # PREFERENCIA 2: Para la primera intervención de Vida Cristiana (Punto 7), recortamos hasta el primer punto
         elif info["seccion"] == "Vida" and num_punto == "7":
             if texto_mins:
                 if ref_extraida:
                     pos_punto = ref_extraida.find(".")
-                    if pos_punto != -1:
-                        ref_recortada = ref_extraida[:pos_punto+1].strip()
-                    else:
-                        ref_recortada = ref_extraida
+                    ref_recortada = ref_extraida[:pos_punto+1].strip() if pos_punto != -1 else ref_extraida
                     texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins} {ref_recortada}</font>"
                 else:
                     texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
             else:
                 texto_formateado = f"<b>{titulo_limpio}</b>"
                 
-        # PREFERENCIA 3: Los puntos 3, 4, 5, 6 y 8 van enteros de corrido
         else:
             if texto_mins:
-                if ref_extraida:
-                    texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins} {ref_extraida}</font>"
-                else:
-                    texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
+                texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins} {ref_extraida}</font>" if ref_extraida else f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
             else:
                 texto_formateado = f"<b>{texto_completo}</b>"
             
         materias_detectadas[num_punto] = {
             "titulo": texto_formateado,
             "minutos": "5",
-            "seccion": info["seccion"]
+            "seccion": seccion_filtrado
         }
         
-    return fecha_cab, lectura_cab, materias_detectadas
+    return materias_detectadas
 
-pestana_programa, pestana_hermanos = st.tabs([
-    "🚀 Fabricador en Caliente de Folletos", 
-    "👥 Gestión de Hermanos (Nómina)"
+pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
+    "🚀 Fabricador de Folletos", 
+    "📋 Historial Guardado",
+    "👥 Gestión de Hermanos"
 ])
-
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
+    
+    # REPARACIÓN PUNTO 3: Añadimos los selectores fijos manuales de meses y semanas
+    c_mes, c_sem = st.columns(2)
+    with c_mes:
+        mes_seleccionado = st.selectbox("📅 Seleccione el Mes Activo:", ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"], index=8, key="sel_mes_global")
+    with c_sem:
+        semana_seleccionada = st.text_input("📆 Ingrese el Rango de la Semana (Ej: 7-13 de septiembre):", placeholder="Escriba la fecha de la semana aquí...", key="sel_sem_global")
+
+    st.markdown("---")
     st.markdown("Copia la Guía de Actividades completa desde **JW.org**, pégala abajo y presiona el botón para procesar.")
 
     texto_jw_entrada = st.text_area(
         "Pega aquí el texto completo copiado de JW.org:", 
         height=180, 
-        placeholder="1ra línea: Rango de Fecha\n2da línea: Lectura de la Semana\nSiguientes líneas: Los puntos de la reunión...",
+        placeholder="Puntos de la reunión...",
         key="txt_jw_live"
     )
 
-    boton_armar_pdf = st.button("⚙️ Procesar Datos para Descarga (Paso 1)", use_container_width=True)
+    boton_armar_pdf = st.button("⚙️ Procesar Datos para Asignación (Paso 1)", use_container_width=True)
 
-    f_cab, l_cab, materias_dinamicas = procesar_texto_plano_reunion(texto_jw_entrada)
+    materias_dinamicas = procesar_texto_plano_reunion(texto_jw_entrada)
 
     st.markdown("---")
-    nombre_archivo_final = "reunion_actual.pdf"
 
-    # SANADO VISUAL ABSOLUTO: Aseguramos la limpieza de corchetes en las variables de la web
-    f_cab_clean = str(f_cab).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
-    l_cab_clean = str(l_cab).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
-
-    st.subheader(f"📅 Vista Previa de la Semana: {f_cab_clean}")
-    st.info(f"📖 Lectura Bíblica Extraída: **{l_cab_clean}**")
+    st.subheader(f"📅 Planificación de la Semana: {semana_seleccionada if semana_seleccionada else 'Por definir'}")
+    st.info(f"📖 Mes de Trabajo Activo: **{mes_seleccionado}**")
 
     with st.sidebar:
         st.header("⚙️ Control de Operación")
@@ -169,19 +179,20 @@ with pestana_programa:
     
     col_p1, col_p2 = st.columns(2)
     with col_p1:
-        opciones_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia")
-        nom_presi = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in opciones_presi] if opciones_presi else [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
+        opciones_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia", mes_seleccionado)
+        nom_presi = [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in opciones_presi] if opciones_presi else [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in lista_hermanos]
+        if "" not in nom_presi: nom_presi.insert(0, "Por asignar")
         presidente = st.selectbox("Presidente de la Reunión", nom_presi, key="p_presi_live")
         
     with col_p2:
-        opciones_ora = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Oración")
-        nom_ora = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in opciones_ora] if opciones_ora else [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
+        opciones_ora = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Oración", mes_seleccionado)
+        nom_ora = [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in opciones_ora] if opciones_ora else [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in lista_hermanos]
+        if "" not in nom_ora: nom_ora.insert(0, "Por asignar")
         oracion_inicial = st.selectbox("Oración Inicial", nom_ora, key="p_ora_live")
 
     st.markdown("---")
     
     asignados_en_vivo = {"presidente": presidente, "oracion_inicial": oracion_inicial}
-    
     for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias_dinamicas[k]
         tipo_seccion = m.get("seccion", "Tesoros")
@@ -190,6 +201,8 @@ with pestana_programa:
             emoji, color_sub = "🌾", "Seamos Mejores Maestros"
         elif tipo_seccion == "Vida":
             emoji, color_sub = "🐑", "Vida Cristiana"
+        elif tipo_seccion == "Lectura":
+            emoji, color_sub = "📖", "Lectura"
         else:
             emoji, color_sub = "💎", "Tesoros de la Biblia"
             
@@ -198,31 +211,61 @@ with pestana_programa:
             
         st.markdown(f"**{emoji} {k}. {titulo_preview}**")
         
-        opciones_materia = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, color_sub)
-        nombres_materia = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in opciones_materia] if opciones_materia else [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
-        if "" not in nombres_materia: nombres_materia.insert(0, "")
+        # Filtros calibrados vinculados al Mes Activo para calcular participaciones
+        opciones_materia = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, color_sub, mes_seleccionado)
+        nombres_materia = [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in opciones_materia] if opciones_materia else [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in lista_hermanos]
+        if "Por asignar" not in nombres_materia: nombres_materia.insert(0, "Por asignar")
             
         c1, c2 = st.columns(2)
         with c1:
             titular = st.selectbox(f"Asignado punto {k}", nombres_materia, key=f"live_t_{k}")
-            asignados_en_vivo[f"p{k}_t"] = titular if titular else "Por asignar"
+            asignados_en_vivo[f"p{k}_t"] = titular if titular != "Por asignar" else "Por asignar"
+            
         with c2:
             if tipo_seccion == "Maestros":
-                opciones_ayudante = reglas.filtrar_ayudantes_inteligente(titular, lista_hermanos, "Seamos Mejores Maestros")
-                nombres_ayudante = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in opciones_ayudante] if opciones_ayudante else [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
-                if "" not in nombres_ayudante: nombres_ayudante.insert(0, "")
+                opciones_ayudante = reglas.filtrar_ayudantes_inteligente(titular, lista_hermanos, "Seamos Mejores Maestros", mes_seleccionado)
+                nombres_ayudante = [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in opciones_ayudante] if opciones_ayudante else [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in lista_hermanos]
+                if "Por asignar" not in nombres_ayudante: nombres_ayudante.insert(0, "Por asignar")
                 ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
-                asignados_en_vivo[f"p{k}_a"] = ayudante if ayudante else "Por asignar"
+                asignados_en_vivo[f"p{k}_a"] = ayudante if ayudante != "Por asignar" else "Por asignar"
 
-    st.markdown("### 🖨️ Descargar Documento Final (Paso 2)")
+    st.markdown("### 🖨️ Compilar y Guardar Permanencia (Paso 2)")
+    
+    col_g1, col_g2 = st.columns(2)
+    
+    with col_g1:
+        # REPARACIÓN PUNTO 4 Y 5: Botón que congela los nombres en el PDF y graba el Historial
+        btn_grabar_semana = st.button("💾 Guardar Semana e Inyectar Nombres", use_container_width=True, type="primary")
+        if btn_grabar_semana:
+            if not semana_seleccionada.strip():
+                st.error("Por favor ingrese el rango de la semana antes de guardar.")
+            else:
+                historial_actual = cargar_historial()
+                if mes_seleccionado not in historial_actual:
+                    historial_actual[mes_seleccionado] = {}
+                
+                # Guardamos las asignaciones en la base de datos local
+                historial_actual[mes_seleccionado][semana_seleccionada] = {
+                    "coordinador": coordinador_activo,
+                    "asignados": asignados_en_vivo
+                }
+                guardar_historial(historial_actual)
+                
+                # Compilamos el archivo físico inyectando los datos reales
+                try:
+                    reglas.generar_pdf_estilo_oficial(mes_seleccionado, semana_seleccionada, materias_dinamicas, asignados_en_vivo)
+                    st.success(f"¡Semana guardada de forma permanente en {FICHERO_HISTORIAL} y nombres fijados en el PDF!")
+                except Exception as e:
+                    st.error(f"Fallo al inyectar ReportLab: {e}")
 
-    if boton_armar_pdf:
-        try:
-            # Enviamos el orden definitivo exigido por el constructor (mes, semana)
-            reglas.generar_pdf_estilo_oficial(l_cab_clean, f_cab_clean, materias_dinamicas, asignados_en_vivo)
-            st.success(f"¡Folleto procesado con éxito por {coordinador_activo}! El botón morado de abajo está listo con los datos reales.")
-        except Exception as e:
-            st.error(f"Error interno al compilar: {e}")
+    with col_g2:
+        # REPARACIÓN PUNTO 6: Botón borrador para limpiar la mesa de trabajo
+        btn_resetear_mesa = st.button("🗑️ Resetear / Limpiar Semana Actual", use_container_width=True)
+        if btn_resetear_mesa:
+            st.session_state["txt_jw_live"] = ""
+            st.session_state["sel_sem_global"] = ""
+            st.success("¡Mesa de trabajo limpia! Portapapeles y fechas reseteados para la siguiente semana.")
+            st.rerun()
 
     archivo_encontrado_fisco = "reunion_actual.pdf"
 
@@ -233,13 +276,44 @@ with pestana_programa:
         st.download_button(
             label="🟣 Descargar Folleto Oficial en PDF", 
             data=pdf_bytes, 
-            file_name=f"Reunion_{f_cab_clean.replace(' ', '_')}.pdf", 
+            file_name=f"Reunion_{mes_seleccionado}_{semana_seleccionada.replace(' ', '_')}.pdf" if semana_seleccionada else f"Reunion_{mes_seleccionado}.pdf", 
             mime="application/pdf", 
             key="down_pdf_live",
             use_container_width=True
         )
     else:
-        st.warning("⚠️ No se ha detectado el archivo en el sistema. Presione el botón gris 'Procesar Datos (Paso 1)' arriba para compilar el PDF de ReportLab.")
+        st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos y habilitar el PDF.")
+
+# --- PESTAÑA DEL HISTORIAL EN TIEMPO REAL (PUNTO 4) ---
+with pestana_historial:
+    st.header("📋 Historial de Asignaciones Registradas en la Bitácora")
+    historial_visual = cargar_historial()
+    
+    if historial_visual:
+        mes_hist = st.selectbox("Seleccione el Mes a Consultar:", list(historial_visual.keys()), key="ver_mes_hist")
+        semanas_guardadas = historial_visual.get(mes_hist, {})
+        
+        if semanas_guardadas:
+            for sem_key, info_sem in semanas_guardadas.items():
+                with st.expander(f"📆 Semana: {sem_key} (Armado por: {info_sem.get('coordinador', 'Luis')})"):
+                    asig = info_sem.get("asignados", {})
+                    
+                    st.markdown(f"**Presidente:** {asig.get('presidente', 'Por asignar')} | **Oración Inicial:** {asig.get('oracion_inicial', 'Por asignar')}")
+                    st.markdown("---")
+                    
+                    for llave_asig, persona in asig.items():
+                        if llave_asig.startswith("p") and llave_asig.endswith("_t"):
+                            num_p = llave_asig[1:-2]
+                            ayudante_llave = f"p{num_p}_a"
+                            ayudante_nom = asig.get(ayudante_llave, "")
+                            if ayudante_nom and ayudante_nom != "Por asignar":
+                                st.write(f"• **Punto {num_p}:** {persona} (Ayudante: {ayudante_nom})")
+                            else:
+                                st.write(f"• **Punto {num_p}:** {persona}")
+        else:
+            st.info("No hay semanas guardadas para este mes.")
+    else:
+        st.info("La bitácora de historial está vacía actualmente. Comience guardando una semana.")
 
 with st.sidebar:
     st.markdown("---")
@@ -275,10 +349,10 @@ with pestana_hermanos:
     with col_del:
         st.subheader("❌ Dar de Baja Publicador")
         if lista_hermanos:
-            nombres_baja = [f"{h.get('nombre', '')} {h.get('apellido', '')}" for h in lista_hermanos]
+            nombres_baja = [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in lista_hermanos]
             hermano_a_eliminar = st.selectbox("Seleccione quién se muda o da de baja:", nombres_baja, key="baja_sel_live")
             if st.button("Confirmar Eliminación Permanente", type="primary", key="btn_baja_live"):
-                lista_hermanos = [h for h in lista_hermanos if f"{h.get('nombre', '')} {h.get('apellido', '')}" != hermano_a_eliminar]
+                lista_hermanos = [h for h in lista_hermanos if f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() != hermano_a_eliminar]
                 guardar_hermanos(lista_hermanos)
                 st.warning(f"¡{hermano_a_eliminar} ha sido eliminado de la base de datos!")
                 st.rerun()
@@ -291,7 +365,7 @@ with pestana_hermanos:
         tabla_visual = []
         for h in lista_hermanos:
             tabla_visual.append({
-                "Nombre Completo": f"{h.get('nombre', '')} {h.get('apellido', '')}",
+                "Nombre Completo": f"{h.get('nombre', '')} {h.get('apellido', '')}".strip(),
                 "Sexo": h.get("sexo", "Varón"),
                 "Aptitudes": ", ".join(h.get("aptitudes", [])) if isinstance(h.get("aptitudes", []), list) else str(h.get("aptitudes", ""))
             })
