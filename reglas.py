@@ -9,9 +9,6 @@ from reportlab.lib import colors
 FICHERO_REUNIONES = "reuniones.json"
 FICHERO_HERMANOS = "hermanos.json"
 
-def obtener_nombre_coordinador():
-    return "Luis"
-
 def calcular_participaciones_mes(mes_activo):
     conteo = {}
     if not os.path.exists(FICHERO_REUNIONES): return conteo
@@ -21,33 +18,24 @@ def calcular_participaciones_mes(mes_activo):
         semanas_mes = datos.get(mes_activo, {})
         for semana in semanas_mes.values():
             for hermano in semana.get("asignados", {}).values():
-                if hermano and isinstance(hermano, str):
-                    nombre_limpio = hermano.split(" ->")[0].split("(")[0].strip()
-                    conteo[nombre_limpio] = conteo.get(nombre_limpio, 0) + 1
+                if hermano and isinstance(hermano, str) and hermano != "Por asignar":
+                    conteo[hermano] = conteo.get(hermano, 0) + 1
     except: pass
     return conteo
 
-def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtro):
-    mapeo_aptitudes = {
-        "Tesoros": "Tesoros", "Lectura": "Lectura",
-        "Seamos Mejores Maestros": "Seamos Mejores Maestros",
-        "Presidencia": "Presidencia", "Oración": "Oración",
-        "Vida Cristiana": "Vida Cristiana"
-    }
-    aptit_f = aptitud_filtro.replace("Tesoros de la Biblia", "Tesoros").replace("Vida Cristiana", "Vida Cristiana")
-    aptitud_real = mapeo_aptitudes.get(aptit_f, aptit_f)
-    
-    mes_detectado = "SEPTIEMBRE"
+# CORRECCIÓN PUNTO 1 Y PUNTO 2: Eliminamos el texto ->[Firma] y calibramos la aptitud de Lectura de forma estricta
+def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtro, mes_detectado="SEPTIEMBRE"):
     historial_mes = calcular_participaciones_mes(mes_detectado)
+    aptitud_real = str(aptitud_filtro).strip()
     
     candidatos = []
     if not hermano_titular:
         for h in lista_hermanos:
-            apts_h = [str(a).lower() for a in h.get("aptitudes", [])] if isinstance(h.get("aptitudes", []), list) else str(h.get("aptitudes", "")).lower()
-            if aptitud_real.lower() in apts_h or ("maestros" in aptitud_real.lower() and "maestros" in str(apts_h)):
+            apts_h = [str(a).lower().strip() for a in h.get("aptitudes", [])]
+            if aptitud_real.lower() in apts_h:
                 candidatos.append(h)
     else:
-        titular_limpio = hermano_titular.split(" ->")[0].split("(")[0].strip()
+        titular_limpio = hermano_titular.strip()
         sexo_tit = "Varón"
         apellido_tit = titular_limpio.split(" ")[-1] if " " in titular_limpio else ""
         for h in lista_hermanos:
@@ -58,7 +46,7 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
             nombre_h = f"{h.get('nombre', '')} {h.get('apellido', '')}"
             if nombre_h == titular_limpio: continue
             
-            apts_h = [str(a).lower() for a in h.get("aptitudes", [])] if isinstance(h.get("aptitudes", []), list) else str(h.get("aptitudes", "")).lower()
+            apts_h = [str(a).lower().strip() for a in h.get("aptitudes", [])]
             if "seamos mejores maestros" in apts_h or "maestros" in str(apts_h):
                 if sexo_tit == "Mujer" and h.get("sexo") == "Mujer":
                     candidatos.append(h)
@@ -70,15 +58,16 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
     for h in candidatos:
         nombre_h = f"{h.get('nombre', '')} {h.get('apellido', '')}"
         v = historial_mes.get(nombre_h, 0)
-        etiqueta = nombre_h if v == 0 else (f"{nombre_h} (1 asignación)" if v == 1 else f"{nombre_h} (⚠️ REPETIDO x{v})")
-        lista_ordenada.append({"h": h, "etiqueta": etiqueta, "v": v})
+        etiqueta = nombre_h if v == 0 else (f"{nombre_h} (1 asig.)" if v == 1 else f"{nombre_h} (⚠️ REPETIDO x{v})")
+        lista_ordenada.append({"h": h, "etiqueta": etiqueta, "v": v, "nombre_original": nombre_h})
         
     lista_ordenada.sort(key=lambda x: x["v"])
     
     hermanos_listos = []
-    for idx, item in enumerate(lista_ordenada):
+    for item in lista_ordenada:
         h_copia = dict(item["h"])
-        h_copia["nombre"] = f"{item['etiqueta']} -> [Firma]" if idx == 0 else item["etiqueta"]
+        # REPARACIÓN PUNTO 2: La opción se guarda con el nombre limpio de exhibición pura
+        h_copia["nombre"] = item["nombre_original"]
         h_copia["apellido"] = ""
         hermanos_listos.append(h_copia)
         
@@ -96,7 +85,6 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     est_lectura = ParagraphStyle('EL', fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor("#1A365D"))
     est_letra_blank = ParagraphStyle('ELB', fontName='Helvetica-Bold', fontSize=10, textColor=colors.white, alignment=0)
     
-    # Estilos con leading amplio obligatorio para abrir el segundo renglón plomo
     est_t_tesoros = ParagraphStyle('ETT', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#3A7885"), leading=14)
     est_t_maestros = ParagraphStyle('ETM', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#D08F00"), leading=14)
     est_t_vida = ParagraphStyle('ETV', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#B32415"), leading=14)
@@ -106,32 +94,17 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
 
     elementos = []
     
-    # --- 1. CABECERA PRINCIPAL (DESPAQUETADO ESTRICTO DE SEGURIDAD) ---
-    if isinstance(semana_act, list) and len(semana_act) > 0:
-        texto_fecha = str(semana_act[0])
-    elif isinstance(semana_act, list):
-        texto_fecha = "7-13 de septiembre"
-    else:
-        texto_fecha = str(semana_act)
-        
-    if isinstance(mes_activo, list) and len(mes_activo) > 1:
-        texto_lectura = str(mes_activo[1])
-    elif isinstance(mes_activo, list) and len(mes_activo) > 0:
-        texto_lectura = str(mes_activo[0])
-    elif isinstance(mes_activo, list):
-        texto_lectura = "JEREMÍAS 32, 33"
-    else:
-        texto_lectura = str(mes_activo)
-        
-    texto_fecha = texto_fecha.replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
-    texto_lectura = texto_lectura.replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
+    # --- 1. CABECERA PRINCIPAL (DESPAQUETADO SEGURO) ---
+    texto_fecha = str(semana_act).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
+    texto_lectura = str(mes_activo).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
     
     cab_izq = [
         Paragraph(f"<b>{texto_fecha}</b>", est_fecha),
         Paragraph(f"<b>{texto_lectura}</b>", est_lectura)
     ]
     
-    presi = asignados.get("presidente") or "Por asignar"
+    # REPARACIÓN PUNTO 5: Forzamos la lectura limpia de los nombres guardados
+    presi = str(asignados.get("presidente", "Por asignar")).strip()
     cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
     t_presi = Table(cab_der, colWidths=[80, 140])
     t_presi.setStyle(TableStyle([
@@ -147,7 +120,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     elementos.append(t_principal)
     
     # --- 2. FILA HORIZONTAL: CANCIÓN DE INICIO ---
-    ora_ini = asignados.get("oracion_inicial") or "Por asignar"
+    ora_ini = str(asignados.get("oracion_inicial", "Por asignar")).strip()
     datos_cancion_1 = [
         Paragraph("■ <b>Canción 01</b> y oración", est_cab_tit),
         Paragraph("", est_cab_tit),
@@ -162,7 +135,6 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     ]))
     elementos.append(t_c1)
     elementos.append(Spacer(1, 10))
-    
     secciones_mapeadas = {
         "Tesoros": {"titulo": "TESOROS DE LA BIBLIA", "color": "#3A7885", "estilo_t": est_t_tesoros},
         "Maestros": {"titulo": "SEAMOS MEJORES MAESTROS", "color": "#D08F00", "estilo_t": est_t_maestros},
@@ -171,7 +143,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     seccion_actual = ""
     
-    # --- 3. BUCLE PRINCIPAL CON MATRIZ SEPARADA DE MATERIAS REALES ---
+    # --- 3. BUCLE PRINCIPAL CON MEDIDAS DE CELDAS COMPLETAS ---
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias[k]
         sec_materia = m.get("seccion", "Tesoros")
@@ -201,8 +173,12 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             elementos.append(t_tit)
             elementos.append(Spacer(1, 8))
             
-        titular = asignados.get(f"p{k}_t", "Por asignar")
-        ayudante = asignados.get(f"p{k}_a", "")
+        # REPARACIÓN PUNTO 5: Extracción directa de los nombres asignados reales fijos
+        titular = str(asignados.get(f"p{k}_t", "Por asignar")).strip()
+        ayudante = str(asignados.get(f"p{k}_a", "")).strip()
+        
+        if titular == "None": titular = "Por asignar"
+        if ayudante == "None" or ayudante == "Por asignar": ayudante = ""
         
         texto_html_final = str(m.get('titulo', ''))
         if not texto_html_final.startswith(f"{k}."):
@@ -213,7 +189,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         fila_materia = [
             Paragraph(texto_html_final, conf_sec["estilo_t"]),
             Paragraph(f"{titular}", est_hnos),
-            Paragraph(f"{ayudante if ayudante and ayudante != 'Por asignar' else ''}", est_hnos)
+            Paragraph(f"{ayudante}", est_hnos)
         ]
         
         t_fila = Table([fila_materia], colWidths=[320, 110, 110])
