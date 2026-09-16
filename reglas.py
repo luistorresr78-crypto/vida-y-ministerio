@@ -1,4 +1,4 @@
-import streamlit st
+import streamlit as st
 import json
 import os
 import re
@@ -66,7 +66,6 @@ def procesar_texto_plano_reunion(texto_usuario):
     for linea in lineas:
         linea_up = linea.upper()
         
-        # FIX DEFINITIVO: Si lee la cancion 128 o el titulo de vida, cambia de inmediato la seccion
         if "SEAMOS MEJORES MAESTROS" in linea_up or "HAGA DISCÍPULOS" in linea_up:
             seccion_actual_texto = "Maestros"
             continue
@@ -130,11 +129,13 @@ def procesar_texto_plano_reunion(texto_usuario):
         
     return materias_detectadas
 
+# Asegúrate de que esta línea conecte limpio con el Bloque 2 de abajo
 pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
     "🚀 Fabricador de Folletos", 
     "📋 Historial Guardado",
     "👥 Gestión de Hermanos"
 ])
+
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
     
