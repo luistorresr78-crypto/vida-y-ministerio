@@ -10,7 +10,6 @@ st.set_page_config(page_title="Mesa de Asignaciones Teocraticas", page_icon="�
 FICHERO_HERMANOS = "hermanos.json"
 FICHERO_HISTORIAL = "historial_reuniones.json"
 
-# --- CONTROLADOR DEL HISTORIAL PERMANENTE (PUNTO 4) ---
 def cargar_historial():
     if not os.path.exists(FICHERO_HISTORIAL):
         with open(FICHERO_HISTORIAL, "w", encoding="utf-8") as f:
@@ -53,7 +52,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR CON SEGUIMIENTO, FILTRADO Y RECORTE QUIRÚRGICO DE TEXTOS ---
+# --- PROCESADOR CON DETECTOR ANTICIPADO DE SECCIÓN PARA CANCIONES ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
@@ -66,12 +65,14 @@ def procesar_texto_plano_reunion(texto_usuario):
     puntos_crudos = {}
     for linea in lineas:
         linea_up = linea.upper()
+        
         if "SEAMOS MEJORES MAESTROS" in linea_up or "HAGA DISCÍPULOS" in linea_up:
             seccion_actual_texto = "Maestros"
             continue
-        elif "NUESTRA VIDA CRISTIANA" in linea_up:
+        elif "NUESTRA VIDA CRISTIANA" in linea_up or "CANCIÓN 128" in linea_up:
             seccion_actual_texto = "Vida"
-            continue
+            if "CANCIÓN 128" in linea_up:
+                continue
             
         match_punto = re.match(r"^([1-9]|10)\.\s*(.*)", linea)
         if match_punto:
@@ -93,7 +94,6 @@ def procesar_texto_plano_reunion(texto_usuario):
         match_ref = re.search(r"\(\s*\d+\s*min[s]?\.?\s*\)\s*\.?\s*(.*)", texto_completo)
         ref_extraida = match_ref.group(1).strip() if match_ref else ""
         
-        # CORRECCIÓN PUNTO 1: El punto 3 se marca estrictamente como "Lectura" para que salgan sus hermanos asignados
         seccion_filtrado = info["seccion"]
         if num_punto == "3":
             seccion_filtrado = "Lectura"
@@ -129,11 +129,13 @@ def procesar_texto_plano_reunion(texto_usuario):
         
     return materias_detectadas
 
+# Asegúrate de que esta línea conecte limpio con el Bloque 2 de abajo
 pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
     "🚀 Fabricador de Folletos", 
     "📋 Historial Guardado",
     "👥 Gestión de Hermanos"
 ])
+
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
     
