@@ -59,7 +59,6 @@ def procesar_texto_plano_reunion(texto_usuario):
         
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    # Extraemos las dos primeras líneas reales como fecha y lectura bíblica
     fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
     lectura_cab = lineas[1] if len(lineas) > 1 else "JEREMÍAS 32, 33"
     
@@ -159,12 +158,10 @@ with pestana_programa:
 
     boton_armar_pdf = st.button("⚙️ Procesar Datos para Asignación (Paso 1)", use_container_width=True)
 
-    # El procesador ahora nos devuelve tres variables: fecha, lectura bíblica real y las materias desglosadas
     f_jw, l_jw, materias_dinamicas = procesar_texto_plano_reunion(texto_jw_entrada)
 
     st.markdown("---")
 
-    # CORRECCIÓN EN CALIENTE: Preferimos la fecha y lectura extraídas de JW.org, y si no hay, usamos los selectores manuales
     f_final = f_jw if texto_jw_entrada.strip() else (semana_seleccionada if semana_seleccionada else "7-13 de septiembre")
     l_final = l_jw if texto_jw_entrada.strip() else f"LECTURA DE {mes_seleccionado}"
 
@@ -224,7 +221,7 @@ with pestana_programa:
         if texto_editado_usuario != titulo_preview:
             if "<br/>" in titulo_bruto:
                 partes_brutas = titulo_bruto.split("<br/>")
-                subtitulo_plomo = partes_brutas if len(partes_brutas) > 1 else ""
+                subtitulo_plomo = partes_brutas[1] if len(partes_brutas) > 1 else ""
                 m["titulo"] = f"<b>{texto_editado_usuario}</b><br/>{subtitulo_plomo}"
             else:
                 m["titulo"] = f"<b>{texto_editado_usuario}</b>"
@@ -266,7 +263,6 @@ with pestana_programa:
                 guardar_historial(historial_actual)
                 
                 try:
-                    # Sincronización de Raíz: Enviamos las variables purificadas (Lectura real primero, luego fecha)
                     reglas.generar_pdf_estilo_oficial(l_cab_clean, f_cab_clean, materias_dinamicas, asignados_en_vivo)
                     st.success(f"¡Semana guardada de forma permanente en {FICHERO_HISTORIAL} y nombres fijos con lectura bíblica en el PDF!")
                 except Exception as e:
@@ -295,12 +291,20 @@ with pestana_programa:
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos y habilitar el PDF.")
 
-# --- PESTAÑA DEL HISTORIAL EN TIEMPO REAL ---
+# --- PESTAÑA DEL HISTORIAL EN TIEMPO REAL CON BORRADO (PUNTO 4 REPARADO) ---
 with pestana_historial:
     st.header("📋 Historial de Asignaciones Registradas en la Bitácora")
     historial_visual = cargar_historial()
     
     if historial_visual:
+        # LUIS: Este es tu nuevo botón de vaciado de bitácora
+        btn_borrar_todo_el_historial = st.button("🚨 BORRAR TODO EL HISTORIAL PERMANENTE", type="primary", use_container_width=True)
+        if btn_borrar_todo_el_historial:
+            guardar_historial({})
+            st.success("💥 ¡Bitácora de historial completamente vaciada y formateada con éxito!")
+            st.rerun()
+            
+        st.markdown("---")
         mes_hist = st.selectbox("Seleccione el Mes a Consultar:", list(historial_visual.keys()), key="ver_mes_hist")
         semanas_guardadas = historial_visual.get(mes_hist, {})
         
