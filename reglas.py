@@ -19,7 +19,7 @@ def calcular_participaciones_mes(mes_activo):
         for semana in semanas_mes.values():
             for hermano in semana.get("asignados", {}).values():
                 if hermano and isinstance(hermano, str) and hermano != "Por asignar":
-                    conteo[hermano] = conteo.get(brother, 0) + 1
+                    conteo[hermano] = conteo.get(hermano, 0) + 1
     except: pass
     return conteo
 
@@ -83,6 +83,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     est_lectura = ParagraphStyle('EL', fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor("#1A365D"))
     est_letra_blank = ParagraphStyle('ELB', fontName='Helvetica-Bold', fontSize=10, textColor=colors.white, alignment=0)
     
+    # Estilos con leading amplio obligatorio para abrir el segundo renglón plomo
     est_t_tesoros = ParagraphStyle('ETT', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#3A7885"), leading=14)
     est_t_maestros = ParagraphStyle('ETM', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#D08F00"), leading=14)
     est_t_vida = ParagraphStyle('ETV', fontName='Helvetica', fontSize=10, textColor=colors.HexColor("#B32415"), leading=14)
@@ -132,6 +133,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     ]))
     elementos.append(t_c1)
     elementos.append(Spacer(1, 10))
+    
     secciones_mapeadas = {
         "Tesoros": {"titulo": "TESOROS DE LA BIBLIA", "color": "#3A7885", "estilo_t": est_t_tesoros},
         "Maestros": {"titulo": "SEAMOS MEJORES MAESTROS", "color": "#D08F00", "estilo_t": est_t_maestros},
@@ -140,7 +142,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     seccion_actual = ""
     
-    # --- 3. BUCLE PRINCIPAL CON MEDIDAS DE CELDAS FIJAS ---
+    # --- 3. BUCLE PRINCIPAL CON INYECTOR SECUENCIAL BLINDADO ---
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias[k]
         sec_materia = m.get("seccion", "Tesoros")
@@ -149,7 +151,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             seccion_actual = sec_materia
             conf = secciones_mapeadas.get(seccion_actual, secciones_mapeadas["Tesoros"])
             
-            # ORDEN SECUENCIAL CORREGIDO: Primero dibujamos la barra de la sección
+            # BLINDAJE SECUENCIAL: Primero creamos y pintamos la barra del título de la sección de forma obligatoria
             t_tit = Table([[Paragraph(f"<b>{conf['titulo']}</b>", est_letra_blank)]], colWidths=[540])
             t_tit.setStyle(TableStyle([
                 ('BACKGROUND', (0,0), (-1,-1), colors.HexColor(conf["color"])),
@@ -160,7 +162,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             elementos.append(t_tit)
             elementos.append(Spacer(1, 4))
             
-            # ORDEN SECUENCIAL CORREGIDO: La Canción 128 se inyecta inmediatamente DESPUÉS de la barra roja
+            # BLINDAJE SECUENCIAL: Si la sección que acaba de nacer es "Vida", inyectamos la Canción 128 estrictamente ABAJO
             if seccion_actual == "Vida":
                 datos_cancion_2 = [Paragraph("■ <b>Canción 128</b>", est_cab_tit), Paragraph("", est_hnos), Paragraph("", est_hnos)]
                 t_c2 = Table([datos_cancion_2], colWidths=[320, 110, 110])
