@@ -55,9 +55,14 @@ def guardar_hermanos(lista):
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
-        return materias_detectadas
+        return "7-13 de septiembre", "JEREMÍAS 32, 33", materias_detectadas
         
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
+    
+    # Extraemos las dos primeras líneas reales como fecha y lectura bíblica
+    fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
+    lectura_cab = lineas[1] if len(lineas) > 1 else "JEREMÍAS 32, 33"
+    
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
 
@@ -126,7 +131,7 @@ def procesar_texto_plano_reunion(texto_usuario):
             "seccion": seccion_filtrado
         }
         
-    return materias_detectadas
+    return fecha_cab, lectura_cab, materias_detectadas
 
 pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
     "🚀 Fabricador de Folletos", 
@@ -154,23 +159,26 @@ with pestana_programa:
 
     boton_armar_pdf = st.button("⚙️ Procesar Datos para Asignación (Paso 1)", use_container_width=True)
 
-    materias_dinamicas = procesar_texto_plano_reunion(texto_jw_entrada)
+    # El procesador ahora nos devuelve tres variables: fecha, lectura bíblica real y las materias desglosadas
+    f_jw, l_jw, materias_dinamicas = procesar_texto_plano_reunion(texto_jw_entrada)
 
     st.markdown("---")
 
-    f_cab_clean = str(semana_seleccionada).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
-    l_cab_clean = str(mes_seleccionado).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
+    # CORRECCIÓN EN CALIENTE: Preferimos la fecha y lectura extraídas de JW.org, y si no hay, usamos los selectores manuales
+    f_final = f_jw if texto_jw_entrada.strip() else (semana_seleccionada if semana_seleccionada else "7-13 de septiembre")
+    l_final = l_jw if texto_jw_entrada.strip() else f"LECTURA DE {mes_seleccionado}"
 
-    st.subheader(f"📅 Planificación de la Semana: {f_cab_clean if f_cab_clean else 'Por definir'}")
-    st.info(f"📖 Mes de Trabajo Activo: **{l_cab_clean}**")
+    f_cab_clean = str(f_final).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
+    l_cab_clean = str(l_final).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
 
-    # PURIFICACIÓN: Dejamos la barra lateral enfocada únicamente en el Coordinador del día
+    st.subheader(f"📅 Planificación de la Semana: {f_cab_clean}")
+    st.info(f"📖 Texto Bíblico Extraído: **{l_cab_clean}**")
+
     with st.sidebar:
         st.header("⚙️ Control de Operación")
         coordinador_activo = st.selectbox("¿Quién está asignando hoy?", ["Sergio", "Jonathan", "Luis"], key="coord_act_live")
 
     st.markdown("### 🎚️ Asignar Privilegios para el Folleto PDF")
-    
     col_p1, col_p2 = st.columns(2)
     with col_p1:
         opciones_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia", mes_seleccionado)
@@ -188,6 +196,7 @@ with pestana_programa:
     st.markdown("### 📝 Ajustar Temas de Intervenciones y Asignar Hermanos")
     
     asignados_en_vivo = {"presidente": presidente, "oracion_inicial": oracion_inicial}
+
     for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias_dinamicas[k]
         tipo_seccion = m.get("seccion", "Tesoros")
@@ -206,7 +215,6 @@ with pestana_programa:
             
         st.markdown(f"**{emoji} Punto {k}**")
         
-        # Cajas mágicas interactivas que te permiten editar a mano el título de cualquier intervención
         texto_editado_usuario = st.text_input(
             f"Editar información del Punto {k}:", 
             value=titulo_preview, 
@@ -216,7 +224,7 @@ with pestana_programa:
         if texto_editado_usuario != titulo_preview:
             if "<br/>" in titulo_bruto:
                 partes_brutas = titulo_bruto.split("<br/>")
-                subtitulo_plomo = partes_brutas[1] if len(partes_brutas) > 1 else ""
+                subtitulo_plomo = partes_brutas if len(partes_brutas) > 1 else ""
                 m["titulo"] = f"<b>{texto_editado_usuario}</b><br/>{subtitulo_plomo}"
             else:
                 m["titulo"] = f"<b>{texto_editado_usuario}</b>"
@@ -244,22 +252,23 @@ with pestana_programa:
     with col_g1:
         btn_grabar_semana = st.button("💾 Guardar Semana e Inyectar Nombres", use_container_width=True, type="primary")
         if btn_grabar_semana:
-            if not semana_seleccionada.strip():
-                st.error("Por favor ingrese el rango de la semana antes de guardar.")
+            if not f_cab_clean or f_cab_clean == "Por definir":
+                st.error("Por favor ingrese el rango de la semana o procese la Guía de JW.org antes de guardar.")
             else:
                 historial_actual = cargar_historial()
                 if mes_seleccionado not in historial_actual:
                     historial_actual[mes_seleccionado] = {}
                 
-                historial_actual[mes_seleccionado][semana_seleccionada] = {
+                historial_actual[mes_seleccionado][f_cab_clean] = {
                     "coordinador": coordinador_activo,
                     "asignados": asignados_en_vivo
                 }
                 guardar_historial(historial_actual)
                 
                 try:
-                    reglas.generar_pdf_estilo_oficial(mes_seleccionado, semana_seleccionada, materias_dinamicas, asignados_en_vivo)
-                    st.success(f"¡Semana guardada de forma permanente en {FICHERO_HISTORIAL} y nombres fijos con textos editados en el PDF!")
+                    # Sincronización de Raíz: Enviamos las variables purificadas (Lectura real primero, luego fecha)
+                    reglas.generar_pdf_estilo_oficial(l_cab_clean, f_cab_clean, materias_dinamicas, asignados_en_vivo)
+                    st.success(f"¡Semana guardada de forma permanente en {FICHERO_HISTORIAL} y nombres fijos con lectura bíblica en el PDF!")
                 except Exception as e:
                     st.error(f"Fallo al inyectar ReportLab: {e}")
 
@@ -278,7 +287,7 @@ with pestana_programa:
         st.download_button(
             label="🟣 Descargar Folleto Oficial en PDF", 
             data=pdf_bytes, 
-            file_name=f"Reunion_{mes_seleccionado}_{semana_seleccionada.replace(' ', '_')}.pdf" if semana_seleccionada else f"Reunion_{mes_seleccionado}.pdf", 
+            file_name=f"Reunion_{mes_seleccionado}_{f_cab_clean.replace(' ', '_')}.pdf", 
             mime="application/pdf", 
             key="down_pdf_live",
             use_container_width=True
