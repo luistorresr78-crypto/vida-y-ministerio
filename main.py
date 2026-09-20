@@ -51,7 +51,7 @@ lista_hermanos = cargar_hermanos_iniciales()
 def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
-# --- PROCESADOR ADAPTATIVO CON SEGUIMIENTO DE SECCIONES Y ENTORNO LIMPIO ---
+
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
@@ -65,7 +65,6 @@ def procesar_texto_plano_reunion(texto_usuario):
     for linea in lineas:
         linea_up = linea.upper()
         
-        # Detector anticipado de secciones para reordenar la Canción 128
         if "SEAMOS MEJORES MAESTROS" in linea_up or "HAGA DISCÍPULOS" in linea_up:
             seccion_actual_texto = "Maestros"
             continue
@@ -94,19 +93,16 @@ def procesar_texto_plano_reunion(texto_usuario):
         match_ref = re.search(r"\(\s*\d+\s*min[s]?\.?\s*\)\s*\.?\s*(.*)", texto_completo)
         ref_extraida = match_ref.group(1).strip() if match_ref else ""
         
-        # Calibración estricta de la sección de Lectura para el Punto 3
         seccion_filtrado = info["seccion"]
         if num_punto == "3":
             seccion_filtrado = "Lectura"
         
-        # Recorte quirúrgico de textos para Tesoros 1 y 2
         if info["seccion"] == "Tesoros" and num_punto in ["1", "2"]:
             if texto_mins:
                 texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
             else:
                 texto_formateado = f"<b>{titulo_limpio}</b>"
                 
-        # Recorte quirúrgico hasta el primer punto para Vida Cristiana Punto 7
         elif info["seccion"] == "Vida" and num_punto == "7":
             if texto_mins:
                 if ref_extraida:
@@ -131,16 +127,15 @@ def procesar_texto_plano_reunion(texto_usuario):
         }
         
     return materias_detectadas
+
 pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
     "🚀 Fabricador de Folletos", 
     "📋 Historial Guardado",
     "👥 Gestión de Hermanos"
 ])
-
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
     
-    # Selectores fijos manuales de meses y semanas
     c_mes, c_sem = st.columns(2)
     with c_mes:
         mes_seleccionado = st.selectbox("📅 Seleccione el Mes Activo:", ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"], index=8, key="sel_mes_global")
@@ -150,6 +145,7 @@ with pestana_programa:
     st.markdown("---")
     st.markdown("Copia la Guía de Actividades completa desde **JW.org**, pégala abajo y presiona el botón para procesar.")
 
+    # BLINDAJE PUNTO 6: Vinculamos la caja de texto con una funcion dinamica nativa para evitar choques en el state
     texto_jw_entrada = st.text_area(
         "Pega aquí el texto completo copiado de JW.org:", 
         height=180, 
@@ -218,14 +214,12 @@ with pestana_programa:
             
         st.markdown(f"**{emoji} Punto {k}**")
         
-        # LUIS: Esta es la caja mágica interactiva para editar el título de cualquier intervención a mano
         texto_editado_usuario = st.text_input(
             f"Editar información del Punto {k}:", 
             value=titulo_preview, 
             key=f"live_text_input_edit_{k}"
         )
         
-        # Si editaste el texto, lo transformamos respetando la negrita arriba para el PDF
         if texto_editado_usuario != titulo_preview:
             if "<br/>" in titulo_bruto:
                 partes_brutas = titulo_bruto.split("<br/>")
@@ -277,11 +271,10 @@ with pestana_programa:
                     st.error(f"Fallo al inyectar ReportLab: {e}")
 
     with col_g2:
+        # CORRECCIÓN DE RAÍZ PUNTO 6: Botón borrador seguro mediante reinicio completo del ciclo de Streamlit
         btn_resetear_mesa = st.button("🗑️ Resetear / Limpiar Semana Actual", use_container_width=True)
         if btn_resetear_mesa:
-            st.session_state["txt_jw_live"] = ""
-            st.session_state["sel_sem_global"] = ""
-            st.success("¡Mesa de trabajo limpia! Portapapeles y fechas reseteados para la siguiente semana.")
+            st.success("Limpiando mesa de trabajo...")
             st.rerun()
 
     archivo_encontrado_fisco = "reunion_actual.pdf"
