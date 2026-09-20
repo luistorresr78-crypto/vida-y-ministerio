@@ -145,7 +145,6 @@ with pestana_programa:
     st.markdown("---")
     st.markdown("Copia la Guía de Actividades completa desde **JW.org**, pégala abajo y presiona el botón para procesar.")
 
-    # BLINDAJE PUNTO 6: Vinculamos la caja de texto con una funcion dinamica nativa para evitar choques en el state
     texto_jw_entrada = st.text_area(
         "Pega aquí el texto completo copiado de JW.org:", 
         height=180, 
@@ -165,17 +164,10 @@ with pestana_programa:
     st.subheader(f"📅 Planificación de la Semana: {f_cab_clean if f_cab_clean else 'Por definir'}")
     st.info(f"📖 Mes de Trabajo Activo: **{l_cab_clean}**")
 
+    # PURIFICACIÓN: Dejamos la barra lateral enfocada únicamente en el Coordinador del día
     with st.sidebar:
         st.header("⚙️ Control de Operación")
         coordinador_activo = st.selectbox("¿Quién está asignando hoy?", ["Sergio", "Jonathan", "Luis"], key="coord_act_live")
-        
-        st.subheader("♻️ Registro de Reemplazos")
-        with st.expander("Ver panel de Reemplazos"):
-            h_ausente = st.text_input("Hermano Ausente", key="aus_live")
-            h_sustituto = st.text_input("Hermano que Reemplaza", key="sust_live")
-            if st.button("Guardar Reemplazo en Bitácora", key="btn_remp_live"):
-                if h_ausente and h_sustituto:
-                    st.success(f"Sustitución guardada: {h_sustituto} cubre a {h_ausente}")
 
     st.markdown("### 🎚️ Asignar Privilegios para el Folleto PDF")
     
@@ -214,6 +206,7 @@ with pestana_programa:
             
         st.markdown(f"**{emoji} Punto {k}**")
         
+        # Cajas mágicas interactivas que te permiten editar a mano el título de cualquier intervención
         texto_editado_usuario = st.text_input(
             f"Editar información del Punto {k}:", 
             value=titulo_preview, 
@@ -271,7 +264,6 @@ with pestana_programa:
                     st.error(f"Fallo al inyectar ReportLab: {e}")
 
     with col_g2:
-        # CORRECCIÓN DE RAÍZ PUNTO 6: Botón borrador seguro mediante reinicio completo del ciclo de Streamlit
         btn_resetear_mesa = st.button("🗑️ Resetear / Limpiar Semana Actual", use_container_width=True)
         if btn_resetear_mesa:
             st.success("Limpiando mesa de trabajo...")
