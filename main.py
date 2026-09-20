@@ -51,8 +51,7 @@ lista_hermanos = cargar_hermanos_iniciales()
 def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
-
-# --- PROCESADOR CON DETECTOR ANTICIPADO DE SECCIÓN PARA CANCIONES ---
+# --- PROCESADOR ADAPTATIVO CON SEGUIMIENTO DE SECCIONES Y ENTORNO LIMPIO ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
@@ -66,6 +65,7 @@ def procesar_texto_plano_reunion(texto_usuario):
     for linea in lineas:
         linea_up = linea.upper()
         
+        # Detector anticipado de secciones para reordenar la Canción 128
         if "SEAMOS MEJORES MAESTROS" in linea_up or "HAGA DISCÍPULOS" in linea_up:
             seccion_actual_texto = "Maestros"
             continue
@@ -94,16 +94,19 @@ def procesar_texto_plano_reunion(texto_usuario):
         match_ref = re.search(r"\(\s*\d+\s*min[s]?\.?\s*\)\s*\.?\s*(.*)", texto_completo)
         ref_extraida = match_ref.group(1).strip() if match_ref else ""
         
+        # Calibración estricta de la sección de Lectura para el Punto 3
         seccion_filtrado = info["seccion"]
         if num_punto == "3":
             seccion_filtrado = "Lectura"
         
+        # Recorte quirúrgico de textos para Tesoros 1 y 2
         if info["seccion"] == "Tesoros" and num_punto in ["1", "2"]:
             if texto_mins:
                 texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
             else:
                 texto_formateado = f"<b>{titulo_limpio}</b>"
                 
+        # Recorte quirúrgico hasta el primer punto para Vida Cristiana Punto 7
         elif info["seccion"] == "Vida" and num_punto == "7":
             if texto_mins:
                 if ref_extraida:
@@ -128,8 +131,6 @@ def procesar_texto_plano_reunion(texto_usuario):
         }
         
     return materias_detectadas
-
-# Asegúrate de que esta línea conecte limpio con el Bloque 2 de abajo
 pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
     "🚀 Fabricador de Folletos", 
     "📋 Historial Guardado",
@@ -139,7 +140,7 @@ pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
     
-    # REPARACIÓN PUNTO 3: Añadimos los selectores fijos manuales de meses y semanas
+    # Selectores fijos manuales de meses y semanas
     c_mes, c_sem = st.columns(2)
     with c_mes:
         mes_seleccionado = st.selectbox("📅 Seleccione el Mes Activo:", ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"], index=8, key="sel_mes_global")
@@ -162,8 +163,11 @@ with pestana_programa:
 
     st.markdown("---")
 
-    st.subheader(f"📅 Planificación de la Semana: {semana_seleccionada if semana_seleccionada else 'Por definir'}")
-    st.info(f"📖 Mes de Trabajo Activo: **{mes_seleccionado}**")
+    f_cab_clean = str(semana_seleccionada).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
+    l_cab_clean = str(mes_seleccionado).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
+
+    st.subheader(f"📅 Planificación de la Semana: {f_cab_clean if f_cab_clean else 'Por definir'}")
+    st.info(f"📖 Mes de Trabajo Activo: **{l_cab_clean}**")
 
     with st.sidebar:
         st.header("⚙️ Control de Operación")
@@ -181,20 +185,19 @@ with pestana_programa:
     
     col_p1, col_p2 = st.columns(2)
     with col_p1:
-        # CORRECCIÓN DE RAÍZ: Pasamos mes_seleccionado como cuarto parámetro obligatorio
         opciones_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia", mes_seleccionado)
         nom_presi = [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in opciones_presi] if opciones_presi else [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in lista_hermanos]
         if "Por asignar" not in nom_presi: nom_presi.insert(0, "Por asignar")
         presidente = st.selectbox("Presidente de la Reunión", nom_presi, key="p_presi_live")
         
     with col_p2:
-        # CORRECCIÓN DE RAÍZ: Pasamos mes_seleccionado como cuarto parámetro obligatorio
         opciones_ora = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Oración", mes_seleccionado)
         nom_ora = [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in opciones_ora] if opciones_ora else [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in lista_hermanos]
         if "Por asignar" not in nom_ora: nom_ora.insert(0, "Por asignar")
         oracion_inicial = st.selectbox("Oración Inicial", nom_ora, key="p_ora_live")
 
     st.markdown("---")
+    st.markdown("### 📝 Ajustar Temas de Intervenciones y Asignar Hermanos")
     
     asignados_en_vivo = {"presidente": presidente, "oracion_inicial": oracion_inicial}
     for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
@@ -213,9 +216,24 @@ with pestana_programa:
         titulo_bruto = str(m.get('titulo', ''))
         titulo_preview = re.sub(r"<[^>]*>", "", titulo_bruto).strip()
             
-        st.markdown(f"**{emoji} {k}. {titulo_preview}**")
+        st.markdown(f"**{emoji} Punto {k}**")
         
-        # CORRECCIÓN DE RAÍZ: Pasamos mes_seleccionado como cuarto parámetro obligatorio
+        # LUIS: Esta es la caja mágica interactiva para editar el título de cualquier intervención a mano
+        texto_editado_usuario = st.text_input(
+            f"Editar información del Punto {k}:", 
+            value=titulo_preview, 
+            key=f"live_text_input_edit_{k}"
+        )
+        
+        # Si editaste el texto, lo transformamos respetando la negrita arriba para el PDF
+        if texto_editado_usuario != titulo_preview:
+            if "<br/>" in titulo_bruto:
+                partes_brutas = titulo_bruto.split("<br/>")
+                subtitulo_plomo = partes_brutas[1] if len(partes_brutas) > 1 else ""
+                m["titulo"] = f"<b>{texto_editado_usuario}</b><br/>{subtitulo_plomo}"
+            else:
+                m["titulo"] = f"<b>{texto_editado_usuario}</b>"
+        
         opciones_materia = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, color_sub, mes_seleccionado)
         nombres_materia = [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in opciones_materia] if opciones_materia else [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in lista_hermanos]
         if "Por asignar" not in nombres_materia: nombres_materia.insert(0, "Por asignar")
@@ -227,13 +245,11 @@ with pestana_programa:
             
         with c2:
             if tipo_seccion == "Maestros":
-                # CORRECCIÓN DE RAÍZ: Pasamos mes_seleccionado como cuarto parámetro obligatorio
                 opciones_ayudante = reglas.filtrar_ayudantes_inteligente(titular, lista_hermanos, "Seamos Mejores Maestros", mes_seleccionado)
                 nombres_ayudante = [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in opciones_ayudante] if opciones_ayudante else [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in lista_hermanos]
                 if "Por asignar" not in nombres_ayudante: nombres_ayudante.insert(0, "Por asignar")
                 ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
                 asignados_en_vivo[f"p{k}_a"] = ayudante if ayudante != "Por asignar" else "Por asignar"
-
     st.markdown("### 🖨️ Compilar y Guardar Permanencia (Paso 2)")
     
     col_g1, col_g2 = st.columns(2)
@@ -249,14 +265,14 @@ with pestana_programa:
                     historial_actual[mes_seleccionado] = {}
                 
                 historial_actual[mes_seleccionado][semana_seleccionada] = {
-                    "coordinador": coordinator_activo if 'coordinator_activo' in locals() else coordinador_activo,
+                    "coordinador": coordinador_activo,
                     "asignados": asignados_en_vivo
                 }
                 guardar_historial(historial_actual)
                 
                 try:
                     reglas.generar_pdf_estilo_oficial(mes_seleccionado, semana_seleccionada, materias_dinamicas, asignados_en_vivo)
-                    st.success(f"¡Semana guardada de forma permanente en {FICHERO_HISTORIAL} y nombres fijados en el PDF!")
+                    st.success(f"¡Semana guardada de forma permanente en {FICHERO_HISTORIAL} y nombres fijos con textos editados en el PDF!")
                 except Exception as e:
                     st.error(f"Fallo al inyectar ReportLab: {e}")
 
@@ -285,7 +301,7 @@ with pestana_programa:
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos y habilitar el PDF.")
 
-# --- PESTAÑA DEL HISTORIAL EN TIEMPO REAL (PUNTO 4) ---
+# --- PESTAÑA DEL HISTORIAL EN TIEMPO REAL ---
 with pestana_historial:
     st.header("📋 Historial de Asignaciones Registradas en la Bitácora")
     historial_visual = cargar_historial()
