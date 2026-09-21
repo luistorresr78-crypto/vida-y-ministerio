@@ -52,35 +52,42 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ADAPTATIVO CON SEPARADOR DE RENGLONES ULTRA-SENSIBLE ---
+# --- PROCESADOR ADAPTATIVO RENGLÓN POR RENGLÓN ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
         return "14-20 de septiembre", "JEREMÍAS 34, 35", materias_detectadas
         
+    lineas_crudas = texto_usuario.split("\n")
+    lineas = []
+    
+    # Saneamiento de Raíz: Si el Punto 7 o el Punto 8 vienen pegados en la misma línea, los separamos obligatoriamente
+    for lc in lineas_crudas:
+        txt_l = lc.strip()
+        if not txt_l: continue
+        match_break = re.search(r"(.+?)\s*\b((?:7|8)\.\s*Haga\s+\w+)", txt_l)
+        if match_break:
+            lineas.append(match_break.group(1).strip())
+            lineas.append(match_break.group(2).strip())
+        else:
+            lineas.append(txt_l)
+            
     fecha_cab = "14-20 de septiembre"
     lectura_cab = "JEREMÍAS 34, 35"
     
-    # Normalización: Forzamos la separación si el portapapeles unió el Punto 7 al final del Punto 6
-    texto_sano = re.sub(r"(\.\s*)\b(7\.\s*Haga discípulos)", r"\1\n\2", texto_usuario)
-    texto_sano = re.sub(r"(\.\s*)\b(8\.\s*)", r"\1\n\2", texto_sano)
-    
-    lineas = [l.strip() for l in texto_sano.split("\n") if l.strip()]
-    
     if len(lineas) > 1:
-        fecha_cab = lineas[1] if any(chr.isdigit() for chr in lineas[1]) else lineas[0]
-    if len(lineas) > 2 and ("JER" in lineas[2].upper() or "3" in lineas[2]):
+        fecha_cab = lineas[1] if any(c.isdigit() for c in lineas[1]) else lineas[0]
+    if len(lineas) > 2 and "JER" in lineas[2].upper():
         lectura_cab = lineas[2]
-    elif len(lineas) > 1 and ("JER" in lineas[1].upper() or "3" in lineas[1]):
+    elif len(lineas) > 1 and "JER" in lineas[1].upper():
         lectura_cab = lineas[1]
 
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
-
     puntos_crudos = {}
+
     for linea in lineas:
         linea_up = linea.upper()
-        
         if "SEAMOS MEJORES MAESTROS" in linea_up or "HAGA DISCÍPULOS" in linea_up:
             seccion_actual_texto = "Maestros"
             continue
@@ -98,33 +105,41 @@ def procesar_texto_plano_reunion(texto_usuario):
             }
         else:
             if ultimo_punto and ultimo_punto in puntos_crudos:
+                # Si es Tesoros 1 o 2, evitamos acumular los párrafos explicativos infinitos de abajo
+                if puntos_crudos[ultimo_punto]["seccion"] == "Tesoros" and num_punto in ["1", "2"]:
+                    if any(palabra in linea_up for palabra in ["MUCHOS", "LOS RECABITAS", "JEHOVÁ RECOMPENSÓ", "PREGÚNTESE"]):
+                        continue
                 puntos_crudos[ultimo_punto]["lineas"].append(linea)
 
     for num_punto, info in puntos_crudos.items():
         texto_completo = " ".join(info["lineas"]).strip()
         
-        # Recogemos minutos y texto de corrido para respetar las variaciones semanales exactas de Luis
-        m_html = f"<b>{texto_completo}</b>"
+        match_mins = re.search(r"\(\s*(\d+\s*min[s]?\.?)\s*\)", texto_completo)
+        texto_mins = f"({match_mins.group(1)})" if match_mins else ""
+        titulo_limpio = re.sub(r"\s*\(\s*\d+\s*min[s]?\.?\s*\).*", "", texto_completo).strip()
         
         seccion_filtrado = info["seccion"]
         if "LECTURA DE LA BIBLIA" in texto_completo.upper() or num_punto == "3":
             seccion_filtrado = "Lectura"
             
+        if texto_mins:
+            texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
+        else:
+            texto_formateado = f"<b>{texto_completo}</b>"
+            
         materias_detectadas[num_punto] = {
-            "titulo": m_html,
+            "titulo": texto_formateado,
             "minutos": "5",
             "seccion": seccion_filtrado
         }
         
     return fecha_cab, lectura_cab, materias_detectadas
 
-# Enlace directo con la interfaz baja
 pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
     "🚀 Fabricador de Folletos", 
     "📋 Historial Guardado",
     "👥 Gestión de Hermanos"
 ])
-
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
     
@@ -182,7 +197,6 @@ with pestana_programa:
     
     asignados_en_vivo = {"presidente": presidente, "oracion_inicial": oracion_inicial}
 
-    # Bucle infinito y elástico para dibujar tantas materias como JW.org detecte sin esconder ninguna
     for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias_dinamicas[k]
         tipo_seccion = m.get("seccion", "Tesoros")
@@ -201,7 +215,6 @@ with pestana_programa:
             
         st.markdown(f"**{emoji} Punto {k}**")
         
-        # Cajas mágicas interactivas que te muestran la información real y te permiten modificarla si deseas recortar
         texto_editado_usuario = st.text_input(
             f"Editar información del Punto {k}:", 
             value=titulo_preview, 
@@ -327,7 +340,7 @@ with pestana_hermanos:
     col_add, col_del = st.columns(2)
     
     with col_add:
-        st.subheader("➕ Agregar Nuevo Hermano/a")
+        st.subheader("➕path Agregar Nuevo Hermano/a")
         with st.form("form_alta_hermano_live"):
             nuevo_nom = st.text_input("Nombre:")
             nuevo_ape = st.text_input("Apellido:")
