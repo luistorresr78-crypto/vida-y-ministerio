@@ -102,13 +102,13 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     presi = str(asignados.get("presidente", "Por asignar")).strip()
     cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    t_presi = Table(cab_der, colWidths=[70, 160])
+    t_presi = Table(cab_der, colWidths=[90, 160])
     t_presi.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LINEBELOW', (1,0), (1,0), 0.75, colors.HexColor("#4A5568"))
     ]))
     
-    t_principal = Table([[cab_izq, t_presi]], colWidths=[290, 230])
+    t_principal = Table([[cab_izq, t_presi]], colWidths=[290, 250])
     t_principal.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 10)
@@ -122,7 +122,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         Paragraph("", est_cab_tit),
         Paragraph(f"{ora_ini}", est_hnos)
     ]
-    t_c1 = Table([datos_cancion_1], colWidths=[180, 140, 200])
+    t_c1 = Table([datos_cancion_1], colWidths=[340, 100, 100])
     t_c1.setStyle(TableStyle([
         ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
         ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
@@ -170,7 +170,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
                 elementos.append(t_tit)
                 elementos.append(Spacer(1, 4))
             
-            # Inyección secuencial blindada de la Canción intermedia en la sección Vida
+            # Inyección secuencial de la Canción intermedia dinámica en la sección Vida
             if seccion_actual == "Vida":
                 datos_cancion_2 = [Paragraph("■ <b>Canción 121</b>", est_cab_tit), Paragraph("", est_hnos), Paragraph("", est_hnos)]
                 t_c2 = Table([datos_cancion_2], colWidths=)
@@ -194,7 +194,6 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         if not texto_html_final.startswith(f"{k}."):
             texto_html_final = f"{k}. {texto_html_final}"
         
-        # Sincronizamos los estilos visuales de los renglones apuntando al color de sección correspondiente
         conf_sec = secciones_mapeadas.get(sec_materia, secciones_mapeadas["Tesoros"])
         
         fila_materia = [
