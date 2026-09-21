@@ -52,7 +52,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ADAPTATIVO CON DISPARADOR ESTRICTO ---
+# --- PROCESADOR ADAPTATIVO CON FILTRO DE EXCLUSIÓN PERLAS EN REUNIÓN ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
@@ -60,19 +60,26 @@ def procesar_texto_plano_reunion(texto_usuario):
         
     texto_limpio_global = texto_usuario.replace("\r", "\n")
     
-    # Rompedor ciego: Inyecta un salto de línea forzado antes de los números de punto para que entren limpios
+    # Rompedor ciego: Inyectamos un salto de línea forzado antes de los números oficiales de la reunión
     texto_sano = re.sub(r"(?<!\()\b([4-9]|10)\.\s+", r"\n\1. ", texto_limpio_global)
     
     lineas_crudas = texto_sano.split("\n")
-    lineas = [l.strip() for l in lineas_crudas if l.strip()]
+    lineas = []
+    for lc in lineas_crudas:
+        txt_l = lc.strip()
+        if not txt_l: continue
+        # BLINDAJE EXTREMO: Barremos de raíz la sub-pregunta arqueológica del Punto 2 para que no suplante al Punto 7
+        if any(palabra in txt_l.upper() for palabra in ["ARQUEOLÓGICAS", "ARQUEOLOGICAS", "CONFIRMAN", "RESPUESTA"]):
+            continue
+        lineas.append(txt_l)
             
     fecha_cab = "14-20 de septiembre"
     lectura_cab = "JEREMÍAS 34, 35"
     
-    if len(lineas) > 0 and any(c.isdigit() for c in lineas[0]):
-        fecha_cab = lineas[0].strip()
-    if len(lineas) > 1 and "JER" in lineas[1].upper():
-        lectura_cab = lineas[1].strip()
+    if len(lineas) > 0 and any(c.isdigit() for c in lineas):
+        fecha_cab = lineas.strip()
+    if len(lineas) > 1 and "JER" in lineas.upper():
+        lectura_cab = lineas.strip()
 
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
@@ -83,7 +90,6 @@ def procesar_texto_plano_reunion(texto_usuario):
         if "SEAMOS MEJORES MAESTROS" in linea_up or "HAGA DISCÍPULOS" in linea_up:
             seccion_actual_texto = "Maestros"
             continue
-        # BLINDAJE DE CAMBIO DE SECCIÓN: Solo se mueve a Vida si lee el encabezado oficial en mayúsculas
         elif "NUESTRA VIDA CRISTIANA" in linea_up:
             seccion_actual_texto = "Vida"
             continue
