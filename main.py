@@ -52,7 +52,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ADAPTATIVO RENGLÓN POR RENGLÓN ---
+# --- PROCESADOR ADAPTATIVO SANO ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
@@ -61,7 +61,6 @@ def procesar_texto_plano_reunion(texto_usuario):
     lineas_crudas = texto_usuario.split("\n")
     lineas = []
     
-    # Saneamiento de Raíz: Si el Punto 7 o el Punto 8 vienen pegados en la misma línea, los separamos obligatoriamente
     for lc in lineas_crudas:
         txt_l = lc.strip()
         if not txt_l: continue
@@ -105,8 +104,8 @@ def procesar_texto_plano_reunion(texto_usuario):
             }
         else:
             if ultimo_punto and ultimo_punto in puntos_crudos:
-                # Si es Tesoros 1 o 2, evitamos acumular los párrafos explicativos infinitos de abajo
-                if puntos_crudos[ultimo_punto]["seccion"] == "Tesoros" and num_punto in ["1", "2"]:
+                # REPARACIÓN DE VARIABLE: Cambiado a ultimo_punto para sanar el UnboundLocalError
+                if puntos_crudos[ultimo_punto]["seccion"] == "Tesoros" and ultimo_punto in ["1", "2"]:
                     if any(palabra in linea_up for palabra in ["MUCHOS", "LOS RECABITAS", "JEHOVÁ RECOMPENSÓ", "PREGÚNTESE"]):
                         continue
                 puntos_crudos[ultimo_punto]["lineas"].append(linea)
@@ -135,11 +134,13 @@ def procesar_texto_plano_reunion(texto_usuario):
         
     return fecha_cab, lectura_cab, materias_detectadas
 
+# Enlace directo con la interfaz baja
 pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
     "🚀 Fabricador de Folletos", 
     "📋 Historial Guardado",
     "👥 Gestión de Hermanos"
 ])
+
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
     
