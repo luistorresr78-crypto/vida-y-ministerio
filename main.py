@@ -52,33 +52,28 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ADAPTATIVO CON BLINDAJE DE INICIO DE RENGLÓN ---
+# --- PROCESADOR ADAPTATIVO CON ROMPEDOR NUMÉRICO CIEGO ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
         return "14-20 de septiembre", "JEREMÍAS 34, 35", materias_detectadas
         
-    lineas_crudas = texto_usuario.split("\n")
-    lineas = []
+    # Pre-vaciado: Reemplazamos espacios raros y saltos de carro extraños del portapapeles
+    texto_limpio_global = texto_usuario.replace("\r", "\n")
     
-    for lc in lineas_crudas:
-        txt_l = lc.strip()
-        if not txt_l: continue
-        # BLINDAJE EXTREMO: Solo separamos si el número 7 o 8 viene precedido por el final de una lección, no dentro de paréntesis
-        match_break = re.search(r"(.+?)\s*\b(7\.\s*Haga discípulos.*)", txt_l)
-        if match_break:
-            lineas.append(match_break.group(1).strip())
-            lineas.append(match_break.group(2).strip())
-        else:
-            lineas.append(txt_l)
+    # ROMPEDOR CIEGO: Si detecta un número del 4 al 10 con un punto que NO esté dentro de paréntesis, le inyecta un salto de línea forzado
+    texto_sano = re.sub(r"(?<!\()\b([4-9]|10)\.\s+", r"\n\1. ", texto_limpio_global)
+    
+    lineas_crudas = texto_sano.split("\n")
+    lineas = [l.strip() for l in lineas_crudas if l.strip()]
             
     fecha_cab = "14-20 de septiembre"
     lectura_cab = "JEREMÍAS 34, 35"
     
-    if len(lineas) > 0 and any(c.isdigit() for c in lineas[0]):
-        fecha_cab = lineas[0].strip()
-    if len(lineas) > 1 and "JER" in lineas[1].upper():
-        lectura_cab = lineas[1].strip()
+    if len(lineas) > 0 and any(c.isdigit() for c in lineas):
+        fecha_cab = lineas.strip()
+    if len(lineas) > 1 and ("JER" in lineas.upper() or "3" in lineas):
+        lectura_cab = lineas.strip()
 
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
@@ -94,7 +89,7 @@ def procesar_texto_plano_reunion(texto_usuario):
                 seccion_actual_texto = "Vida"
                 continue
             
-        # NATIVO Y BLINDADO: La expresión ^\s* obliga a que el "7." venga al inicio absoluto de la línea
+        # Capturador elástico por borde izquierdo estricto
         match_punto = re.match(r"^\s*([1-9]|10)\.\s*(.*)", linea)
         if match_punto:
             ultimo_punto = match_punto.group(1)
@@ -112,7 +107,6 @@ def procesar_texto_plano_reunion(texto_usuario):
     for num_punto, info in puntos_crudos.items():
         texto_completo = " ".join(info["lineas"]).strip()
         
-        # Capturamos los minutos dinámicos para reacomodarlos abajo en plomo elegante sin rebanar la referencia
         match_mins = re.search(r"\(\s*(\d+\s*min[s]?\.?)\s*\)", texto_completo)
         
         seccion_filtrado = info["seccion"]
