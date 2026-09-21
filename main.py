@@ -52,7 +52,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ADAPTATIVO SANO ---
+# --- PROCESADOR ADAPTATIVO CON PRESERVACIÓN DE REFERENCIAS Y TEXTO INTEGRAL ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
@@ -61,10 +61,11 @@ def procesar_texto_plano_reunion(texto_usuario):
     lineas_crudas = texto_usuario.split("\n")
     lineas = []
     
+    # Saneamiento Avanzado: Separamos si el portapapeles unió asignaciones en una sola línea
     for lc in lineas_crudas:
         txt_l = lc.strip()
         if not txt_l: continue
-        match_break = re.search(r"(.+?)\s*\b((?:7|8)\.\s*Haga\s+\w+)", txt_l)
+        match_break = re.search(r"(.+?)\s*\b((?:4|5|6|7|8|9|10)\.\s*[A-ZÁÉÍÓÚa-záéíóú].*)", txt_l)
         if match_break:
             lineas.append(match_break.group(1).strip())
             lineas.append(match_break.group(2).strip())
@@ -74,12 +75,10 @@ def procesar_texto_plano_reunion(texto_usuario):
     fecha_cab = "14-20 de septiembre"
     lectura_cab = "JEREMÍAS 34, 35"
     
-    if len(lineas) > 1:
-        fecha_cab = lineas[1] if any(c.isdigit() for c in lineas[1]) else lineas[0]
-    if len(lineas) > 2 and "JER" in lineas[2].upper():
-        lectura_cab = lineas[2]
-    elif len(lineas) > 1 and "JER" in lineas[1].upper():
-        lectura_cab = lineas[1]
+    if len(lineas) > 0 and any(c.isdigit() for c in lineas[0]):
+        fecha_cab = lineas[0].strip()
+    if len(lineas) > 1 and ("JER" in lineas[1].upper() or "3" in lineas[1]):
+        lectura_cab = lineas[1].strip()
 
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
@@ -95,6 +94,7 @@ def procesar_texto_plano_reunion(texto_usuario):
                 seccion_actual_texto = "Vida"
                 continue
             
+        # Capturador elástico: Buscamos cualquier número de punto del 1 al 10 al inicio del renglón
         match_punto = re.match(r"^\s*([1-9]|10)\.\s*(.*)", linea)
         if match_punto:
             ultimo_punto = match_punto.group(1)
@@ -104,25 +104,28 @@ def procesar_texto_plano_reunion(texto_usuario):
             }
         else:
             if ultimo_punto and ultimo_punto in puntos_crudos:
-                # REPARACIÓN DE VARIABLE: Cambiado a ultimo_punto para sanar el UnboundLocalError
+                # Barremos únicamente las explicaciones infinitas y preguntas de Tesoros 1 y 2
                 if puntos_crudos[ultimo_punto]["seccion"] == "Tesoros" and ultimo_punto in ["1", "2"]:
-                    if any(palabra in linea_up for palabra in ["MUCHOS", "LOS RECABITAS", "JEHOVÁ RECOMPENSÓ", "PREGÚNTESE"]):
+                    if any(palabra in linea_up for palabra in ["MUCHOS", "LOS RECABITAS", "JEHOVÁ RECOMPENSÓ", "PREGÚNTESE", "IMAGEN DEL VIDEO"]):
                         continue
                 puntos_crudos[ultimo_punto]["lineas"].append(linea)
 
     for num_punto, info in puntos_crudos.items():
         texto_completo = " ".join(info["lineas"]).strip()
         
+        # FIX DE LOGEADO DE REFERENCIAS: Buscamos los minutos pero conservamos TODO el texto para no mutilar referencias
         match_mins = re.search(r"\(\s*(\d+\s*min[s]?\.?)\s*\)", texto_completo)
-        texto_mins = f"({match_mins.group(1)})" if match_mins else ""
-        titulo_limpio = re.sub(r"\s*\(\s*\d+\s*min[s]?\.?\s*\).*", "", texto_completo).strip()
         
         seccion_filtrado = info["seccion"]
         if "LECTURA DE LA BIBLIA" in texto_completo.upper() or num_punto == "3":
             seccion_filtrado = "Lectura"
             
-        if texto_mins:
-            texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
+        # Si tiene minutos, los separamos visualmente con un salto de línea pero MANTENEMOS la referencia completa al lado
+        if match_mins:
+            mins_str = match_mins.group(0)
+            # Removemos los minutos del título principal para formatearlos elegantemente abajo en plomo
+            titulo_limpio_con_ref = texto_completo.replace(mins_str, "").replace("  ", " ").strip()
+            texto_formateado = f"<b>{titulo_limpio_con_ref}</b><br/><font size=9 color='#4A5568'>{mins_str}</font>"
         else:
             texto_formateado = f"<b>{texto_completo}</b>"
             
