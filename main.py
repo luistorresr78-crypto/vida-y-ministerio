@@ -24,7 +24,7 @@ def guardar_historial(datos):
     with open(FICHERO_HISTORIAL, "w", encoding="utf-8") as f:
         json.dump(datos, f, ensure_ascii=False, indent=4)
 
-# --- REPARACIÓN DE RAÍZ: Prioridad absoluta al archivo hermanos.json existente para no sobreescribir tus 80 publicadores ---
+# Rescate automatico de tus 80 publicadores reales guardados en hermanos.json
 def cargar_hermanos_iniciales():
     if os.path.exists(FICHERO_HERMANOS):
         try:
@@ -43,7 +43,6 @@ def cargar_hermanos_iniciales():
         except:
             pass
 
-    # Si por alguna razon el archivo no existiera o estuviera corrupto, recien ahi monta la fabrica
     hermanos_base = [
         {"nombre": "Luis", "apellido": "Torres", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
         {"nombre": "Sergio", "apellido": "Coordinador", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
@@ -59,7 +58,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ADAPTATIVO CON EXTRACCIÓN AUTOMÁTICA DE LECTURA ---
+# --- PROCESADOR ADAPTATIVO CON EXTRACCIÓN AUTOMÁTICA SANADA ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
@@ -158,7 +157,8 @@ def procesar_texto_plano_reunion(texto_usuario):
             "seccion": seccion_filtrado
         }
         
-    return l_cab_clean, materias_detectadas
+    # SANACIÓN DE RAÍZ: Retornamos lectura_cab que es la variable declarada arriba correctamente
+    return lectura_cab, materias_detectadas
 
 # Enlace directo con la interfaz baja
 pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
