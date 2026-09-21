@@ -52,7 +52,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ADAPTATIVO SANO CORREGIDO ---
+# --- PROCESADOR ADAPTATIVO CON DISPARADOR ESTRICTO ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
@@ -60,7 +60,7 @@ def procesar_texto_plano_reunion(texto_usuario):
         
     texto_limpio_global = texto_usuario.replace("\r", "\n")
     
-    # ROMPEDOR CIEGO: Inyecta un salto de línea forzado antes de los números de punto para romper el amontonamiento
+    # Rompedor ciego: Inyecta un salto de línea forzado antes de los números de punto para que entren limpios
     texto_sano = re.sub(r"(?<!\()\b([4-9]|10)\.\s+", r"\n\1. ", texto_limpio_global)
     
     lineas_crudas = texto_sano.split("\n")
@@ -71,8 +71,7 @@ def procesar_texto_plano_reunion(texto_usuario):
     
     if len(lineas) > 0 and any(c.isdigit() for c in lineas[0]):
         fecha_cab = lineas[0].strip()
-    # CORRECCIÓN DE SINTAXIS: Evaluamos el renglón individual con .upper() para evitar el AttributeError
-    if len(lineas) > 1 and ("JER" in lineas[1].upper() or "3" in lineas[1]):
+    if len(lineas) > 1 and "JER" in lineas[1].upper():
         lectura_cab = lineas[1].strip()
 
     seccion_actual_texto = "Tesoros"
@@ -84,10 +83,10 @@ def procesar_texto_plano_reunion(texto_usuario):
         if "SEAMOS MEJORES MAESTROS" in linea_up or "HAGA DISCÍPULOS" in linea_up:
             seccion_actual_texto = "Maestros"
             continue
-        elif "NUESTRA VIDA CRISTIANA" in linea_up or "CANCIÓN" in linea_up or "CANCION" in linea_up:
-            if ultimo_punto and int(ultimo_punto) >= 4:
-                seccion_actual_texto = "Vida"
-                continue
+        # BLINDAJE DE CAMBIO DE SECCIÓN: Solo se mueve a Vida si lee el encabezado oficial en mayúsculas
+        elif "NUESTRA VIDA CRISTIANA" in linea_up:
+            seccion_actual_texto = "Vida"
+            continue
             
         match_punto = re.match(r"^\s*([1-9]|10)\.\s*(.*)", linea)
         if match_punto:
