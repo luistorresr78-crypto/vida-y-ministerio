@@ -52,11 +52,11 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ADAPTATIVO UNIVERSAL POR MINUTOS ---
+# --- PROCESADOR ADAPTATIVO CON EXTRACCIÓN AUTOMÁTICA DE LECTURA ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
-        return "", "", materias_detectadas
+        return "JEREMÍAS 32, 33", materias_detectadas
         
     texto_limpio_global = texto_usuario.replace("\r", "\n")
     
@@ -76,14 +76,14 @@ def procesar_texto_plano_reunion(texto_usuario):
             continue
         lineas.append(txt_l)
             
-    fecha_cab = ""
-    lectura_cab = ""
+    lectura_cab = "JEREMÍAS 32, 33"
     
-    lineas_cab = [l for l in lineas if "ESPAÑOL" not in l.lower() and "LEER" not in l.upper() and not re.match(r"^\s*[1-9]", l) and "CANCIÓN" not in l.upper()]
-    if len(lineas_cab) > 0:
-        fecha_cab = lineas_cab[0].strip()
-    if len(lineas_cab) > 1:
-        lectura_cab = lineas_cab[1].strip()
+    # Buscamos la línea que contenga la lectura de la semana en mayúsculas
+    for l in lineas:
+        if any(libro in l.upper() for libro in ["JER", "MAT", "MAR", "LUC", "JUA", "HECH", "ROM", "COR", "GAL", "EF", "FIL"]):
+            if not re.match(r"^\s*[1-9]", l) and "CANCIÓN" not in l.upper():
+                lectura_cab = l.strip()
+                break
 
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
@@ -126,7 +126,6 @@ def procesar_texto_plano_reunion(texto_usuario):
         if match_mins:
             mins_str = match_mins.group(0)
             
-            # BLINDAJE UNIVERSAL DE TESOROS 1 Y 2: Cortamos todo rastro de texto después de los minutos de forma estricta
             if info["seccion"] == "Tesoros" and num_punto in ["1", "2"]:
                 pos_m = texto_completo.find(mins_str)
                 titulo_final_t = texto_completo[:pos_m].strip()
@@ -154,15 +153,13 @@ def procesar_texto_plano_reunion(texto_usuario):
             "seccion": seccion_filtrado
         }
         
-    return fecha_cab, lectura_cab, materias_detectadas
+    return lectura_cab, materias_detectadas
 
-# Enlace directo con la interfaz baja
 pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
     "🚀 Fabricador de Folletos", 
     "📋 Historial Guardado",
     "👥 Gestión de Hermanos"
 ])
-
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
     
@@ -184,15 +181,14 @@ with pestana_programa:
 
     boton_armar_pdf = st.button("⚙️ Procesar Datos para Asignación (Paso 1)", use_container_width=True)
 
-    f_jw, l_jw, materias_dinamicas = procesar_texto_plano_reunion(texto_jw_entrada)
+    # El procesador ahora nos extrae de forma elástica la lectura de las perlas espirituales
+    l_jw, materias_dinamicas = procesar_texto_plano_reunion(texto_jw_entrada)
 
     st.markdown("---")
 
-    f_final = f_jw if texto_jw_entrada.strip() else (semana_seleccionada if semana_seleccionada else "14-20 de septiembre")
-    l_final = l_jw if texto_jw_entrada.strip() else f"LECTURA DE {mes_seleccionado}"
-
-    f_cab_clean = str(f_final).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
-    l_cab_clean = str(l_final).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
+    # ENLAZADO DIRECTO: Forzamos a que el sistema use de forma obligatoria el mes y el rango ingresados en los campos manuales
+    f_cab_clean = str(semana_seleccionada if semana_seleccionada else "14-20 de septiembre").strip()
+    l_cab_clean = str(l_jw if texto_jw_entrada.strip() else f"LECTURA DE {mes_seleccionado}").strip()
 
     st.subheader(f"📅 Planificación de la Semana: {f_cab_clean}")
     st.info(f"📖 Texto Bíblico Extraído: **{l_cab_clean}**")
