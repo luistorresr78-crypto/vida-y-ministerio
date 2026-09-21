@@ -52,7 +52,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ADAPTATIVO CON INTERCEPTOR QUIRÚRGICO DE FRASES ---
+# --- PROCESADOR ADAPTATIVO CON RECORTADOR ESTRICTO DE VIDA CRISTIANA ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
@@ -60,7 +60,7 @@ def procesar_texto_plano_reunion(texto_usuario):
         
     texto_limpio_global = texto_usuario.replace("\r", "\n")
     
-    # INTERCEPCIÓN QUIRÚRGICA: Forzamos la separación física del Punto 7 y 8 cortando antes de sus frases iniciales reales
+    # Intercepción elástica de asignaciones consecutivas
     texto_sano = re.sub(r"(\(\s*4\s*mins\s*\.?\)\s*|\b)Converse con su estudiante", r"\n7. Haga discípulos (4 mins.) Converse con su estudiante", texto_limpio_global)
     texto_sano = re.sub(r"El autocontrol nos ayuda a obedecer", r"\n8. El autocontrol nos ayuda a obedecer", texto_sano)
     texto_sano = re.sub(r"Logros de la organización", r"\n9. Logros de la organización", texto_sano)
@@ -72,7 +72,6 @@ def procesar_texto_plano_reunion(texto_usuario):
     for lc in lineas_crudas:
         txt_l = lc.strip()
         if not txt_l: continue
-        # Limpieza estricta de sub-preguntas arqueológicas del portapapeles para evitar suplantaciones
         if "PRUEBAS ARQUEOLÓGICAS" in txt_l.upper() or "RESPUESTA" in txt_l.upper() or "¿QUÉ PERLAS" in txt_l.upper():
             continue
         lineas.append(txt_l)
@@ -80,7 +79,6 @@ def procesar_texto_plano_reunion(texto_usuario):
     fecha_cab = "14-20 de septiembre"
     lectura_cab = "JEREMÍAS 34, 35"
     
-    # Saneamiento de cabecera: Filtramos palabras del navegador web como "español" o "LEER EN"
     lineas_cab = [l for l in lineas if "ESPAÑOL" not in l.lower() and "LEER" not in l.upper() and not re.match(r"^\s*[1-9]", l) and "CANCIÓN" not in l.upper()]
     if len(lineas_cab) > 0:
         fecha_cab = lineas_cab[0].strip()
@@ -113,7 +111,6 @@ def procesar_texto_plano_reunion(texto_usuario):
             }
         else:
             if ultimo_punto and ultimo_punto in puntos_crudos:
-                # RECORTE DE REFERENCIAS LARGAS: Barremos los párrafos explicativos gigantes de Tesoros 1 y 2
                 if puntos_crudos[ultimo_punto]["seccion"] == "Tesoros" and ultimo_punto in ["1", "2"]:
                     if any(p in linea_up for p in ["MUCHOS", "LOS RECABITAS", "JEHOVÁ RECOMPENSÓ", "PREGÚNTESE", "IMAGEN DEL VIDEO"]):
                         continue
@@ -124,7 +121,6 @@ def procesar_texto_plano_reunion(texto_usuario):
     for num_punto, info in puntos_crudos.items():
         texto_completo = " ".join(info["lineas"]).strip()
         
-        # Filtramos la marca de tiempo para armar el formato de referencia corta elegante
         match_mins = re.search(r"\(\s*(\d+\s*min[s]?\.?)\s*\)", texto_completo)
         
         seccion_filtrado = info["seccion"]
@@ -134,8 +130,20 @@ def procesar_texto_plano_reunion(texto_usuario):
         if match_mins:
             mins_str = match_mins.group(0)
             titulo_limpio_con_ref = texto_completo.replace(mins_str, "").replace("  ", " ").strip()
-            # Quitamos duplicados accidentales del Punto 7 si se inyectaron dos veces
             titulo_limpio_con_ref = titulo_limpio_con_ref.replace("7. Haga discípulos", "").strip()
+            
+            # LUIS: REGLA DE CORTE SOLICITADA PARA NUESTRA VIDA CRISTIANA
+            if info["seccion"] == "Vida":
+                pos_mins = texto_completo.find(mins_str)
+                texto_desde_mins = texto_completo[pos_mins:]
+                # Buscamos el primer punto que aparezca inmediatamente después de los minutos entre paréntesis
+                match_primer_punto = re.search(r"\.", texto_desde_mins)
+                if match_primer_punto:
+                    pos_punto_real = pos_mins + match_primer_punto.start()
+                    # Recortamos el texto de forma estricta hasta ese primer punto
+                    texto_completo = texto_completo[:pos_punto_real + 1].strip()
+                    titulo_limpio_con_ref = texto_completo.replace(mins_str, "").replace("  ", " ").strip()
+            
             texto_formateado = f"<b>{titulo_limpio_con_ref}</b><br/><font size=9 color='#4A5568'>{mins_str}</font>"
         else:
             texto_formateado = f"<b>{texto_completo}</b>"
