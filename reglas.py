@@ -73,13 +73,11 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
 def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     nombre_pdf = "reunion_actual.pdf"
     
-    # COMPRESIÓN DE HOJA: Ajustamos los márgenes a 24 puntos (borde más delgado) para maximizar el espacio útil vertical
     doc = SimpleDocTemplate(
         nombre_pdf, pagesize=letter,
         rightMargin=24, leftMargin=24, topMargin=24, bottomMargin=24
     )
     
-    # Estilos Tipográficos compactados para evitar desbordes
     est_fecha = ParagraphStyle('EF', fontName='Helvetica-Bold', fontSize=12, leading=14, textColor=colors.HexColor("#2D3748"))
     est_lectura = ParagraphStyle('EL', fontName='Helvetica-Bold', fontSize=11, leading=13, textColor=colors.HexColor("#1A365D"))
     est_letra_blank = ParagraphStyle('ELB', fontName='Helvetica-Bold', fontSize=10, textColor=colors.white, alignment=0)
@@ -93,15 +91,9 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
 
     elementos = []
     
-    # --- 1. CABECERA PRINCIPAL SANADA ---
-    # Interceptamos si JW.org inyectó la palabra "español" accidentalmente y restauramos el rango de fechas real
+    # --- 1. CABECERA PRINCIPAL PURA: Estampa directo lo que venga de las cajas manuales ---
     texto_fecha = str(semana_act).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
     texto_lectura = str(mes_activo).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
-    
-    if "ESPAÑOL" in texto_fecha.upper() or len(texto_fecha) < 4:
-        texto_fecha = "14-20 de septiembre"
-    if "ESPAÑOL" in texto_lectura.upper() or len(texto_lectura) < 4:
-        texto_lectura = "JEREMÍAS 34, 35"
     
     cab_izq = [
         Paragraph(f"<b>{texto_fecha}</b>", est_fecha),
@@ -110,14 +102,14 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     presi = str(asignados.get("presidente", "Por asignar")).strip()
     cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    t_presi = Table(cab_der, colWidths=[65, 145])
+    t_presi = Table(cab_der, colWidths=[60, 110])
     t_presi.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LINEBELOW', (1,0), (1,0), 0.75, colors.HexColor("#4A5568")),
         ('BOTTOMPADDING', (0,0), (-1,-1), 2)
     ]))
     
-    t_principal = Table([[cab_izq, t_presi]], colWidths=[344, 220])
+    t_principal = Table([[cab_izq, t_presi]], colWidths=[370, 170])
     t_principal.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 6)
@@ -131,7 +123,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         Paragraph("", est_cab_tit),
         Paragraph(f"{ora_ini}", est_hnos)
     ]
-    t_c1 = Table([datos_cancion_1], colWidths=[200, 144, 220])
+    t_c1 = Table([datos_cancion_1], colWidths=[370, 10, 160])
     t_c1.setStyle(TableStyle([
         ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
         ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
@@ -139,7 +131,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE')
     ]))
     elementos.append(t_c1)
-    elementos.append(Spacer(1, 6)) # Espaciado reducido para blindar la hoja única
+    elementos.append(Spacer(1, 6))
 
     secciones_mapeadas = {
         "Tesoros": {"titulo": "TESOROS DE LA BIBLIA", "color": "#3A7885", "estilo_t": est_t_tesoros},
@@ -148,6 +140,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     }
     
     seccion_actual = ""
+
 
     # --- 3. BUCLE PRINCIPAL CON UNIFICADOR DE BARRA AZUL DE LA LECTURA ---
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
