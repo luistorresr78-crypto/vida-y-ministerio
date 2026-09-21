@@ -52,16 +52,15 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ADAPTATIVO CON ROMPEDOR NUMÉRICO CIEGO ---
+# --- PROCESADOR ADAPTATIVO SANO CORREGIDO ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
         return "14-20 de septiembre", "JEREMÍAS 34, 35", materias_detectadas
         
-    # Pre-vaciado: Reemplazamos espacios raros y saltos de carro extraños del portapapeles
     texto_limpio_global = texto_usuario.replace("\r", "\n")
     
-    # ROMPEDOR CIEGO: Si detecta un número del 4 al 10 con un punto que NO esté dentro de paréntesis, le inyecta un salto de línea forzado
+    # ROMPEDOR CIEGO: Inyecta un salto de línea forzado antes de los números de punto para romper el amontonamiento
     texto_sano = re.sub(r"(?<!\()\b([4-9]|10)\.\s+", r"\n\1. ", texto_limpio_global)
     
     lineas_crudas = texto_sano.split("\n")
@@ -70,10 +69,11 @@ def procesar_texto_plano_reunion(texto_usuario):
     fecha_cab = "14-20 de septiembre"
     lectura_cab = "JEREMÍAS 34, 35"
     
-    if len(lineas) > 0 and any(c.isdigit() for c in lineas):
-        fecha_cab = lineas.strip()
-    if len(lineas) > 1 and ("JER" in lineas.upper() or "3" in lineas):
-        lectura_cab = lineas.strip()
+    if len(lineas) > 0 and any(c.isdigit() for c in lineas[0]):
+        fecha_cab = lineas[0].strip()
+    # CORRECCIÓN DE SINTAXIS: Evaluamos el renglón individual con .upper() para evitar el AttributeError
+    if len(lineas) > 1 and ("JER" in lineas[1].upper() or "3" in lineas[1]):
+        lectura_cab = lineas[1].strip()
 
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
@@ -89,7 +89,6 @@ def procesar_texto_plano_reunion(texto_usuario):
                 seccion_actual_texto = "Vida"
                 continue
             
-        # Capturador elástico por borde izquierdo estricto
         match_punto = re.match(r"^\s*([1-9]|10)\.\s*(.*)", linea)
         if match_punto:
             ultimo_punto = match_punto.group(1)
