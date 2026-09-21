@@ -52,15 +52,15 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ADAPTATIVO CON INTERCEPTOR QUIRÚRGICO DE FRASES ---
+# --- PROCESADOR ADAPTATIVO UNIVERSAL POR MINUTOS ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
-        return "14-20 de septiembre", "JEREMÍAS 34, 35", materias_detectadas
+        return "", "", materias_detectadas
         
     texto_limpio_global = texto_usuario.replace("\r", "\n")
     
-    # Intercepción elástica: Forzamos la separación del Punto 7 y puntos de Vida Cristiana
+    # Intercepción elástica de asignaciones consecutivas
     texto_sano = re.sub(r"(\(\s*4\s*mins\s*\.?\)\s*|\b)Converse con su estudiante", r"\n7. Haga discípulos (4 mins.) Converse con su estudiante", texto_limpio_global)
     texto_sano = re.sub(r"El autocontrol nos ayuda a obedecer", r"\n8. El autocontrol nos ayuda a obedecer", texto_sano)
     texto_sano = re.sub(r"Logros de la organización", r"\n9. Logros de la organización", texto_sano)
@@ -76,8 +76,8 @@ def procesar_texto_plano_reunion(texto_usuario):
             continue
         lineas.append(txt_l)
             
-    fecha_cab = "14-20 de septiembre"
-    lectura_cab = "JEREMÍAS 34, 35"
+    fecha_cab = ""
+    lectura_cab = ""
     
     lineas_cab = [l for l in lineas if "ESPAÑOL" not in l.lower() and "LEER" not in l.upper() and not re.match(r"^\s*[1-9]", l) and "CANCIÓN" not in l.upper()]
     if len(lineas_cab) > 0:
@@ -111,9 +111,6 @@ def procesar_texto_plano_reunion(texto_usuario):
             }
         else:
             if ultimo_punto and ultimo_punto in puntos_crudos:
-                if puntos_crudos[ultimo_punto]["seccion"] == "Tesoros" and ultimo_punto in ["1", "2"]:
-                    if any(p in linea_up for p in ["MUCHOS", "LOS RECABITAS", "JEHOVÁ RECOMPENSÓ", "PREGÚNTESE", "IMAGEN DEL VIDEO"]):
-                        continue
                 if "CANCIÓN" in linea_up or "CANCION" in linea_up:
                     continue
                 puntos_crudos[ultimo_punto]["lineas"].append(linea)
@@ -123,26 +120,31 @@ def procesar_texto_plano_reunion(texto_usuario):
         
         match_mins = re.search(r"\(\s*(\d+\s*min[s]?\.?)\s*\)", texto_completo)
         seccion_filtrado = info["seccion"]
-        
         if num_punto == "3" or "LECTURA DE LA BIBLIA" in texto_completo.upper():
             seccion_filtrado = "Lectura"
             
         if match_mins:
             mins_str = match_mins.group(0)
-            titulo_limpio_con_ref = texto_completo.replace(mins_str, "").replace("  ", " ").strip()
-            titulo_limpio_con_ref = titulo_limpio_con_ref.replace("7. Haga discípulos", "").strip()
             
-            # Regala el corte solicitado para Nuestra Vida Cristiana
-            if info["seccion"] == "Vida":
-                pos_mins = texto_completo.find(mins_str)
-                texto_desde_mins = texto_completo[pos_mins:]
-                match_primer_punto = re.search(r"\.", texto_desde_mins)
-                if match_primer_punto:
-                    pos_punto_real = pos_mins + match_primer_punto.start()
-                    texto_completo = texto_completo[:pos_punto_real + 1].strip()
-                    titulo_limpio_con_ref = texto_completo.replace(mins_str, "").replace("  ", " ").strip()
-            
-            texto_formateado = f"<b>{titulo_limpio_con_ref}</b><br/><font size=9 color='#4A5568'>{mins_str}</font>"
+            # BLINDAJE UNIVERSAL DE TESOROS 1 Y 2: Cortamos todo rastro de texto después de los minutos de forma estricta
+            if info["seccion"] == "Tesoros" and num_punto in ["1", "2"]:
+                pos_m = texto_completo.find(mins_str)
+                titulo_final_t = texto_completo[:pos_m].strip()
+                texto_formateado = f"<b>{titulo_final_t}</b><br/><font size=9 color='#4A5568'>{mins_str}</font>"
+            else:
+                titulo_limpio_con_ref = texto_completo.replace(mins_str, "").replace("  ", " ").strip()
+                titulo_limpio_con_ref = titulo_limpio_con_ref.replace("7. Haga discípulos", "").strip()
+                
+                if info["seccion"] == "Vida":
+                    pos_mins = texto_completo.find(mins_str)
+                    texto_desde_mins = texto_completo[pos_mins:]
+                    match_primer_punto = re.search(r"\.", texto_desde_mins)
+                    if match_primer_punto:
+                        pos_punto_real = pos_mins + match_primer_punto.start()
+                        texto_completo = texto_completo[:pos_punto_real + 1].strip()
+                        titulo_limpio_con_ref = texto_completo.replace(mins_str, "").replace("  ", " ").strip()
+                
+                texto_formateado = f"<b>{titulo_limpio_con_ref}</b><br/><font size=9 color='#4A5568'>{mins_str}</font>"
         else:
             texto_formateado = f"<b>{texto_completo}</b>"
             
@@ -154,11 +156,13 @@ def procesar_texto_plano_reunion(texto_usuario):
         
     return fecha_cab, lectura_cab, materias_detectadas
 
+# Enlace directo con la interfaz baja
 pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
     "🚀 Fabricador de Folletos", 
     "📋 Historial Guardado",
     "👥 Gestión de Hermanos"
 ])
+
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
     
