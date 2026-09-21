@@ -52,7 +52,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ELÁSTICO SANADO ---
+# --- PROCESADOR ELÁSTICO ADAPTATIVO CON SEGUIMIENTO SANO ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
@@ -111,7 +111,6 @@ def procesar_texto_plano_reunion(texto_usuario):
             else:
                 texto_formateado = f"<b>{titulo_limpio}</b>"
                 
-        # CORRECCIÓN DE RAÍZ: Evaluamos contra la variable dinámica, no contra el texto rígido "7"
         elif info["seccion"] == "Vida" and num_punto == primer_punto_vida_detectado:
             if texto_mins:
                 if ref_extraida:
@@ -137,13 +136,11 @@ def procesar_texto_plano_reunion(texto_usuario):
         
     return fecha_cab, lectura_cab, materias_detectadas
 
-# Conecta directo con tus pestañas de abajo
 pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
     "🚀 Fabricador de Folletos", 
     "📋 Historial Guardado",
     "👥 Gestión de Hermanos"
 ])
-
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
     
@@ -201,7 +198,6 @@ with pestana_programa:
     
     asignados_en_vivo = {"presidente": presidente, "oracion_inicial": oracion_inicial}
 
-    # Bucle infinito y elástico para dibujar tantas materias como JW.org detecte
     for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias_dinamicas[k]
         tipo_seccion = m.get("seccion", "Tesoros")
@@ -229,7 +225,7 @@ with pestana_programa:
         if texto_editado_usuario != titulo_preview:
             if "<br/>" in titulo_bruto:
                 partes_brutas = titulo_bruto.split("<br/>")
-                subtitulo_plomo = partes_brutas if len(partes_brutas) > 1 else ""
+                subtitulo_plomo = partes_brutas[1] if len(partes_brutas) > 1 else ""
                 m["titulo"] = f"<b>{texto_editado_usuario}</b><br/>{subtitulo_plomo}"
             else:
                 m["titulo"] = f"<b>{texto_editado_usuario}</b>"
@@ -258,7 +254,7 @@ with pestana_programa:
         btn_grabar_semana = st.button("💾 Guardar Semana e Inyectar Nombres", use_container_width=True, type="primary")
         if btn_grabar_semana:
             if not f_cab_clean or f_cab_clean == "Por definir":
-                st.error("Por favor ingrese el rango de la semana o procese la Guía de JW.org antes de guardar.")
+                st.error("Por favor ingrese el rango de la semana antes de guardar.")
             else:
                 historial_actual = cargar_historial()
                 if mes_seleccionado not in historial_actual:
