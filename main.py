@@ -52,26 +52,30 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ELÁSTICO CON INTERCEPTOR DE CANCIONES DINÁMICO ---
+# --- PROCESADOR ADAPTATIVO CON SEPARADOR DE RENGLONES ULTRA-SENSIBLE ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
-        return "7-13 de septiembre", "JEREMÍAS 32, 33", materias_detectadas
+        return "14-20 de septiembre", "JEREMÍAS 34, 35", materias_detectadas
         
-    lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
-    
     fecha_cab = "14-20 de septiembre"
     lectura_cab = "JEREMÍAS 34, 35"
     
-    # Intentamos capturar la fecha y lectura reales de las primeras dos líneas del portapapeles
-    if len(lineas) > 0 and any(chr.isdigit() for chr in lineas[0]):
-        fecha_cab = lineas[0]
-    if len(lineas) > 1 and "JER" in lineas[1].upper():
+    # Normalización: Forzamos la separación si el portapapeles unió el Punto 7 al final del Punto 6
+    texto_sano = re.sub(r"(\.\s*)\b(7\.\s*Haga discípulos)", r"\1\n\2", texto_usuario)
+    texto_sano = re.sub(r"(\.\s*)\b(8\.\s*)", r"\1\n\2", texto_sano)
+    
+    lineas = [l.strip() for l in texto_sano.split("\n") if l.strip()]
+    
+    if len(lineas) > 1:
+        fecha_cab = lineas[1] if any(chr.isdigit() for chr in lineas[1]) else lineas[0]
+    if len(lineas) > 2 and ("JER" in lineas[2].upper() or "3" in lineas[2]):
+        lectura_cab = lineas[2]
+    elif len(lineas) > 1 and ("JER" in lineas[1].upper() or "3" in lineas[1]):
         lectura_cab = lineas[1]
-        
+
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
-    primer_punto_vida_detectado = None
 
     puntos_crudos = {}
     for linea in lineas:
@@ -80,22 +84,18 @@ def procesar_texto_plano_reunion(texto_usuario):
         if "SEAMOS MEJORES MAESTROS" in linea_up or "HAGA DISCÍPULOS" in linea_up:
             seccion_actual_texto = "Maestros"
             continue
-        # BLINDAJE UNIVERSAL: Si lee la palabra NUESTRA VIDA o cualquier CANCIÓN intermedia (121, 128, etc.), cambia el carril
         elif "NUESTRA VIDA CRISTIANA" in linea_up or "CANCIÓN" in linea_up or "CANCION" in linea_up:
-            # Evitamos que la canción de apertura (Punto 1 o inicio) mueva el carril antes de tiempo
-            if ultimo_punto and int(ultimo_punto) >= 3:
+            if ultimo_punto and int(ultimo_punto) >= 4:
                 seccion_actual_texto = "Vida"
                 continue
             
-        match_punto = re.match(r"^([1-9]|10)\.\s*(.*)", linea)
+        match_punto = re.match(r"^\s*([1-9]|10)\.\s*(.*)", linea)
         if match_punto:
             ultimo_punto = match_punto.group(1)
             puntos_crudos[ultimo_punto] = {
                 "lineas": [match_punto.group(2)],
                 "seccion": seccion_actual_texto
             }
-            if seccion_actual_texto == "Vida" and primer_punto_vida_detectado is None:
-                primer_punto_vida_detectado = ultimo_punto
         else:
             if ultimo_punto and ultimo_punto in puntos_crudos:
                 puntos_crudos[ultimo_punto]["lineas"].append(linea)
@@ -103,52 +103,28 @@ def procesar_texto_plano_reunion(texto_usuario):
     for num_punto, info in puntos_crudos.items():
         texto_completo = " ".join(info["lineas"]).strip()
         
-        match_mins = re.search(r"\(\s*(\d+\s*min[s]?\.?)\s*\)", texto_completo)
-        texto_mins = f"({match_mins.group(1)})" if match_mins else ""
-        titulo_limpio = re.sub(r"\s*\(\s*\d+\s*min[s]?\.?\s*\).*", "", texto_completo).strip()
-        match_ref = re.search(r"\(\s*(\d+\s*min[s]?\.?)\s*\)\s*\.?\s*(.*)", texto_completo)
-        ref_extraida = match_ref.group(2).strip() if match_ref else ""
+        # Recogemos minutos y texto de corrido para respetar las variaciones semanales exactas de Luis
+        m_html = f"<b>{texto_completo}</b>"
         
         seccion_filtrado = info["seccion"]
-        if "LECTURA DE LA BIBLIA" in texto_completo.upper():
+        if "LECTURA DE LA BIBLIA" in texto_completo.upper() or num_punto == "3":
             seccion_filtrado = "Lectura"
-        
-        if info["seccion"] == "Tesoros" and num_punto in ["1", "2"]:
-            if texto_mins:
-                texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
-            else:
-                texto_formateado = f"<b>{titulo_limpio}</b>"
-                
-        elif info["seccion"] == "Vida" and num_punto == primer_punto_vida_detectado:
-            if texto_mins:
-                if ref_extraida:
-                    pos_punto = ref_extraida.find(".")
-                    ref_recortada = ref_extraida[:pos_punto+1].strip() if pos_punto != -1 else ref_extraida
-                    texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins} {ref_recortada}</font>"
-                else:
-                    texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
-            else:
-                texto_formateado = f"<b>{titulo_limpio}</b>"
-                
-        else:
-            if texto_mins:
-                texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins} {ref_extraida}</font>" if ref_extraida else f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
-            else:
-                texto_formateado = f"<b>{texto_completo}</b>"
             
         materias_detectadas[num_punto] = {
-            "titulo": texto_formateado,
+            "titulo": m_html,
             "minutos": "5",
             "seccion": seccion_filtrado
         }
         
     return fecha_cab, lectura_cab, materias_detectadas
 
+# Enlace directo con la interfaz baja
 pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
     "🚀 Fabricador de Folletos", 
     "📋 Historial Guardado",
     "👥 Gestión de Hermanos"
 ])
+
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
     
