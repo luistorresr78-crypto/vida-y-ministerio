@@ -24,27 +24,34 @@ def guardar_historial(datos):
     with open(FICHERO_HISTORIAL, "w", encoding="utf-8") as f:
         json.dump(datos, f, ensure_ascii=False, indent=4)
 
+# --- REPARACIÓN DE RAÍZ: Prioridad absoluta al archivo hermanos.json existente para no sobreescribir tus 80 publicadores ---
 def cargar_hermanos_iniciales():
-    if not os.path.exists(FICHERO_HERMANOS):
-        hermanos_base = [
-            {"nombre": "Luis", "apellido": "Torres", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
-            {"nombre": "Sergio", "apellido": "Coordinador", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
-            {"nombre": "Jonathan", "apellido": "Coordinador", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]}
-        ]
-        with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
-            json.dump(hermanos_base, f, ensure_ascii=False, indent=4)
-            
-    with open(FICHERO_HERMANOS, "r", encoding="utf-8") as f:
-        datos_sucios = json.load(f)
-        lista_limpia = []
-        for h in datos_sucios:
-            lista_limpia.append({
-                "nombre": h.get("nombre", "").strip().title(),
-                "apellido": h.get("apellido", "").strip().title(),
-                "sexo": h.get("sexo", "Varón"),
-                "aptitudes": h.get("aptitudes", [])
-            })
-        return lista_limpia
+    if os.path.exists(FICHERO_HERMANOS):
+        try:
+            with open(FICHERO_HERMANOS, "r", encoding="utf-8") as f:
+                datos_existentes = json.load(f)
+                if isinstance(datos_existentes, list) and len(datos_existentes) > 0:
+                    lista_limpia = []
+                    for h in datos_existentes:
+                        lista_limpia.append({
+                            "nombre": h.get("nombre", "").strip().title(),
+                            "apellido": h.get("apellido", "").strip().title(),
+                            "sexo": h.get("sexo", "Varón"),
+                            "aptitudes": h.get("aptitudes", [])
+                        })
+                    return lista_limpia
+        except:
+            pass
+
+    # Si por alguna razon el archivo no existiera o estuviera corrupto, recien ahi monta la fabrica
+    hermanos_base = [
+        {"nombre": "Luis", "apellido": "Torres", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
+        {"nombre": "Sergio", "apellido": "Coordinador", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
+        {"nombre": "Jonathan", "apellido": "Coordinador", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]}
+    ]
+    with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
+        json.dump(hermanos_base, f, ensure_ascii=False, indent=4)
+    return hermanos_base
 
 lista_hermanos = cargar_hermanos_iniciales()
 
@@ -60,7 +67,6 @@ def procesar_texto_plano_reunion(texto_usuario):
         
     texto_limpio_global = texto_usuario.replace("\r", "\n")
     
-    # Intercepción elástica de asignaciones consecutivas
     texto_sano = re.sub(r"(\(\s*4\s*mins\s*\.?\)\s*|\b)Converse con su estudiante", r"\n7. Haga discípulos (4 mins.) Converse con su estudiante", texto_limpio_global)
     texto_sano = re.sub(r"El autocontrol nos ayuda a obedecer", r"\n8. El autocontrol nos ayuda a obedecer", texto_sano)
     texto_sano = re.sub(r"Logros de la organización", r"\n9. Logros de la organización", texto_sano)
@@ -78,7 +84,6 @@ def procesar_texto_plano_reunion(texto_usuario):
             
     lectura_cab = "JEREMÍAS 32, 33"
     
-    # Buscamos la línea que contenga la lectura de la semana en mayúsculas
     for l in lineas:
         if any(libro in l.upper() for libro in ["JER", "MAT", "MAR", "LUC", "JUA", "HECH", "ROM", "COR", "GAL", "EF", "FIL"]):
             if not re.match(r"^\s*[1-9]", l) and "CANCIÓN" not in l.upper():
@@ -153,13 +158,15 @@ def procesar_texto_plano_reunion(texto_usuario):
             "seccion": seccion_filtrado
         }
         
-    return lectura_cab, materias_detectadas
+    return l_cab_clean, materias_detectadas
 
+# Enlace directo con la interfaz baja
 pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
     "🚀 Fabricador de Folletos", 
     "📋 Historial Guardado",
     "👥 Gestión de Hermanos"
 ])
+
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
     
