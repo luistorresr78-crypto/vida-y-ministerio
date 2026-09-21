@@ -52,6 +52,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
+# --- PROCESADOR ELÁSTICO COMPLETO: YA NO DEPENDE DE NÚMEROS FIJOS ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
@@ -64,11 +65,13 @@ def procesar_texto_plano_reunion(texto_usuario):
     
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
+    primer_punto_vida_detectado = None
 
     puntos_crudos = {}
     for linea in lineas:
         linea_up = linea.upper()
         
+        # Switcheo elástico por banderas de títulos oficiales de JW.org
         if "SEAMOS MEJORES MAESTROS" in linea_up or "HAGA DISCÍPULOS" in linea_up:
             seccion_actual_texto = "Maestros"
             continue
@@ -84,6 +87,8 @@ def procesar_texto_plano_reunion(texto_usuario):
                 "lineas": [match_punto.group(2)],
                 "seccion": seccion_actual_texto
             }
+            if seccion_actual_texto == "Vida" and primer_punto_vida_detectado is None:
+                primer_punto_vida_detectado = ultimo_punto
         else:
             if ultimo_punto and ultimo_punto in puntos_crudos:
                 puntos_crudos[ultimo_punto]["lineas"].append(linea)
@@ -94,20 +99,23 @@ def procesar_texto_plano_reunion(texto_usuario):
         match_mins = re.search(r"\(\s*(\d+\s*min[s]?\.?)\s*\)", texto_completo)
         texto_mins = f"({match_mins.group(1)})" if match_mins else ""
         titulo_limpio = re.sub(r"\s*\(\s*\d+\s*min[s]?\.?\s*\).*", "", texto_completo).strip()
-        match_ref = re.search(r"\(\s*\d+\s*min[s]?\.?\s*\)\s*\.?\s*(.*)", texto_completo)
-        ref_extraida = match_ref.group(1).strip() if match_ref else ""
+        match_ref = re.search(r"\(\s*(\d+\s*min[s]?\.?)\s*\)\s*\.?\s*(.*)", texto_completo)
+        ref_extraida = match_ref.group(2).strip() if match_ref else ""
         
+        # DETECTOR INTELIGENTE DE LECTURA: Si el texto contiene la palabra, le asigna la aptitud sin importar el número
         seccion_filtrado = info["seccion"]
-        if num_punto == "3":
+        if "LECTURA DE LA BIBLIA" in texto_completo.upper():
             seccion_filtrado = "Lectura"
         
+        # PREFERENCIA 1: Primeras intervenciones de Tesoros, formato compacto
         if info["seccion"] == "Tesoros" and num_punto in ["1", "2"]:
             if texto_mins:
                 texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
             else:
                 texto_formateado = f"<b>{titulo_limpio}</b>"
                 
-        elif info["seccion"] == "Vida" and num_punto == "7":
+        # PREFERENCIA 2: Primer punto dinámico de la sección Vida Cristiana, recorte al primer punto
+        elif info["seccion"] == "Vida" and num_punto == primer_punto_vida_detectado:
             if texto_mins:
                 if ref_extraida:
                     pos_punto = ref_extraida.find(".")
@@ -118,6 +126,7 @@ def procesar_texto_plano_reunion(texto_usuario):
             else:
                 texto_formateado = f"<b>{titulo_limpio}</b>"
                 
+        # PREFERENCIA 3: Todos los demás puntos dinámicos (4, 5, 6, 7, 8, 9 de corrido)
         else:
             if texto_mins:
                 texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins} {ref_extraida}</font>" if ref_extraida else f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
@@ -194,6 +203,7 @@ with pestana_programa:
     
     asignados_en_vivo = {"presidente": presidente, "oracion_inicial": oracion_inicial}
 
+    # Bucle infinito y elástico para dibujar tantas materias como JW.org detecte
     for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias_dinamicas[k]
         tipo_seccion = m.get("seccion", "Tesoros")
@@ -221,7 +231,7 @@ with pestana_programa:
         if texto_editado_usuario != titulo_preview:
             if "<br/>" in titulo_bruto:
                 partes_brutas = titulo_bruto.split("<br/>")
-                subtitulo_plomo = partes_brutas[1] if len(partes_brutas) > 1 else ""
+                subtitulo_plomo = partes_brutas if len(partes_brutas) > 1 else ""
                 m["titulo"] = f"<b>{texto_editado_usuario}</b><br/>{subtitulo_plomo}"
             else:
                 m["titulo"] = f"<b>{texto_editado_usuario}</b>"
@@ -291,13 +301,12 @@ with pestana_programa:
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos y habilitar el PDF.")
 
-# --- PESTAÑA DEL HISTORIAL EN TIEMPO REAL CON BORRADO (PUNTO 4 REPARADO) ---
+# --- PESTAÑA DEL HISTORIAL EN TIEMPO REAL CON BORRADO ---
 with pestana_historial:
     st.header("📋 Historial de Asignaciones Registradas en la Bitácora")
     historial_visual = cargar_historial()
     
     if historial_visual:
-        # LUIS: Este es tu nuevo botón de vaciado de bitácora
         btn_borrar_todo_el_historial = st.button("🚨 BORRAR TODO EL HISTORIAL PERMANENTE", type="primary", use_container_width=True)
         if btn_borrar_todo_el_historial:
             guardar_historial({})
