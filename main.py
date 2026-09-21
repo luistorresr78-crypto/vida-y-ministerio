@@ -52,7 +52,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ELÁSTICO COMPLETO: YA NO DEPENDE DE NÚMEROS FIJOS ---
+# --- PROCESADOR ELÁSTICO SANADO ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
@@ -71,7 +71,6 @@ def procesar_texto_plano_reunion(texto_usuario):
     for linea in lineas:
         linea_up = linea.upper()
         
-        # Switcheo elástico por banderas de títulos oficiales de JW.org
         if "SEAMOS MEJORES MAESTROS" in linea_up or "HAGA DISCÍPULOS" in linea_up:
             seccion_actual_texto = "Maestros"
             continue
@@ -102,19 +101,17 @@ def procesar_texto_plano_reunion(texto_usuario):
         match_ref = re.search(r"\(\s*(\d+\s*min[s]?\.?)\s*\)\s*\.?\s*(.*)", texto_completo)
         ref_extraida = match_ref.group(2).strip() if match_ref else ""
         
-        # DETECTOR INTELIGENTE DE LECTURA: Si el texto contiene la palabra, le asigna la aptitud sin importar el número
         seccion_filtrado = info["seccion"]
         if "LECTURA DE LA BIBLIA" in texto_completo.upper():
             seccion_filtrado = "Lectura"
         
-        # PREFERENCIA 1: Primeras intervenciones de Tesoros, formato compacto
         if info["seccion"] == "Tesoros" and num_punto in ["1", "2"]:
             if texto_mins:
                 texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
             else:
                 texto_formateado = f"<b>{titulo_limpio}</b>"
                 
-        # PREFERENCIA 2: Primer punto dinámico de la sección Vida Cristiana, recorte al primer punto
+        # CORRECCIÓN DE RAÍZ: Evaluamos contra la variable dinámica, no contra el texto rígido "7"
         elif info["seccion"] == "Vida" and num_punto == primer_punto_vida_detectado:
             if texto_mins:
                 if ref_extraida:
@@ -126,7 +123,6 @@ def procesar_texto_plano_reunion(texto_usuario):
             else:
                 texto_formateado = f"<b>{titulo_limpio}</b>"
                 
-        # PREFERENCIA 3: Todos los demás puntos dinámicos (4, 5, 6, 7, 8, 9 de corrido)
         else:
             if texto_mins:
                 texto_formateado = f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins} {ref_extraida}</font>" if ref_extraida else f"<b>{titulo_limpio}</b><br/><font size=9 color='#4A5568'>{texto_mins}</font>"
@@ -141,11 +137,13 @@ def procesar_texto_plano_reunion(texto_usuario):
         
     return fecha_cab, lectura_cab, materias_detectadas
 
+# Conecta directo con tus pestañas de abajo
 pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
     "🚀 Fabricador de Folletos", 
     "📋 Historial Guardado",
     "👥 Gestión de Hermanos"
 ])
+
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
     
