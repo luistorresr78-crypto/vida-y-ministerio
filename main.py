@@ -52,7 +52,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ELÁSTICO ADAPTATIVO CON SEGUIMIENTO SANO ---
+# --- PROCESADOR ELÁSTICO CON INTERCEPTOR DE CANCIONES DINÁMICO ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
@@ -60,9 +60,15 @@ def procesar_texto_plano_reunion(texto_usuario):
         
     lineas = [l.strip() for l in texto_usuario.split("\n") if l.strip()]
     
-    fecha_cab = lineas[0] if len(lineas) > 0 else "7-13 de septiembre"
-    lectura_cab = lineas[1] if len(lineas) > 1 else "JEREMÍAS 32, 33"
+    fecha_cab = "14-20 de septiembre"
+    lectura_cab = "JEREMÍAS 34, 35"
     
+    # Intentamos capturar la fecha y lectura reales de las primeras dos líneas del portapapeles
+    if len(lineas) > 0 and any(chr.isdigit() for chr in lineas[0]):
+        fecha_cab = lineas[0]
+    if len(lineas) > 1 and "JER" in lineas[1].upper():
+        lectura_cab = lineas[1]
+        
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
     primer_punto_vida_detectado = None
@@ -74,9 +80,11 @@ def procesar_texto_plano_reunion(texto_usuario):
         if "SEAMOS MEJORES MAESTROS" in linea_up or "HAGA DISCÍPULOS" in linea_up:
             seccion_actual_texto = "Maestros"
             continue
-        elif "NUESTRA VIDA CRISTIANA" in linea_up or "CANCIÓN 128" in linea_up:
-            seccion_actual_texto = "Vida"
-            if "CANCIÓN 128" in linea_up:
+        # BLINDAJE UNIVERSAL: Si lee la palabra NUESTRA VIDA o cualquier CANCIÓN intermedia (121, 128, etc.), cambia el carril
+        elif "NUESTRA VIDA CRISTIANA" in linea_up or "CANCIÓN" in linea_up or "CANCION" in linea_up:
+            # Evitamos que la canción de apertura (Punto 1 o inicio) mueva el carril antes de tiempo
+            if ultimo_punto and int(ultimo_punto) >= 3:
+                seccion_actual_texto = "Vida"
                 continue
             
         match_punto = re.match(r"^([1-9]|10)\.\s*(.*)", linea)
@@ -148,7 +156,7 @@ with pestana_programa:
     with c_mes:
         mes_seleccionado = st.selectbox("📅 Seleccione el Mes Activo:", ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"], index=8, key="sel_mes_global")
     with c_sem:
-        semana_seleccionada = st.text_input("📆 Ingrese el Rango de la Semana (Ej: 7-13 de septiembre):", placeholder="Escriba la fecha de la semana aquí...", key="sel_sem_global")
+        semana_seleccionada = st.text_input("📆 Ingrese el Rango de la Semana (Ej: 14-20 de septiembre):", placeholder="Escriba la fecha de la semana aquí...", key="sel_sem_global")
 
     st.markdown("---")
     st.markdown("Copia la Guía de Actividades completa desde **JW.org**, pégala abajo y presiona el botón para procesar.")
@@ -166,7 +174,7 @@ with pestana_programa:
 
     st.markdown("---")
 
-    f_final = f_jw if texto_jw_entrada.strip() else (semana_seleccionada if semana_seleccionada else "7-13 de septiembre")
+    f_final = f_jw if texto_jw_entrada.strip() else (semana_seleccionada if semana_seleccionada else "14-20 de septiembre")
     l_final = l_jw if texto_jw_entrada.strip() else f"LECTURA DE {mes_seleccionado}"
 
     f_cab_clean = str(f_final).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
@@ -198,6 +206,7 @@ with pestana_programa:
     
     asignados_en_vivo = {"presidente": presidente, "oracion_inicial": oracion_inicial}
 
+    # Bucle infinito y elástico para dibujar tantas materias como JW.org detecte sin esconder ninguna
     for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias_dinamicas[k]
         tipo_seccion = m.get("seccion", "Tesoros")
@@ -216,6 +225,7 @@ with pestana_programa:
             
         st.markdown(f"**{emoji} Punto {k}**")
         
+        # Cajas mágicas interactivas que te muestran la información real y te permiten modificarla si deseas recortar
         texto_editado_usuario = st.text_input(
             f"Editar información del Punto {k}:", 
             value=titulo_preview, 
