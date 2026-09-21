@@ -52,7 +52,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ADAPTATIVO SANO REPARADO ---
+# --- PROCESADOR ADAPTATIVO POR NUMERACIÓN PURA BLINDADA ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
@@ -60,28 +60,29 @@ def procesar_texto_plano_reunion(texto_usuario):
         
     texto_limpio_global = texto_usuario.replace("\r", "\n")
     
-    # Rompedor ciego: Inyectamos un salto de línea forzado antes de los números oficiales de la reunión
-    texto_sano = re.sub(r"(?<!\()\b([4-9]|10)\.\s+", r"\n\1. ", texto_limpio_global)
+    # Rompedor ciego: Forzamos un salto de línea limpio antes de cualquier número oficial del 1 al 10
+    texto_sano = re.sub(r"(?<!\()\b([1-9]|10)\.\s+", r"\n\1. ", texto_limpio_global)
     
     lineas_crudas = texto_sano.split("\n")
     lineas = []
+    
     for lc in lineas_crudas:
         txt_l = lc.strip()
         if not txt_l: continue
-        # Saneamiento estricto de sub-preguntas intrusas para liberar el Punto 7 real
-        if any(palabra in txt_l.upper() for palabra in ["ARQUEOLÓGICAS", "ARQUEOLOGICAS", "CONFIRMAN", "RESPUESTA"]):
+        # Excluimos de raíz las sub-preguntas internas de las perlas para que no saboteen los puntos oficiales
+        if any(palabra in txt_l.upper() for palabra in ["¿QUÉ PRUEBAS ARQUEOLÓGICAS", "¿QUE PRUEBAS ARQUEOLOGICAS", "RESPUESTA", "PREGÚNTESE", "IMAGEN DEL VIDEO"]):
             continue
         lineas.append(txt_l)
             
     fecha_cab = "14-20 de septiembre"
     lectura_cab = "JEREMÍAS 34, 35"
     
-    if len(lineas) > 0 and any(c.isdigit() for c in lineas[0]):
-        fecha_cab = lineas[0].strip()
-    # REPARACIÓN DE SINTAXIS: Evaluamos el elemento individual con .upper() para evitar el AttributeError
-    if len(lineas) > 1:
-        if "JER" in lineas[1].upper() or "3" in lineas[1]:
-            lectura_cab = lineas[1].strip()
+    # Extraemos de forma segura las dos primeras líneas reales como fecha y lectura bíblica
+    lineas_filtradas_cab = [l for l in lineas if not re.match(r"^\s*([1-9]|10)\.", l) and "CANCIÓN" not in l.upper() and "LEER EN" not in l.upper()]
+    if len(lineas_filtradas_cab) > 0:
+        fecha_cab = lineas_filtradas_cab[0].strip()
+    if len(lineas_filtradas_cab) > 1:
+        lectura_cab = lineas_filtradas_cab[1].strip()
 
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
@@ -89,13 +90,20 @@ def procesar_texto_plano_reunion(texto_usuario):
 
     for linea in lineas:
         linea_up = linea.upper()
+        
+        # Switcheo elástico por banderas estrictas de JW.org
         if "SEAMOS MEJORES MAESTROS" in linea_up or "HAGA DISCÍPULOS" in linea_up:
             seccion_actual_texto = "Maestros"
             continue
         elif "NUESTRA VIDA CRISTIANA" in linea_up:
             seccion_actual_texto = "Vida"
             continue
+        elif "PALABRAS DE CONCLUSIÓN" in linea_up or "PALABRAS DE CONCLUSION" in linea_up:
+            # En cuanto lea la conclusión de la última línea, frena la acumulación de datos
+            ultimo_punto = None
+            continue
             
+        # El capturador numérico puro manda: Si inicia con "X. ", abre casillero sin importar los minutos
         match_punto = re.match(r"^\s*([1-9]|10)\.\s*(.*)", linea)
         if match_punto:
             ultimo_punto = match_punto.group(1)
@@ -105,18 +113,19 @@ def procesar_texto_plano_reunion(texto_usuario):
             }
         else:
             if ultimo_punto and ultimo_punto in puntos_crudos:
-                if puntos_crudos[ultimo_punto]["seccion"] == "Tesoros" and ultimo_punto in ["1", "2"]:
-                    if any(palabra in linea_up for palabra in ["MUCHOS", "LOS RECABITAS", "JEHOVÁ RECOMPENSÓ", "PREGÚNTESE", "IMAGEN DEL VIDEO"]):
-                        continue
+                # Evitamos que se metan las canciones de transición adentro de los bloques de los alumnos
+                if "CANCIÓN" in linea_up or "CANCION" in linea_up:
+                    continue
                 puntos_crudos[ultimo_punto]["lineas"].append(linea)
 
     for num_punto, info in puntos_crudos.items():
         texto_completo = " ".join(info["lineas"]).strip()
         
+        # Buscamos la duración en minutos para formatearla abajo de forma ploma y elegante
         match_mins = re.search(r"\(\s*(\d+\s*min[s]?\.?)\s*\)", texto_completo)
         
         seccion_filtrado = info["seccion"]
-        if "LECTURA DE LA BIBLIA" in texto_completo.upper() or num_punto == "3":
+        if num_punto == "3" or "LECTURA DE LA BIBLIA" in texto_completo.upper():
             seccion_filtrado = "Lectura"
             
         if match_mins:
@@ -140,6 +149,7 @@ pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
     "📋 Historial Guardado",
     "👥 Gestión de Hermanos"
 ])
+
 
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
