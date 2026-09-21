@@ -52,7 +52,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ADAPTATIVO CON FILTRO DE EXCLUSIÓN PERLAS EN REUNIÓN ---
+# --- PROCESADOR ADAPTATIVO SANO REPARADO ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
@@ -68,7 +68,7 @@ def procesar_texto_plano_reunion(texto_usuario):
     for lc in lineas_crudas:
         txt_l = lc.strip()
         if not txt_l: continue
-        # BLINDAJE EXTREMO: Barremos de raíz la sub-pregunta arqueológica del Punto 2 para que no suplante al Punto 7
+        # Saneamiento estricto de sub-preguntas intrusas para liberar el Punto 7 real
         if any(palabra in txt_l.upper() for palabra in ["ARQUEOLÓGICAS", "ARQUEOLOGICAS", "CONFIRMAN", "RESPUESTA"]):
             continue
         lineas.append(txt_l)
@@ -76,10 +76,12 @@ def procesar_texto_plano_reunion(texto_usuario):
     fecha_cab = "14-20 de septiembre"
     lectura_cab = "JEREMÍAS 34, 35"
     
-    if len(lineas) > 0 and any(c.isdigit() for c in lineas):
-        fecha_cab = lineas.strip()
-    if len(lineas) > 1 and "JER" in lineas.upper():
-        lectura_cab = lineas.strip()
+    if len(lineas) > 0 and any(c.isdigit() for c in lineas[0]):
+        fecha_cab = lineas[0].strip()
+    # REPARACIÓN DE SINTAXIS: Evaluamos el elemento individual con .upper() para evitar el AttributeError
+    if len(lineas) > 1:
+        if "JER" in lineas[1].upper() or "3" in lineas[1]:
+            lectura_cab = lineas[1].strip()
 
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
