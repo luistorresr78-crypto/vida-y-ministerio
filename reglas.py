@@ -78,6 +78,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         rightMargin=24, leftMargin=24, topMargin=24, bottomMargin=24
     )
     
+    # --- Paleta y Estilos Tipográficos Oficiales ---
     est_fecha = ParagraphStyle('EF', fontName='Helvetica-Bold', fontSize=12, leading=14, textColor=colors.HexColor("#2D3748"))
     est_lectura = ParagraphStyle('EL', fontName='Helvetica-Bold', fontSize=11, leading=13, textColor=colors.HexColor("#1A365D"))
     est_letra_blank = ParagraphStyle('ELB', fontName='Helvetica-Bold', fontSize=10, textColor=colors.white, alignment=0)
@@ -91,7 +92,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
 
     elementos = []
     
-    # --- 1. CABECERA PRINCIPAL PURA: Estampa directo lo que venga de las cajas manuales ---
+    # --- 1. CABECERA PRINCIPAL PURA ---
     texto_fecha = str(semana_act).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
     texto_lectura = str(mes_activo).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
     
@@ -102,14 +103,16 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     presi = str(asignados.get("presidente", "Por asignar")).strip()
     cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    t_presi = Table(cab_der, colWidths=[60, 110])
+    # MEDIDA REPARADA: Fijamos el ancho de la celda de presidencia en 100 puntos y 120 puntos
+    t_presi = Table(cab_der, colWidths=[100, 120])
     t_presi.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LINEBELOW', (1,0), (1,0), 0.75, colors.HexColor("#4A5568")),
         ('BOTTOMPADDING', (0,0), (-1,-1), 2)
     ]))
     
-    t_principal = Table([[cab_izq, t_presi]], colWidths=[370, 170])
+    # MEDIDA REPARADA: La tabla principal de la cabecera mide 320 puntos de texto y 220 puntos de control
+    t_principal = Table([[cab_izq, t_presi]], colWidths=[320, 220])
     t_principal.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 6)
@@ -123,7 +126,8 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         Paragraph("", est_cab_tit),
         Paragraph(f"{ora_ini}", est_hnos)
     ]
-    t_c1 = Table([datos_cancion_1], colWidths=[370, 10, 160])
+    # MEDIDA REPARADA: Saneamos el colWidths asignándole las tres columnas simétricas oficiales (320, 110, 110 puntos)
+    t_c1 = Table([datos_cancion_1], colWidths=[320, 110, 110])
     t_c1.setStyle(TableStyle([
         ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
         ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
@@ -140,6 +144,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     }
     
     seccion_actual = ""
+
 
 
     # --- 3. BUCLE PRINCIPAL CON UNIFICADOR DE BARRA AZUL DE LA LECTURA ---
