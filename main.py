@@ -24,7 +24,6 @@ def guardar_historial(datos):
     with open(FICHERO_HISTORIAL, "w", encoding="utf-8") as f:
         json.dump(datos, f, ensure_ascii=False, indent=4)
 
-# Rescate automatico de tus 80 publicadores reales guardados en hermanos.json
 def cargar_hermanos_iniciales():
     if os.path.exists(FICHERO_HERMANOS):
         try:
@@ -58,14 +57,15 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
-# --- PROCESADOR ADAPTATIVO CON EXTRACCIÓN AUTOMÁTICA SANADA ---
+# --- PROCESADOR ADAPTATIVO CON ESCANER DE CANCIONES DE 3 DÍGITOS ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
-        return "JEREMÍAS 32, 33", materias_detectadas
+        return "JEREMÍAS 32, 33", "1", "121", "28", materias_detectadas
         
     texto_limpio_global = texto_usuario.replace("\r", "\n")
     
+    # Intercepción elástica de asignaciones consecutivas
     texto_sano = re.sub(r"(\(\s*4\s*mins\s*\.?\)\s*|\b)Converse con su estudiante", r"\n7. Haga discípulos (4 mins.) Converse con su estudiante", texto_limpio_global)
     texto_sano = re.sub(r"El autocontrol nos ayuda a obedecer", r"\n8. El autocontrol nos ayuda a obedecer", texto_sano)
     texto_sano = re.sub(r"Logros de la organización", r"\n9. Logros de la organización", texto_sano)
@@ -88,6 +88,13 @@ def procesar_texto_plano_reunion(texto_usuario):
             if not re.match(r"^\s*[1-9]", l) and "CANCIÓN" not in l.upper():
                 lectura_cab = l.strip()
                 break
+
+    # ESCANER DE CANCIONES REALS: Buscamos todos los números de canciones de la semana de corrido
+    canciones_encontradas = re.findall(r"(?:CANCIÓN|CANCION)\s*([0-9]+)", texto_sano.upper())
+    
+    c_apertura = canciones_encontradas[0] if len(canciones_encontradas) > 0 else "1"
+    c_intermedia = canciones_encontradas[1] if len(canciones_encontradas) > 1 else "121"
+    c_conclusion = canciones_encontradas[-1] if len(canciones_encontradas) > 2 else "28"
 
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
@@ -157,8 +164,7 @@ def procesar_texto_plano_reunion(texto_usuario):
             "seccion": seccion_filtrado
         }
         
-    # SANACIÓN DE RAÍZ: Retornamos lectura_cab que es la variable declarada arriba correctamente
-    return lectura_cab, materias_detectadas
+    return lectura_cab, c_apertura, c_intermedia, c_conclusion, materias_detectadas
 
 # Enlace directo con la interfaz baja
 pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
