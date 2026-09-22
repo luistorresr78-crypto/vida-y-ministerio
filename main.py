@@ -56,7 +56,6 @@ lista_hermanos = cargar_hermanos_iniciales()
 def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
-
 # --- PROCESADOR ADAPTATIVO CON ESCANER DE CANCIONES DE 3 DÍGITOS ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
@@ -65,7 +64,7 @@ def procesar_texto_plano_reunion(texto_usuario):
         
     texto_limpio_global = texto_usuario.replace("\r", "\n")
     
-    # Intercepción elástica de asignaciones consecutivas
+    # Intercepcion elastica de asignaciones consecutivas
     texto_sano = re.sub(r"(\(\s*4\s*mins\s*\.?\)\s*|\b)Converse con su estudiante", r"\n7. Haga discípulos (4 mins.) Converse con su estudiante", texto_limpio_global)
     texto_sano = re.sub(r"El autocontrol nos ayuda a obedecer", r"\n8. El autocontrol nos ayuda a obedecer", texto_sano)
     texto_sano = re.sub(r"Logros de la organización", r"\n9. Logros de la organización", texto_sano)
@@ -89,7 +88,7 @@ def procesar_texto_plano_reunion(texto_usuario):
                 lectura_cab = l.strip()
                 break
 
-    # ESCANER DE CANCIONES REALS: Buscamos todos los números de canciones de la semana de corrido
+    # ESCANER DE CANCIONES REALES: Buscamos todos los numeros enteros completos (de 1 a 3 digitos de corrido)
     canciones_encontradas = re.findall(r"(?:CANCIÓN|CANCION)\s*([0-9]+)", texto_sano.upper())
     
     c_apertura = canciones_encontradas[0] if len(canciones_encontradas) > 0 else "1"
@@ -125,7 +124,6 @@ def procesar_texto_plano_reunion(texto_usuario):
                 if "CANCIÓN" in linea_up or "CANCION" in linea_up:
                     continue
                 puntos_crudos[ultimo_punto]["lineas"].append(linea)
-
     for num_punto, info in puntos_crudos.items():
         texto_completo = " ".join(info["lineas"]).strip()
         
@@ -166,7 +164,7 @@ def procesar_texto_plano_reunion(texto_usuario):
         
     return lectura_cab, c_apertura, c_intermedia, c_conclusion, materias_detectadas
 
-# Enlace directo con la interfaz baja
+# --- DISPARADOR DE PESTAÑAS DE LA PASARELA VISUAL ---
 pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
     "🚀 Fabricador de Folletos", 
     "📋 Historial Guardado",
@@ -194,12 +192,10 @@ with pestana_programa:
 
     boton_armar_pdf = st.button("⚙️ Procesar Datos para Asignación (Paso 1)", use_container_width=True)
 
-    # El procesador ahora nos extrae de forma elástica la lectura de las perlas espirituales
-    l_jw, materias_dinamicas = procesar_texto_plano_reunion(texto_jw_entrada)
+    l_jw, c_apertura_live, c_intermedia_live, c_conclusion_live, materias_dinamicas = procesar_texto_plano_reunion(texto_jw_entrada)
 
     st.markdown("---")
 
-    # ENLAZADO DIRECTO: Forzamos a que el sistema use de forma obligatoria el mes y el rango ingresados en los campos manuales
     f_cab_clean = str(semana_seleccionada if semana_seleccionada else "14-20 de septiembre").strip()
     l_cab_clean = str(l_jw if texto_jw_entrada.strip() else f"LECTURA DE {mes_seleccionado}").strip()
 
@@ -208,7 +204,7 @@ with pestana_programa:
 
     with st.sidebar:
         st.header("⚙️ Control de Operación")
-        coordinador_activo = st.selectbox("¿Quién está asignando hoy?", ["Sergio", "Jonathan", "Luis"], key="coord_act_live")
+        coordinador_activo = st.selectbox("¿Quién está assigning hoy?", ["Sergio", "Jonathan", "Luis"], key="coord_act_live")
 
     st.markdown("### 🎚️ Asignar Privilegios para el Folleto PDF")
     col_p1, col_p2 = st.columns(2)
@@ -227,7 +223,13 @@ with pestana_programa:
     st.markdown("---")
     st.markdown("### 📝 Ajustar Temas de Intervenciones y Asignar Hermanos")
     
-    asignados_en_vivo = {"presidente": presidente, "oracion_inicial": oracion_inicial}
+    asignados_en_vivo = {
+        "presidente": presidente, 
+        "oracion_inicial": oracion_inicial,
+        "c_apertura": c_apertura_live,
+        "c_intermedia": c_intermedia_live,
+        "c_conclusion": c_conclusion_live
+    }
 
     for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias_dinamicas[k]
