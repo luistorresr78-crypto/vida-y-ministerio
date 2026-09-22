@@ -69,7 +69,6 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
         hermanos_listos.append(h_copia)
         
     return hermanos_listos
-
 def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     nombre_pdf = "reunion_actual.pdf"
     
@@ -92,7 +91,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
 
     elementos = []
     
-    # --- 1. CABECERA PRINCIPAL PURA ---
+    # --- 1. CABECERA PRINCIPAL ---
     texto_fecha = str(semana_act).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
     texto_lectura = str(mes_activo).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
     
@@ -103,7 +102,6 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     presi = str(asignados.get("presidente", "Por asignar")).strip()
     cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    # MEDIDA REPARADA: Fijamos el ancho de la celda de presidencia en 100 puntos y 120 puntos
     t_presi = Table(cab_der, colWidths=[100, 120])
     t_presi.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -111,7 +109,6 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         ('BOTTOMPADDING', (0,0), (-1,-1), 2)
     ]))
     
-    # MEDIDA REPARADA: La tabla principal de la cabecera mide 320 puntos de texto y 220 puntos de control
     t_principal = Table([[cab_izq, t_presi]], colWidths=[320, 220])
     t_principal.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
@@ -119,14 +116,14 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     ]))
     elementos.append(t_principal)
     
-    # --- 2. FILA HORIZONTAL: CANCIÓN DE INICIO ---
+    # --- 2. FILA HORIZONTAL: CANCIÓN DE INICIO DINÁMICA ---
     ora_ini = str(asignados.get("oracion_inicial", "Por asignar")).strip()
+    c_ini = str(asignados.get("c_apertura", "1")).strip()
     datos_cancion_1 = [
-        Paragraph("■ <b>Canción 01</b> y oración", est_cab_tit),
+        Paragraph(f"■ <b>Canción {c_ini}</b> y oración", est_cab_tit),
         Paragraph("", est_cab_tit),
         Paragraph(f"{ora_ini}", est_hnos)
     ]
-    # MEDIDA REPARADA: Saneamos el colWidths asignándole las tres columnas simétricas oficiales (320, 110, 110 puntos)
     t_c1 = Table([datos_cancion_1], colWidths=[320, 110, 110])
     t_c1.setStyle(TableStyle([
         ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
@@ -144,20 +141,15 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     }
     
     seccion_actual = ""
-
-
-
-    # --- 3. BUCLE PRINCIPAL CON UNIFICADOR DE BARRA AZUL DE LA LECTURA ---
+    
+    # --- 3. BUCLE PRINCIPAL ---
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias[k]
         sec_materia = m.get("seccion", "Tesoros")
         
-        # UNIFICACIÓN DE RAÍZ: Si la sección viene etiquetada como Lectura, la forzamos a ser "Tesoros" 
-        # para que el sistema no crea que cambió de carril y no dibuje la barra azul otra vez
         if sec_materia == "Lectura":
             sec_materia = "Tesoros"
         
-        # Si de verdad cambia la sección (Tesoros -> Maestros -> Vida), dibujamos la barra correspondiente
         if sec_materia != seccion_actual:
             seccion_actual = sec_materia
             conf = secciones_mapeadas.get(seccion_actual, secciones_mapeadas["Tesoros"])
@@ -172,10 +164,11 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             elementos.append(t_tit)
             elementos.append(Spacer(1, 4))
             
-            # Inyección de la Canción intermedia dinámica en la sección Vida
+            # Inyección de la Canción intermedia dinámica
             if seccion_actual == "Vida":
-                datos_cancion_2 = [Paragraph("■ <b>Canción 121</b>", est_cab_tit), Paragraph("", est_hnos), Paragraph("", est_hnos)]
-                t_c2 = Table([datos_cancion_2], colWidths=[310, 115, 115])
+                c_int = str(asignados.get("c_intermedia", "121")).strip()
+                datos_cancion_2 = [Paragraph(f"■ <b>Canción {c_int}</b>", est_cab_tit), Paragraph("", est_hnos), Paragraph("", est_hnos)]
+                t_c2 = Table([datos_cancion_2], colWidths=[320, 110, 110])
                 t_c2.setStyle(TableStyle([
                     ('LINEABOVE', (0,0), (-1,-1), 0.5, colors.HexColor("#718096")),
                     ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#718096")),
@@ -205,7 +198,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             Paragraph(f"{ayudante}", est_hnos)
         ]
         
-        t_fila = Table([fila_materia], colWidths=[310, 115, 115])
+        t_fila = Table([fila_materia], colWidths=[320, 110, 110])
         t_fila.setStyle(TableStyle([
             ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E0")),
             ('PADDING', (0,0), (-1,-1), 6),
@@ -215,14 +208,15 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         elementos.append(t_fila)
         elementos.append(Spacer(1, 4))
         
-    # --- 4. CIERRE INFERIOR ---
+    # --- 4. CIERRE INFERIOR CON CANCIÓN FINAL DINÁMICA ---
     elementos.append(Spacer(1, 4))
+    c_fin = str(asignados.get("c_conclusion", "28")).strip()
     datos_conclusion = [
         Paragraph("Palabras de conclusión (3 mins.)", est_cab_tit),
-        Paragraph("■ <b>Canción 28</b> y oración", est_cab_tit),
+        Paragraph(f"■ <b>Canción {c_fin}</b> y oración", est_cab_tit),
         Paragraph("", est_hnos)
     ]
-    t_c_fin = Table([datos_conclusion], colWidths=[310, 115, 115])
+    t_c_fin = Table([datos_conclusion], colWidths=[320, 110, 110])
     t_c_fin.setStyle(TableStyle([
         ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
         ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
