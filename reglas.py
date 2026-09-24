@@ -161,12 +161,12 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     seccion_actual = ""
 
-    # --- 3. BUCLE PRINCIPAL CON UNIFICADOR DE BARRA AZUL DE LA LECTURA ---
+       # --- 3. BUCLE PRINCIPAL CON LIMPIADOR AUTOMÁTICO DE NOMBRES ---
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias[k]
         sec_materia = m.get("seccion", "Tesoros")
         
-        # Unificacion de raiz para evitar barras duplicadas en la Lectura
+        # Unificación de raíz para evitar barras duplicadas en la Lectura
         if sec_materia == "Lectura":
             sec_materia = "Tesoros"
         
@@ -184,7 +184,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             elementos.append(t_tit)
             elementos.append(Spacer(1, 4))
             
-            # Inyeccion de la Cancion intermedia dinamica
+            # Inyección de la Canción intermedia dinámica
             if seccion_actual == "Vida":
                 c_int = str(asignados.get("c_intermedia", "121")).strip()
                 datos_cancion_2 = [Paragraph(f"■ <b>Canción {c_int}</b>", est_cab_tit), Paragraph("", est_hnos), Paragraph("", est_hnos)]
@@ -200,10 +200,11 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             else:
                 elementos.append(Spacer(1, 4))
         
-        # Limpieza de textos y formateo de nombres quitando el sufijo de uso del menu para el PDF impreso
+        # Jalamos los nombres crudos de la pantalla azul
         titular_sucio = str(asignados.get(f"p{k}_t", "Por asignar")).strip()
         ayudante_sucio = str(asignados.get(f"p{k}_a", "")).strip()
         
+        # LIJA QUIRÚRGICA: Borramos el (Uso: X) de raíz para que jamás ensucie el papel impreso
         titular = re.sub(r"\s*\(Uso:\s*\d+\)", "", titular_sucio).strip()
         ayudante = re.sub(r"\s*\(Uso:\s*\d+\)", "", ayudante_sucio).strip()
         
@@ -215,6 +216,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             texto_html_final = f"{k}. {texto_html_final}"
         
         conf_sec = secciones_mapeadas.get(sec_materia, secciones_mapeadas["Tesoros"])
+        
         fila_materia = [
             Paragraph(texto_html_final, conf_sec["estilo_t"]),
             Paragraph(f"{titular}", est_hnos),
