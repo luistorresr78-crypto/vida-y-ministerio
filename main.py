@@ -8,16 +8,22 @@ import reglas
 st.set_page_config(page_title="Mesa de Asignaciones Teocraticas", page_icon="📝", layout="wide")
 
 FICHERO_HERMANOS = "hermanos.json"
+FICHERO_HISTORIAL = "historial_reuniones.json"
 
-# --- PERSISTIDOR INMUNE: Forzamos la grabacion en la memoria viva st.session_state ---
-if "historial_reuniones_state" not in st.session_state:
-    st.session_state["historial_reuniones_state"] = {}
-
+# --- BLINDAJE DE RAÍZ: Volvemos al almacenamiento en archivo físico persistente para evitar borrados por inactividad ---
 def cargar_historial():
-    return st.session_state["historial_reuniones_state"]
+    if not os.path.exists(FICHERO_HISTORIAL):
+        with open(FICHERO_HISTORIAL, "w", encoding="utf-8") as f:
+            json.dump({}, f, ensure_ascii=False, indent=4)
+    try:
+        with open(FICHERO_HISTORIAL, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return {}
 
 def guardar_historial(datos):
-    st.session_state["historial_reuniones_state"] = datos
+    with open(FICHERO_HISTORIAL, "w", encoding="utf-8") as f:
+        json.dump(datos, f, ensure_ascii=False, indent=4)
 
 def cargar_hermanos_iniciales():
     if os.path.exists(FICHERO_HERMANOS):
@@ -86,8 +92,8 @@ def procesar_texto_plano_reunion(texto_usuario):
     # ESCANER DE CANCIONES REALES: Buscamos todos los numeros enteros completos (de 1 a 3 digitos de corrido)
     canciones_encontradas = re.findall(r"(?:CANCIÓN|CANCION)\s*([0-9]+)", texto_sano.upper())
     
-    c_apertura = canciones_encontradas[0] if len(canciones_encontradas) > 0 else "1"
-    c_intermedia = canciones_encontradas[1] if len(canciones_encontradas) > 1 else "121"
+    c_apertura = canciones_encontradas if len(canciones_encontradas) > 0 else "1"
+    c_intermedia = canciones_encontradas if len(canciones_encontradas) > 1 else "121"
     c_conclusion = canciones_encontradas[-1] if len(canciones_encontradas) > 2 else "28"
 
     seccion_actual_texto = "Tesoros"
@@ -203,12 +209,11 @@ with pestana_programa:
 
     st.markdown("### 🎚️ Asignar Privilegios para el Folleto PDF")
 
-    # CARGA RECALCULADORA: Jalamos el historial en vivo para pasarle el conteo de uso al ordenador
+    # CARGA RECALCULADORA PERMANENTE: Jalamos el historial directamente desde el archivo real guardado en disco
     historial_actual_para_conteo = cargar_historial()
 
     col_p1, col_p2 = st.columns(2)
     with col_p1:
-        # Pasamos el estado de la bitácora para que ordene dejando arriba al que lleva 0 usos
         opciones_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia", mes_seleccionado, historial_actual_para_conteo)
         nom_presi = [h.get("nombre", "").strip() for h in opciones_presi]
         if "Por asignar" not in nom_presi: nom_presi.insert(0, "Por asignar")
@@ -232,7 +237,6 @@ with pestana_programa:
     }
 
     historial_asig_semana = []
-    # Limpiamos el texto de la sugerencia de uso para realizar la comparación de repetición limpia
     presi_limpio = re.sub(r"\s*\(Uso:\s*\d+\)", "", presidente).strip()
     ora_limpia = re.sub(r"\s*\(Uso:\s*\d+\)", "", oracion_inicial).strip()
     
@@ -249,10 +253,9 @@ with pestana_programa:
         elif tipo_seccion == "Lectura":
             emoji, color_sub = "📖", "Lectura"
         else:
-            emoji, color_sub = "💎", "Tesoros"
+            emoji, color_sub = "Tesoros"
             
         titulo_bruto = str(m.get('titulo', ''))
-        # LIJA QUIRÚRGICA: Si el título viene con formato de lista de corchetes, extraemos solo el texto limpio principal
         if titulo_bruto.startswith("[") and "']" in titulo_bruto:
             match_interno = re.search(r"['\"](.*?)['\"]", titulo_bruto)
             if match_interno:
@@ -290,6 +293,7 @@ with pestana_programa:
                 st.warning(f"⚠️ ¡Atención! El hermano **{titular_limpio}** ya tiene asignada otra intervención en esta reunión.")
             elif titular_limpio != "Por asignar":
                 historial_asig_semana.append(titular_limpio)
+            
         with c2:
             if tipo_seccion == "Maestros":
                 opciones_ayudante = reglas.filtrar_ayudantes_inteligente(titular_limpio, lista_hermanos, "Seamos Mejores Maestros", mes_seleccionado, historial_actual_para_conteo)
@@ -305,7 +309,6 @@ with pestana_programa:
                     historial_asig_semana.append(ayudante_limpio)
 
     st.markdown("### 🖨️ Compilar y Guardar Permanencia (Paso 2)")
-    
     col_g1, col_g2 = st.columns(2)
     
     with col_g1:
@@ -326,7 +329,7 @@ with pestana_programa:
                 
                 try:
                     reglas.generar_pdf_estilo_oficial(l_cab_clean, f_cab_clean, materias_dinamicas, asignados_en_vivo)
-                    st.success(f"¡Semana guardada en la memoria acumulativa y nombres fijos en el PDF!")
+                    st.success(f"¡Semana guardada con éxito en el archivo físico permanente y nombres listos!")
                 except Exception as e:
                     st.error(f"Fallo al inyectar ReportLab: {e}")
 
@@ -351,9 +354,9 @@ with pestana_programa:
             use_container_width=True
         )
     else:
-        st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos y habilitar el PDF.")
+        st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos.")
 
-# --- PESTAÑA DEL HISTORIAL EN TIEMPO REAL CON BORRADO QUIRÚRGICO ---
+# --- PESTAÑA DEL HISTORIAL EN TIEMPO REAL CON BORRADO QUIRÚRGICO PERMANENTE ---
 with pestana_historial:
     st.header("📋 Historial de Asignaciones Registradas en la Bitácora")
     historial_visual = cargar_historial()
@@ -384,7 +387,7 @@ with pestana_historial:
         btn_borrar_todo_el_historial = st.button("🚨 COMODÍN: VACIAR COMPLETA TODA LA BITÁCORA DEL HISTORIAL", use_container_width=True)
         if btn_borrar_todo_el_historial:
             guardar_historial({})
-            st.success("💥 ¡Bitácora de historial completamente vaciada y formateada con éxito!")
+            st.success("💥 ¡Bitácora de historial completamente vaciada con éxito!")
             st.rerun()
             
         st.markdown("---")
