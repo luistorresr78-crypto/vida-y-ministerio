@@ -44,8 +44,8 @@ def cargar_hermanos_iniciales():
 
     hermanos_base = [
         {"nombre": "Luis", "apellido": "Torres", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
-        {"nombre": "Sergio", "apellido": "Coordinador", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
-        {"nombre": "Jonathan", "apellido": "Coordinador", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]}
+        {"nombre": "Sergio", "apellido": "Venegas", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
+        {"nombre": "Jonathan", "apellido": "Rojas", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]}
     ]
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(hermanos_base, f, ensure_ascii=False, indent=4)
@@ -56,7 +56,7 @@ lista_hermanos = cargar_hermanos_iniciales()
 def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
-# --- PROCESADOR ADAPTATIVO CON ESCANER DE CANCIONES DE 3 DÍGITOS ---
+
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
@@ -64,7 +64,6 @@ def procesar_texto_plano_reunion(texto_usuario):
         
     texto_limpio_global = texto_usuario.replace("\r", "\n")
     
-    # Intercepcion elastica de asignaciones consecutivas
     texto_sano = re.sub(r"(\(\s*4\s*mins\s*\.?\)\s*|\b)Converse con su estudiante", r"\n7. Haga discípulos (4 mins.) Converse con su estudiante", texto_limpio_global)
     texto_sano = re.sub(r"El autocontrol nos ayuda a obedecer", r"\n8. El autocontrol nos ayuda a obedecer", texto_sano)
     texto_sano = re.sub(r"Logros de la organización", r"\n9. Logros de la organización", texto_sano)
@@ -88,11 +87,10 @@ def procesar_texto_plano_reunion(texto_usuario):
                 lectura_cab = l.strip()
                 break
 
-    # ESCANER DE CANCIONES REALES: Buscamos todos los numeros enteros completos (de 1 a 3 digitos de corrido)
     canciones_encontradas = re.findall(r"(?:CANCIÓN|CANCION)\s*([0-9]+)", texto_sano.upper())
     
-    c_apertura = canciones_encontradas[0] if len(canciones_encontradas) > 0 else "1"
-    c_intermedia = canciones_encontradas[1] if len(canciones_encontradas) > 1 else "121"
+    c_apertura = canciones_encontradas if len(canciones_encontradas) > 0 else "1"
+    c_intermedia = canciones_encontradas if len(canciones_encontradas) > 1 else "121"
     c_conclusion = canciones_encontradas[-1] if len(canciones_encontradas) > 2 else "28"
 
     seccion_actual_texto = "Tesoros"
@@ -124,6 +122,7 @@ def procesar_texto_plano_reunion(texto_usuario):
                 if "CANCIÓN" in linea_up or "CANCION" in linea_up:
                     continue
                 puntos_crudos[ultimo_punto]["lineas"].append(linea)
+
     for num_punto, info in puntos_crudos.items():
         texto_completo = " ".join(info["lineas"]).strip()
         
@@ -164,13 +163,11 @@ def procesar_texto_plano_reunion(texto_usuario):
         
     return lectura_cab, c_apertura, c_intermedia, c_conclusion, materias_detectadas
 
-# --- DISPARADOR DE PESTAÑAS DE LA PASARELA VISUAL ---
 pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
     "🚀 Fabricador de Folletos", 
     "📋 Historial Guardado",
     "👥 Gestión de Hermanos"
 ])
-
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
     
@@ -231,6 +228,11 @@ with pestana_programa:
         "c_conclusion": c_conclusion_live
     }
 
+    # Creamos un balde de control para meter el nombre de cada hermano que elijas en la semana
+    historial_asig_semana = []
+    if presidente != "Por asignar": historial_asig_semana.append(presidente)
+    if oracion_inicial != "Por asignar": historial_asig_semana.append(oracion_inicial)
+
     for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias_dinamicas[k]
         tipo_seccion = m.get("seccion", "Tesoros")
@@ -254,7 +256,6 @@ with pestana_programa:
             value=titulo_preview, 
             key=f"live_text_input_edit_{k}"
         )
-        
         if texto_editado_usuario != titulo_preview:
             if "<br/>" in titulo_bruto:
                 partes_brutas = titulo_bruto.split("<br/>")
@@ -272,6 +273,12 @@ with pestana_programa:
             titular = st.selectbox(f"Asignado punto {k}", nombres_materia, key=f"live_t_{k}")
             asignados_en_vivo[f"p{k}_t"] = titular if titular != "Por asignar" else "Por asignar"
             
+            # DETECTOR EN VIVO: Si el titular elegido ya esta en el balde de la semana, dispara la alerta amarilla
+            if titular != "Por asignar" and titular in historial_asig_semana:
+                st.warning(f"⚠️ ¡Atención Coordinador! El hermano **{titular}** ya tiene asignada otra intervención en esta reunión.")
+            elif titular != "Por asignar":
+                historial_asig_semana.append(titular)
+            
         with c2:
             if tipo_seccion == "Maestros":
                 opciones_ayudante = reglas.filtrar_ayudantes_inteligente(titular, lista_hermanos, "Seamos Mejores Maestros", mes_seleccionado)
@@ -279,8 +286,14 @@ with pestana_programa:
                 if "Por asignar" not in nombres_ayudante: nombres_ayudante.insert(0, "Por asignar")
                 ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
                 asignados_en_vivo[f"p{k}_a"] = ayudante if ayudante != "Por asignar" else "Por asignar"
+                
+                # DETECTOR EN VIVO: Valida de la misma forma si el ayudante se repite esta semana
+                if ayudante != "Por asignar" and ayudante in historial_asig_semana:
+                    st.warning(f"⚠️ ¡Atención Coordinador! El ayudante **{ayudante}** ya participa en otra parte esta semana.")
+                elif ayudante != "Por asignar":
+                    historial_asig_semana.append(ayudante)
+
     st.markdown("### 🖨️ Compilar y Guardar Permanencia (Paso 2)")
-    
     col_g1, col_g2 = st.columns(2)
     
     with col_g1:
@@ -328,42 +341,65 @@ with pestana_programa:
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos y habilitar el PDF.")
 
-# --- PESTAÑA DEL HISTORIAL EN TIEMPO REAL CON BORRADO ---
+# --- PESTAÑA DEL HISTORIAL EN TIEMPO REAL CON BORRADO QUIRÚRGICO ---
 with pestana_historial:
     st.header("📋 Historial de Asignaciones Registradas en la Bitácora")
     historial_visual = cargar_historial()
     
     if historial_visual:
-        btn_borrar_todo_el_historial = st.button("🚨 BORRAR TODO EL HISTORIAL PERMANENTE", type="primary", use_container_width=True)
+        st.subheader("🗑️ Control y Limpieza del Historial")
+        c_del_m, c_del_s = st.columns(2)
+        
+        with c_del_m:
+            mes_a_borrar_sel = st.selectbox("Seleccione Mes para Limpieza:", list(historial_visual.keys()), key="mes_del_global_live")
+            
+        with c_del_s:
+            semanas_del_mes_seleccionado = list(historial_visual.get(mes_a_borrar_sel, {}).keys())
+            if semanas_del_mes_seleccionado:
+                semana_a_borrar_sel = st.selectbox("Seleccione Semana Específica a Eliminar:", semanas_del_mes_seleccionado, key="sem_del_especifica_live")
+                btn_borrar_una_sola_semana = st.button("❌ BORRAR SOLO ESTA SEMANA", type="primary", use_container_width=True)
+                if btn_borrar_una_sola_semana:
+                    del historial_visual[mes_a_borrar_sel][semana_a_borrar_sel]
+                    if not historial_visual[mes_a_borrar_sel]:
+                        del historial_visual[mes_a_borrar_sel]
+                    guardar_historial(historial_visual)
+                    st.success(f"💥 ¡La semana '{semana_a_borrar_sel}' ha sido eliminada quirúrgicamente de la bitácora!")
+                    st.rerun()
+            else:
+                st.info("No hay semanas disponibles en este mes.")
+                
+        st.markdown("---")
+        btn_borrar_todo_el_historial = st.button("🚨 COMODÍN: VACIAR COMPLETA TODA LA BITÁCORA DEL HISTORIAL", use_container_width=True)
         if btn_borrar_todo_el_historial:
             guardar_historial({})
             st.success("💥 ¡Bitácora de historial completamente vaciada y formateada con éxito!")
             st.rerun()
             
         st.markdown("---")
-        mes_hist = st.selectbox("Seleccione el Mes a Consultar:", list(historial_visual.keys()), key="ver_mes_hist")
-        semanas_guardadas = historial_visual.get(mes_hist, {})
-        
-        if semanas_guardadas:
-            for sem_key, info_sem in semanas_guardadas.items():
-                with st.expander(f"📆 Semana: {sem_key} (Armado por: {info_sem.get('coordinador', 'Luis')})"):
-                    asig = info_sem.get("asignados", {})
-                    
-                    st.markdown(f"**Presidente:** {asig.get('presidente', 'Por asignar')} | **Oración Inicial:** {asig.get('oracion_inicial', 'Por asignar')}")
-                    st.markdown("---")
-                    
-                    for llave_asig, persona in asig.items():
-                        if llave_asig.startswith("p") and llave_asig.endswith("_t"):
-                            num_p = llave_asig[1:-2]
-                            ayudante_llave = f"p{num_p}_a"
-                            ayudante_nom = asig.get(ayudante_llave, "")
-                            if ayudante_nom and ayudante_nom != "Por asignar":
-                                st.write(f"• **Punto {num_p}:** {persona} (Ayudante: {ayudante_nom})")
-                            else:
-                                t_fila_nom = asig.get(f"p{num_p}_t", "Por asignar")
-                                st.write(f"• **Punto {num_p}:** {t_fila_nom}")
-        else:
-            st.info("No hay semanas guardadas para este mes.")
+        if historial_visual:
+            mes_hist = st.selectbox("Seleccione el Mes a Consultar:", list(historial_visual.keys()), key="ver_mes_hist")
+            semanas_guardadas = historial_visual.get(mes_hist, {})
+            
+            if semanas_guardadas:
+                for sem_key, info_sem in semanas_guardadas.items():
+                    with st.expander(f"📆 Semana: {sem_key} (Armado por: {info_sem.get('coordinador', 'Luis')})"):
+                        asig = info_sem.get("asignados", {})
+                        
+                        st.markdown(f"**Presidente:** {asig.get('presidente', 'Por asignar')} | **Oración Inicial:** {asig.get('oracion_inicial', 'Por asignar')}")
+                        st.markdown("---")
+                        
+                        for llave_asig, persona in asig.items():
+                            if llave_asig.startswith("p") and llave_asig.endswith("_t"):
+                                num_p = llave_asig[1:-2]
+                                ayudante_llave = f"p{num_p}_a"
+                                ayudante_nom = asig.get(ayudante_llave, "")
+                                if ayudante_nom and ayudante_nom != "Por asignar":
+                                    st.write(f"• **Punto {num_p}:** {persona} (Ayudante: {ayudante_nom})")
+                                else:
+                                    t_fila_nom = asig.get(f"p{num_p}_t", "Por asignar")
+                                    st.write(f"• **Punto {num_p}:** {t_fila_nom}")
+            else:
+                st.info("No hay semanas guardadas para este mes.")
     else:
         st.info("La bitácora de historial está vacía actualmente. Comience guardando una semana.")
 
