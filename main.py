@@ -8,21 +8,16 @@ import reglas
 st.set_page_config(page_title="Mesa de Asignaciones Teocraticas", page_icon="📝", layout="wide")
 
 FICHERO_HERMANOS = "hermanos.json"
-FICHERO_HISTORIAL = "historial_reuniones.json"
+
+# --- REPARACIÓN DE RAÍZ: Inyectamos el Persistidor en Memoria de Navegador (st.session_state) ---
+if "historial_reuniones_state" not in st.session_state:
+    st.session_state["historial_reuniones_state"] = {}
 
 def cargar_historial():
-    if not os.path.exists(FICHERO_HISTORIAL):
-        with open(FICHERO_HISTORIAL, "w", encoding="utf-8") as f:
-            json.dump({}, f, ensure_ascii=False, indent=4)
-    try:
-        with open(FICHERO_HISTORIAL, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except:
-        return {}
+    return st.session_state["historial_reuniones_state"]
 
 def guardar_historial(datos):
-    with open(FICHERO_HISTORIAL, "w", encoding="utf-8") as f:
-        json.dump(datos, f, ensure_ascii=False, indent=4)
+    st.session_state["historial_reuniones_state"] = datos
 
 def cargar_hermanos_iniciales():
     if os.path.exists(FICHERO_HERMANOS):
@@ -57,6 +52,7 @@ def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
 
+# --- PROCESADOR ADAPTATIVO CON ESCANER DE CANCIONES DE 3 DÍGITOS ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
@@ -228,7 +224,7 @@ with pestana_programa:
         "c_conclusion": c_conclusion_live
     }
 
-    # Creamos un balde de control para meter el nombre de cada hermano que elijas en la semana
+    # Activamos el balde de control semanal para rastrear duplicados
     historial_asig_semana = []
     if presidente != "Por asignar": historial_asig_semana.append(presidente)
     if oracion_inicial != "Por asignar": historial_asig_semana.append(oracion_inicial)
@@ -250,12 +246,12 @@ with pestana_programa:
         titulo_preview = re.sub(r"<[^>]*>", "", titulo_bruto).strip()
             
         st.markdown(f"**{emoji} Punto {k}**")
-        
         texto_editado_usuario = st.text_input(
             f"Editar información del Punto {k}:", 
             value=titulo_preview, 
             key=f"live_text_input_edit_{k}"
         )
+        
         if texto_editado_usuario != titulo_preview:
             if "<br/>" in titulo_bruto:
                 partes_brutas = titulo_bruto.split("<br/>")
@@ -273,9 +269,9 @@ with pestana_programa:
             titular = st.selectbox(f"Asignado punto {k}", nombres_materia, key=f"live_t_{k}")
             asignados_en_vivo[f"p{k}_t"] = titular if titular != "Por asignar" else "Por asignar"
             
-            # DETECTOR EN VIVO: Si el titular elegido ya esta en el balde de la semana, dispara la alerta amarilla
+            # DETECTOR EN VIVO: Si el titular ya está en la lista semanal, salta la advertencia amarilla
             if titular != "Por asignar" and titular in historial_asig_semana:
-                st.warning(f"⚠️ ¡Atención Coordinador! El hermano **{titular}** ya tiene asignada otra intervención en esta reunión.")
+                st.warning(f"⚠️ ¡Atención! El hermano **{titular}** ya tiene asignada otra intervención en esta reunión.")
             elif titular != "Por asignar":
                 historial_asig_semana.append(titular)
             
@@ -287,9 +283,9 @@ with pestana_programa:
                 ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
                 asignados_en_vivo[f"p{k}_a"] = ayudante if ayudante != "Por asignar" else "Por asignar"
                 
-                # DETECTOR EN VIVO: Valida de la misma forma si el ayudante se repite esta semana
+                # DETECTOR EN VIVO: Si el ayudante ya está en la lista semanal, salta la advertencia amarilla
                 if ayudante != "Por asignar" and ayudante in historial_asig_semana:
-                    st.warning(f"⚠️ ¡Atención Coordinador! El ayudante **{ayudante}** ya participa en otra parte esta semana.")
+                    st.warning(f"⚠️ ¡Atención! El ayudante **{ayudante}** ya participa en otra parte esta semana.")
                 elif ayudante != "Por asignar":
                     historial_asig_semana.append(ayudante)
 
@@ -314,7 +310,7 @@ with pestana_programa:
                 
                 try:
                     reglas.generar_pdf_estilo_oficial(l_cab_clean, f_cab_clean, materias_dinamicas, asignados_en_vivo)
-                    st.success(f"¡Semana guardada de forma permanente en {FICHERO_HISTORIAL} y nombres fijos con lectura bíblica en el PDF!")
+                    st.success(f"¡Semana guardada en la memoria local y nombres fijos en el PDF!")
                 except Exception as e:
                     st.error(f"Fallo al inyectar ReportLab: {e}")
 
