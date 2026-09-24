@@ -256,21 +256,21 @@ with pestana_programa:
             
         st.markdown(f"**{emoji} Punto {k}**")
         
-        texto_editated_usuario = st.text_input(
+        texto_editado_usuario = st.text_input(
             f"Editar información del Punto {k}:", 
             value=titulo_preview, 
             key=f"live_text_input_edit_{k}"
         )
         
-        if texto_editated_usuario != titulo_preview:
+        if texto_editado_usuario != titulo_preview:
             if "<br/>" in titulo_bruto:
                 partes_brutas = titulo_bruto.split("<br/>")
                 subtitulo_plomo = partes_brutas if len(partes_brutas) > 1 else ""
-                m["titulo"] = f"<b>{texto_editated_usuario}</b><br/>{subtitulo_plomo}"
+                m["titulo"] = f"<b>{texto_editado_usuario}</b><br/>{subtitulo_plomo}"
             else:
-                m["titulo"] = f"<b>{texto_editated_usuario}</b>"
+                m["titulo"] = f"<b>{texto_editado_usuario}</b>"
         
-        # SUGERENCIA DE LUIS: El selector carga ordenado de menor a mayor cantidad de usos en el mes
+        # LIBERACIÓN TOTAL: Saneamos el llamado al conteo acumulado para que Tesoros (Puntos 1 y 2) cargue abierto y libre
         opciones_materia = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, color_sub, mes_seleccionado, historial_actual_para_conteo)
         nombres_materia = [h.get("nombre", "").strip() for h in opciones_materia]
         if "Por asignar" not in nombres_materia: nombres_materia.insert(0, "Por asignar")
@@ -280,12 +280,12 @@ with pestana_programa:
             titular = st.selectbox(f"Asignado punto {k}", nombres_materia, key=f"live_t_{k}")
             asignados_en_vivo[f"p{k}_t"] = titular if titular != "Por asignar" else "Por asignar"
             
-            # Limpiamos el contador de uso para realizar la alerta semanal limpia
             titular_limpio = re.sub(r"\s*\(Uso:\s*\d+\)", "", titular).strip()
             if titular_limpio != "Por asignar" and titular_limpio in historial_asig_semana:
                 st.warning(f"⚠️ ¡Atención! El hermano **{titular_limpio}** ya tiene asignada otra intervención en esta reunión.")
             elif titular_limpio != "Por asignar":
                 historial_asig_semana.append(titular_limpio)
+
             
         with c2:
             if tipo_seccion == "Maestros":
@@ -302,6 +302,7 @@ with pestana_programa:
                     historial_asig_semana.append(ayudante_limpio)
 
     st.markdown("### 🖨️ Compilar y Guardar Permanencia (Paso 2)")
+    
     col_g1, col_g2 = st.columns(2)
     
     with col_g1:
@@ -315,7 +316,7 @@ with pestana_programa:
                     historial_actual[mes_seleccionado] = {}
                 
                 historial_actual[mes_seleccionado][f_cab_clean] = {
-                    "coordinador": coordinador_activo,
+                    "coordinador": coordinator_activo,
                     "asignados": asignados_en_vivo
                 }
                 guardar_historial(historial_actual)
