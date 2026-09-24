@@ -104,7 +104,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
 
     elementos = []
     
-    # --- 1. CABECERA PRINCIPAL ---
+    # --- 1. CABECERA PRINCIPAL CON LIJA DE TEXTO ---
     texto_fecha = str(semana_act).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
     texto_lectura = str(mes_activo).replace("['", "").replace("']", "").replace('["', "").replace('"]', "").strip()
     
@@ -113,16 +113,19 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         Paragraph(f"<b>{texto_lectura}</b>", est_lectura)
     ]
     
-    presi = str(asignados.get("presidente", "Por asignar")).strip()
+    presi_sucio = str(asignados.get("presidente", "Por asignar")).strip()
+    # LIJA AUTOMÁTICA: Borramos el (Uso: X) del presidente para que el PDF impreso salga 100% limpio
+    presi = re.sub(r"\s*\(Uso:\s*\d+\)", "", presi_sucio).strip()
+    
     cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    t_presi = Table(cab_der, colWidths=[60, 120])
+    t_presi = Table(cab_der, colWidths=[65, 115])
     t_presi.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LINEBELOW', (1,0), (1,0), 0.75, colors.HexColor("#4A5568")),
         ('BOTTOMPADDING', (0,0), (-1,-1), 2)
     ]))
     
-    t_principal = Table([[cab_izq, t_presi]], colWidths=[340, 180])
+    t_principal = Table([[cab_izq, t_presi]], colWidths=[320, 220])
     t_principal.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 6)
@@ -130,14 +133,17 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     elementos.append(t_principal)
     
     # --- 2. FILA HORIZONTAL: CANCIÓN DE INICIO DINÁMICA ---
-    ora_ini = str(asignados.get("oracion_inicial", "Por asignar")).strip()
+    ora_ini_sucio = str(asignados.get("oracion_inicial", "Por asignar")).strip()
+    # LIJA AUTOMÁTICA: Limpiamos las colas del contador en la oración inicial
+    ora_ini = re.sub(r"\s*\(Uso:\s*\d+\)", "", ora_ini_sucio).strip()
+    
     c_ini = str(asignados.get("c_apertura", "1")).strip()
     datos_cancion_1 = [
         Paragraph(f"■ <b>Canción {c_ini}</b> y oración", est_cab_tit),
         Paragraph("", est_cab_tit),
         Paragraph(f"{ora_ini}", est_hnos)
     ]
-    t_c1 = Table([datos_cancion_1], colWidths=[320, 100, 100])
+    t_c1 = Table([datos_cancion_1], colWidths=[320, 110, 110])
     t_c1.setStyle(TableStyle([
         ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
         ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
@@ -154,6 +160,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     }
     
     seccion_actual = ""
+
     # --- 3. BUCLE PRINCIPAL CON UNIFICADOR DE BARRA AZUL DE LA LECTURA ---
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias[k]
