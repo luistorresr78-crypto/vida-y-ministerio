@@ -6,25 +6,35 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib import colors
 
-FICHERO_REUNIONES = "reuniones.json"
-FICHERO_HERMANOS = "hermanos.json"
+FICHERO_HISTORIAL = "historial_reuniones.json"
 
-def calcular_participaciones_mes(mes_activo):
+# --- CEREBRO MATEMÁTICO: Cuenta cuántas veces ha trabajado cada hermano en las semanas guardadas del mes ---
+def calcular_participaciones_mes_completo(mes_activo, datos_historial_state=None):
     conteo = {}
-    if not os.path.exists(FICHERO_REUNIONES): return conteo
-    try:
-        with open(FICHERO_REUNIONES, "r", encoding="utf-8") as f:
-            datos = json.load(f)
-        semanas_mes = datos.get(mes_activo, {})
-        for semana in semanas_mes.values():
-            for hermano in semana.get("asignados", {}).values():
-                if hermano and isinstance(hermano, str) and hermano != "Por asignar":
-                    conteo[hermano] = conteo.get(hermano, 0) + 1
-    except: pass
+    # Primero intentamos leer el historial guardado en la memoria en vivo de la pantalla
+    datos = datos_historial_state if datos_historial_state is not None else {}
+    
+    # Si viene vacía la memoria de la pantalla, intentamos jalar la bitácora física por si acaso
+    if not datos and os.path.exists(FICHERO_HISTORIAL):
+        try:
+            with open(FICHERO_HISTORIAL, "r", encoding="utf-8") as f:
+                datos = json.load(f)
+        except: pass
+        
+    if not datos: return conteo
+    
+    semanas_mes = datos.get(mes_activo, {})
+    for semana in semanas_mes.values():
+        asig = semana.get("asignados", {})
+        for llave, hermano in asig.items():
+            # Rastreamos únicamente los casilleros de intervenciones de alumnos, ayudantes y presidentes
+            if hermano and isinstance(hermano, str) and hermano != "Por asignar" and not llave.startswith("c_"):
+                conteo[hermano] = conteo.get(hermano, 0) + 1
     return conteo
 
-def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtro, mes_detectado="SEPTIEMBRE"):
-    historial_mes = calcular_participaciones_mes(mes_detectado)
+# --- ORDENADOR INTELIGENTE: Recibe a los candidatos y los ordena dejando arriba al que menos se ha usado ---
+def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtro, mes_detectado="SEPTIEMBRE", datos_historial_state=None):
+    historial_mes = calcular_participaciones_mes_completo(mes_detectado, datos_historial_state)
     aptitud_real = str(aptitud_filtro).strip()
     
     candidatos = []
@@ -56,15 +66,18 @@ def filtrar_ayudantes_inteligente(hermano_titular, lista_hermanos, aptitud_filtr
     lista_ordenada = []
     for h in candidatos:
         nombre_h = f"{h.get('nombre', '')} {h.get('apellido', '')}"
-        v = historial_mes.get(nombre_h, 0)
-        lista_ordenada.append({"h": h, "v": v, "nombre_original": nombre_h})
+        # Jalamos el historial de veces que ha participado en el mes
+        veces_usado = historial_mes.get(nombre_h, 0)
+        lista_ordenada.append({"h": h, "v": veces_usado, "nombre_original": nombre_h})
         
+    # GANCHO DE LUIS TORRES: Ordenamos estrictamente de menor a mayor uso en el mes
     lista_ordenada.sort(key=lambda x: x["v"])
     
     hermanos_listos = []
     for item in lista_ordenada:
         h_copia = dict(item["h"])
-        h_copia["nombre"] = item["nombre_original"]
+        # Formateamos el texto del menú desplegable para sugerirte cuántas veces lleva asignado (Ej: "Luis Torres (Uso: 0)")
+        h_copia["nombre"] = f"{item['nombre_original']} (Uso: {item['v']})"
         h_copia["apellido"] = ""
         hermanos_listos.append(h_copia)
         
@@ -102,14 +115,14 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     
     presi = str(asignados.get("presidente", "Por asignar")).strip()
     cab_der = [[Paragraph("Presidente", est_cab_tit), Paragraph(f"{presi}", est_hnos)]]
-    t_presi = Table(cab_der, colWidths=[100, 120])
+    t_presi = Table(cab_der, colWidths=[60, 120])
     t_presi.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LINEBELOW', (1,0), (1,0), 0.75, colors.HexColor("#4A5568")),
         ('BOTTOMPADDING', (0,0), (-1,-1), 2)
     ]))
     
-    t_principal = Table([[cab_izq, t_presi]], colWidths=[320, 220])
+    t_principal = Table([[cab_izq, t_presi]], colWidths=[340, 180])
     t_principal.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 6)
@@ -124,7 +137,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
         Paragraph("", est_cab_tit),
         Paragraph(f"{ora_ini}", est_hnos)
     ]
-    t_c1 = Table([datos_cancion_1], colWidths=[320, 110, 110])
+    t_c1 = Table([datos_cancion_1], colWidths=[320, 100, 100])
     t_c1.setStyle(TableStyle([
         ('LINEABOVE', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
         ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#1A365D")),
@@ -141,12 +154,12 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
     }
     
     seccion_actual = ""
-    
-    # --- 3. BUCLE PRINCIPAL ---
+    # --- 3. BUCLE PRINCIPAL CON UNIFICADOR DE BARRA AZUL DE LA LECTURA ---
     for k in sorted(materias.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias[k]
         sec_materia = m.get("seccion", "Tesoros")
         
+        # Unificacion de raiz para evitar barras duplicadas en la Lectura
         if sec_materia == "Lectura":
             sec_materia = "Tesoros"
         
@@ -164,7 +177,7 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             elementos.append(t_tit)
             elementos.append(Spacer(1, 4))
             
-            # Inyección de la Canción intermedia dinámica
+            # Inyeccion de la Cancion intermedia dinamica
             if seccion_actual == "Vida":
                 c_int = str(asignados.get("c_intermedia", "121")).strip()
                 datos_cancion_2 = [Paragraph(f"■ <b>Canción {c_int}</b>", est_cab_tit), Paragraph("", est_hnos), Paragraph("", est_hnos)]
@@ -180,8 +193,12 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             else:
                 elementos.append(Spacer(1, 4))
         
-        titular = str(asignados.get(f"p{k}_t", "Por asignar")).strip()
-        ayudante = str(asignados.get(f"p{k}_a", "")).strip()
+        # Limpieza de textos y formateo de nombres quitando el sufijo de uso del menu para el PDF impreso
+        titular_sucio = str(asignados.get(f"p{k}_t", "Por asignar")).strip()
+        ayudante_sucio = str(asignados.get(f"p{k}_a", "")).strip()
+        
+        titular = re.sub(r"\s*\(Uso:\s*\d+\)", "", titular_sucio).strip()
+        ayudante = re.sub(r"\s*\(Uso:\s*\d+\)", "", ayudante_sucio).strip()
         
         if titular == "None": titular = "Por asignar"
         if ayudante == "None" or ayudante == "Por asignar": ayudante = ""
@@ -191,7 +208,6 @@ def generar_pdf_estilo_oficial(mes_activo, semana_act, materias, asignados):
             texto_html_final = f"{k}. {texto_html_final}"
         
         conf_sec = secciones_mapeadas.get(sec_materia, secciones_mapeadas["Tesoros"])
-        
         fila_materia = [
             Paragraph(texto_html_final, conf_sec["estilo_t"]),
             Paragraph(f"{titular}", est_hnos),
