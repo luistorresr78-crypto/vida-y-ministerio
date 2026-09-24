@@ -242,6 +242,7 @@ with pestana_programa:
         m = materias_dinamicas[k]
         tipo_seccion = m.get("seccion", "Tesoros")
         
+        # UNIFICACIÓN DE RAÍZ: Forzamos la palabra limpia "Tesoros" para que calce de forma idéntica con hermanos.json
         if tipo_seccion == "Maestros":
             emoji, color_sub = "🌾", "Seamos Mejores Maestros"
         elif tipo_seccion == "Vida":
@@ -249,7 +250,7 @@ with pestana_programa:
         elif tipo_seccion == "Lectura":
             emoji, color_sub = "📖", "Lectura"
         else:
-            emoji, color_sub = "💎", "Tesoros de la Biblia"
+            emoji, color_sub = "Tesoros"
             
         titulo_bruto = str(m.get('titulo', ''))
         titulo_preview = re.sub(r"<[^>]*>", "", titulo_bruto).strip()
@@ -270,7 +271,7 @@ with pestana_programa:
             else:
                 m["titulo"] = f"<b>{texto_editado_usuario}</b>"
         
-        # LIBERACIÓN TOTAL: Saneamos el llamado al conteo acumulado para que Tesoros (Puntos 1 y 2) cargue abierto y libre
+        # Ahora el buscador inteligente jalará a tus 90 hermanos de forma fluida y sin trabas
         opciones_materia = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, color_sub, mes_seleccionado, historial_actual_para_conteo)
         nombres_materia = [h.get("nombre", "").strip() for h in opciones_materia]
         if "Por asignar" not in nombres_materia: nombres_materia.insert(0, "Por asignar")
@@ -285,8 +286,6 @@ with pestana_programa:
                 st.warning(f"⚠️ ¡Atención! El hermano **{titular_limpio}** ya tiene asignada otra intervención en esta reunión.")
             elif titular_limpio != "Por asignar":
                 historial_asig_semana.append(titular_limpio)
-
-            
         with c2:
             if tipo_seccion == "Maestros":
                 opciones_ayudante = reglas.filtrar_ayudantes_inteligente(titular_limpio, lista_hermanos, "Seamos Mejores Maestros", mes_seleccionado, historial_actual_para_conteo)
@@ -316,7 +315,7 @@ with pestana_programa:
                     historial_actual[mes_seleccionado] = {}
                 
                 historial_actual[mes_seleccionado][f_cab_clean] = {
-                    "coordinador": coordinator_activo,
+                    "coordinador": coordinador_activo,
                     "asignados": asignados_en_vivo
                 }
                 guardar_historial(historial_actual)
@@ -420,7 +419,7 @@ with pestana_hermanos:
     col_add, col_del = st.columns(2)
     
     with col_add:
-        st.subheader("➕ Agregar Nuevo Hermano/a")
+        st.subheader("➕ ...")
         with st.form("form_alta_hermano_live"):
             nuevo_nom = st.text_input("Nombre:")
             nuevo_ape = st.text_input("Apellido:")
@@ -469,3 +468,4 @@ with pestana_hermanos:
         st.table(tabla_visual)
     else:
         st.info("No hay publicadores registrados en el fichero hermanos.json.")
+
