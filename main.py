@@ -242,7 +242,7 @@ with pestana_programa:
         m = materias_dinamicas[k]
         tipo_seccion = m.get("seccion", "Tesoros")
         
-        # UNIFICACIÓN DE RAÍZ: Forzamos la palabra limpia "Tesoros" para que calce de forma idéntica con hermanos.json
+        # REPARACIÓN DE RAÍZ: Equilibrábamos la balanza entregando dos textos ("💎" y "Tesoros") para dos variables
         if tipo_seccion == "Maestros":
             emoji, color_sub = "🌾", "Seamos Mejores Maestros"
         elif tipo_seccion == "Vida":
@@ -250,7 +250,7 @@ with pestana_programa:
         elif tipo_seccion == "Lectura":
             emoji, color_sub = "📖", "Lectura"
         else:
-            emoji, color_sub = "Tesoros"
+            emoji, color_sub = "💎", "Tesoros"
             
         titulo_bruto = str(m.get('titulo', ''))
         titulo_preview = re.sub(r"<[^>]*>", "", titulo_bruto).strip()
@@ -271,7 +271,6 @@ with pestana_programa:
             else:
                 m["titulo"] = f"<b>{texto_editado_usuario}</b>"
         
-        # Ahora el buscador inteligente jalará a tus 90 hermanos de forma fluida y sin trabas
         opciones_materia = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, color_sub, mes_seleccionado, historial_actual_para_conteo)
         nombres_materia = [h.get("nombre", "").strip() for h in opciones_materia]
         if "Por asignar" not in nombres_materia: nombres_materia.insert(0, "Por asignar")
@@ -419,7 +418,7 @@ with pestana_hermanos:
     col_add, col_del = st.columns(2)
     
     with col_add:
-        st.subheader("➕ ...")
+        st.subheader("➕ Agregar Nuevo Hermano/a")
         with st.form("form_alta_hermano_live"):
             nuevo_nom = st.text_input("Nombre:")
             nuevo_ape = st.text_input("Apellido:")
@@ -468,4 +467,4 @@ with pestana_hermanos:
         st.table(tabla_visual)
     else:
         st.info("No hay publicadores registrados en el fichero hermanos.json.")
-
+         
