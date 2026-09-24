@@ -9,7 +9,7 @@ st.set_page_config(page_title="Mesa de Asignaciones Teocraticas", page_icon="�
 
 FICHERO_HERMANOS = "hermanos.json"
 
-# --- REPARACIÓN DE RAÍZ: Inyectamos el Persistidor en Memoria de Navegador (st.session_state) ---
+# --- PERSISTIDOR INMUNE: Forzamos la grabacion en la memoria viva st.session_state ---
 if "historial_reuniones_state" not in st.session_state:
     st.session_state["historial_reuniones_state"] = {}
 
@@ -51,7 +51,6 @@ lista_hermanos = cargar_hermanos_iniciales()
 def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
-
 # --- PROCESADOR ADAPTATIVO CON ESCANER DE CANCIONES DE 3 DÍGITOS ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
@@ -60,6 +59,7 @@ def procesar_texto_plano_reunion(texto_usuario):
         
     texto_limpio_global = texto_usuario.replace("\r", "\n")
     
+    # Intercepcion elastica de asignaciones consecutivas
     texto_sano = re.sub(r"(\(\s*4\s*mins\s*\.?\)\s*|\b)Converse con su estudiante", r"\n7. Haga discípulos (4 mins.) Converse con su estudiante", texto_limpio_global)
     texto_sano = re.sub(r"El autocontrol nos ayuda a obedecer", r"\n8. El autocontrol nos ayuda a obedecer", texto_sano)
     texto_sano = re.sub(r"Logros de la organización", r"\n9. Logros de la organización", texto_sano)
@@ -83,10 +83,11 @@ def procesar_texto_plano_reunion(texto_usuario):
                 lectura_cab = l.strip()
                 break
 
+    # ESCANER DE CANCIONES REALES: Buscamos todos los numeros enteros completos (de 1 a 3 digitos de corrido)
     canciones_encontradas = re.findall(r"(?:CANCIÓN|CANCION)\s*([0-9]+)", texto_sano.upper())
     
-    c_apertura = canciones_encontradas if len(canciones_encontradas) > 0 else "1"
-    c_intermedia = canciones_encontradas if len(canciones_encontradas) > 1 else "121"
+    c_apertura = canciones_encontradas[0] if len(canciones_encontradas) > 0 else "1"
+    c_intermedia = canciones_encontradas[1] if len(canciones_encontradas) > 1 else "121"
     c_conclusion = canciones_encontradas[-1] if len(canciones_encontradas) > 2 else "28"
 
     seccion_actual_texto = "Tesoros"
@@ -159,6 +160,7 @@ def procesar_texto_plano_reunion(texto_usuario):
         
     return lectura_cab, c_apertura, c_intermedia, c_conclusion, materias_detectadas
 
+# --- DISPARADOR DE PESTAÑAS DE LA PASARELA VISUAL ---
 pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
     "🚀 Fabricador de Folletos", 
     "📋 Historial Guardado",
@@ -200,16 +202,21 @@ with pestana_programa:
         coordinador_activo = st.selectbox("¿Quién está assigning hoy?", ["Sergio", "Jonathan", "Luis"], key="coord_act_live")
 
     st.markdown("### 🎚️ Asignar Privilegios para el Folleto PDF")
+
+    # CARGA RECALCULADORA: Jalamos el historial en vivo para pasarle el conteo de uso al ordenador
+    historial_actual_para_conteo = cargar_historial()
+
     col_p1, col_p2 = st.columns(2)
     with col_p1:
-        opciones_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia", mes_seleccionado)
-        nom_presi = [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in opciones_presi] if opciones_presi else [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in lista_hermanos]
+        # Pasamos el estado de la bitácora para que ordene dejando arriba al que lleva 0 usos
+        opciones_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia", mes_seleccionado, historial_actual_para_conteo)
+        nom_presi = [h.get("nombre", "").strip() for h in opciones_presi]
         if "Por asignar" not in nom_presi: nom_presi.insert(0, "Por asignar")
         presidente = st.selectbox("Presidente de la Reunión", nom_presi, key="p_presi_live")
         
     with col_p2:
-        opciones_ora = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Oración", mes_seleccionado)
-        nom_ora = [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in opciones_ora] if opciones_ora else [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in lista_hermanos]
+        opciones_ora = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Oración", mes_seleccionado, historial_actual_para_conteo)
+        nom_ora = [h.get("nombre", "").strip() for h in opciones_ora]
         if "Por asignar" not in nom_ora: nom_ora.insert(0, "Por asignar")
         oracion_inicial = st.selectbox("Oración Inicial", nom_ora, key="p_ora_live")
 
@@ -224,11 +231,13 @@ with pestana_programa:
         "c_conclusion": c_conclusion_live
     }
 
-    # Activamos el balde de control semanal para rastrear duplicados
     historial_asig_semana = []
-    if presidente != "Por asignar": historial_asig_semana.append(presidente)
-    if oracion_inicial != "Por asignar": historial_asig_semana.append(oracion_inicial)
-
+    # Limpiamos el texto de la sugerencia de uso para realizar la comparación de repetición limpia
+    presi_limpio = re.sub(r"\s*\(Uso:\s*\d+\)", "", presidente).strip()
+    ora_limpia = re.sub(r"\s*\(Uso:\s*\d+\)", "", oracion_inicial).strip()
+    
+    if presi_limpio != "Por asignar": historial_asig_semana.append(presi_limpio)
+    if ora_limpia != "Por asignar": historial_asig_semana.append(ora_limpia)
     for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias_dinamicas[k]
         tipo_seccion = m.get("seccion", "Tesoros")
@@ -246,22 +255,24 @@ with pestana_programa:
         titulo_preview = re.sub(r"<[^>]*>", "", titulo_bruto).strip()
             
         st.markdown(f"**{emoji} Punto {k}**")
-        texto_editado_usuario = st.text_input(
+        
+        texto_editated_usuario = st.text_input(
             f"Editar información del Punto {k}:", 
             value=titulo_preview, 
             key=f"live_text_input_edit_{k}"
         )
         
-        if texto_editado_usuario != titulo_preview:
+        if texto_editated_usuario != titulo_preview:
             if "<br/>" in titulo_bruto:
                 partes_brutas = titulo_bruto.split("<br/>")
                 subtitulo_plomo = partes_brutas if len(partes_brutas) > 1 else ""
-                m["titulo"] = f"<b>{texto_editado_usuario}</b><br/>{subtitulo_plomo}"
+                m["titulo"] = f"<b>{texto_editated_usuario}</b><br/>{subtitulo_plomo}"
             else:
-                m["titulo"] = f"<b>{texto_editado_usuario}</b>"
+                m["titulo"] = f"<b>{texto_editated_usuario}</b>"
         
-        opciones_materia = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, color_sub, mes_seleccionado)
-        nombres_materia = [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in opciones_materia] if opciones_materia else [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in lista_hermanos]
+        # SUGERENCIA DE LUIS: El selector carga ordenado de menor a mayor cantidad de usos en el mes
+        opciones_materia = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, color_sub, mes_seleccionado, historial_actual_para_conteo)
+        nombres_materia = [h.get("nombre", "").strip() for h in opciones_materia]
         if "Por asignar" not in nombres_materia: nombres_materia.insert(0, "Por asignar")
             
         c1, c2 = st.columns(2)
@@ -269,25 +280,26 @@ with pestana_programa:
             titular = st.selectbox(f"Asignado punto {k}", nombres_materia, key=f"live_t_{k}")
             asignados_en_vivo[f"p{k}_t"] = titular if titular != "Por asignar" else "Por asignar"
             
-            # DETECTOR EN VIVO: Si el titular ya está en la lista semanal, salta la advertencia amarilla
-            if titular != "Por asignar" and titular in historial_asig_semana:
-                st.warning(f"⚠️ ¡Atención! El hermano **{titular}** ya tiene asignada otra intervención en esta reunión.")
-            elif titular != "Por asignar":
-                historial_asig_semana.append(titular)
+            # Limpiamos el contador de uso para realizar la alerta semanal limpia
+            titular_limpio = re.sub(r"\s*\(Uso:\s*\d+\)", "", titular).strip()
+            if titular_limpio != "Por asignar" and titular_limpio in historial_asig_semana:
+                st.warning(f"⚠️ ¡Atención! El hermano **{titular_limpio}** ya tiene asignada otra intervención en esta reunión.")
+            elif titular_limpio != "Por asignar":
+                historial_asig_semana.append(titular_limpio)
             
         with c2:
             if tipo_seccion == "Maestros":
-                opciones_ayudante = reglas.filtrar_ayudantes_inteligente(titular, lista_hermanos, "Seamos Mejores Maestros", mes_seleccionado)
-                nombres_ayudante = [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in opciones_ayudante] if opciones_ayudante else [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in lista_hermanos]
+                opciones_ayudante = reglas.filtrar_ayudantes_inteligente(titular_limpio, lista_hermanos, "Seamos Mejores Maestros", mes_seleccionado, historial_actual_para_conteo)
+                nombres_ayudante = [h.get("nombre", "").strip() for h in opciones_ayudante]
                 if "Por asignar" not in nombres_ayudante: nombres_ayudante.insert(0, "Por asignar")
                 ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
                 asignados_en_vivo[f"p{k}_a"] = ayudante if ayudante != "Por asignar" else "Por asignar"
                 
-                # DETECTOR EN VIVO: Si el ayudante ya está en la lista semanal, salta la advertencia amarilla
-                if ayudante != "Por asignar" and ayudante in historial_asig_semana:
-                    st.warning(f"⚠️ ¡Atención! El ayudante **{ayudante}** ya participa en otra parte esta semana.")
-                elif ayudante != "Por asignar":
-                    historial_asig_semana.append(ayudante)
+                ayudante_limpio = re.sub(r"\s*\(Uso:\s*\d+\)", "", ayudante).strip()
+                if ayudante_limpio != "Por asignar" and ayudante_limpio in historial_asig_semana:
+                    st.warning(f"⚠️ ¡Atención! El ayudante **{ayudante_limpio}** ya participa en otra parte esta semana.")
+                elif ayudante_limpio != "Por asignar":
+                    historial_asig_semana.append(ayudante_limpio)
 
     st.markdown("### 🖨️ Compilar y Guardar Permanencia (Paso 2)")
     col_g1, col_g2 = st.columns(2)
@@ -310,7 +322,7 @@ with pestana_programa:
                 
                 try:
                     reglas.generar_pdf_estilo_oficial(l_cab_clean, f_cab_clean, materias_dinamicas, asignados_en_vivo)
-                    st.success(f"¡Semana guardada en la memoria local y nombres fijos en el PDF!")
+                    st.success(f"¡Semana guardada en la memoria acumulativa y nombres fijos en el PDF!")
                 except Exception as e:
                     st.error(f"Fallo al inyectar ReportLab: {e}")
 
@@ -359,7 +371,7 @@ with pestana_historial:
                     if not historial_visual[mes_a_borrar_sel]:
                         del historial_visual[mes_a_borrar_sel]
                     guardar_historial(historial_visual)
-                    st.success(f"💥 ¡La semana '{semana_a_borrar_sel}' ha sido eliminada quirúrgicamente de la bitácora!")
+                    st.success(f"💥 ¡La semana '{semana_a_borrar_sel}' ha sido eliminada de la bitácora!")
                     st.rerun()
             else:
                 st.info("No hay semanas disponibles en este mes.")
@@ -381,19 +393,19 @@ with pestana_historial:
                     with st.expander(f"📆 Semana: {sem_key} (Armado por: {info_sem.get('coordinador', 'Luis')})"):
                         asig = info_sem.get("asignados", {})
                         
-                        st.markdown(f"**Presidente:** {asig.get('presidente', 'Por asignar')} | **Oración Inicial:** {asig.get('oracion_inicial', 'Por asignar')}")
+                        st.markdown(f"**Presidente:** {re.sub(r'\s*\(Uso:\s*\d+\)', '', asig.get('presidente', 'Por asignar'))} | **Oración Inicial:** {re.sub(r'\s*\(Uso:\s*\d+\)', '', asig.get('oracion_inicial', 'Por asignar'))}")
                         st.markdown("---")
                         
                         for llave_asig, persona in asig.items():
                             if llave_asig.startswith("p") and llave_asig.endswith("_t"):
                                 num_p = llave_asig[1:-2]
                                 ayudante_llave = f"p{num_p}_a"
-                                ayudante_nom = asig.get(ayudante_llave, "")
+                                ayudante_nom = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig.get(ayudante_llave, ""))
+                                persona_clean = re.sub(r"\s*\(Uso:\s*\d+\)", "", persona)
                                 if ayudante_nom and ayudante_nom != "Por asignar":
-                                    st.write(f"• **Punto {num_p}:** {persona} (Ayudante: {ayudante_nom})")
+                                    st.write(f"• **Punto {num_p}:** {persona_clean} (Ayudante: {ayudante_nom})")
                                 else:
-                                    t_fila_nom = asig.get(f"p{num_p}_t", "Por asignar")
-                                    st.write(f"• **Punto {num_p}:** {t_fila_nom}")
+                                    st.write(f"• **Punto {num_p}:** {persona_clean}")
             else:
                 st.info("No hay semanas guardadas para este mes.")
     else:
