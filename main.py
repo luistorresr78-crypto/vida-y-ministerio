@@ -242,7 +242,6 @@ with pestana_programa:
         m = materias_dinamicas[k]
         tipo_seccion = m.get("seccion", "Tesoros")
         
-        # REPARACIÓN DE RAÍZ: Equilibrábamos la balanza entregando dos textos ("💎" y "Tesoros") para dos variables
         if tipo_seccion == "Maestros":
             emoji, color_sub = "🌾", "Seamos Mejores Maestros"
         elif tipo_seccion == "Vida":
@@ -253,6 +252,12 @@ with pestana_programa:
             emoji, color_sub = "💎", "Tesoros"
             
         titulo_bruto = str(m.get('titulo', ''))
+        # LIJA QUIRÚRGICA: Si el título viene con formato de lista de corchetes, extraemos solo el texto limpio principal
+        if titulo_bruto.startswith("[") and "']" in titulo_bruto:
+            match_interno = re.search(r"['\"](.*?)['\"]", titulo_bruto)
+            if match_interno:
+                titulo_bruto = f"<b>{match_interno.group(1)}</b>"
+        
         titulo_preview = re.sub(r"<[^>]*>", "", titulo_bruto).strip()
             
         st.markdown(f"**{emoji} Punto {k}**")
@@ -467,4 +472,3 @@ with pestana_hermanos:
         st.table(tabla_visual)
     else:
         st.info("No hay publicadores registrados en el fichero hermanos.json.")
-         
