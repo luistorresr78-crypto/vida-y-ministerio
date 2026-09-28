@@ -242,10 +242,11 @@ with pestana_programa:
     
     if presi_limpio != "Por asignar": historial_asig_semana.append(presi_limpio)
     if ora_limpia != "Por asignar": historial_asig_semana.append(ora_limpia)
-    for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
+      for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias_dinamicas[k]
         tipo_seccion = m.get("seccion", "Tesoros")
         
+        # BALANZA CORREGIDA: Entregamos dos textos ("💎" y "Tesoros") de forma estricta para equilibrar las dos variables
         if tipo_seccion == "Maestros":
             emoji, color_sub = "🌾", "Seamos Mejores Maestros"
         elif tipo_seccion == "Vida":
@@ -253,7 +254,7 @@ with pestana_programa:
         elif tipo_seccion == "Lectura":
             emoji, color_sub = "📖", "Lectura"
         else:
-            emoji, color_sub = "Tesoros"
+            emoji, color_sub = "💎", "Tesoros"
             
         titulo_bruto = str(m.get('titulo', ''))
         if titulo_bruto.startswith("[") and "']" in titulo_bruto:
@@ -270,7 +271,6 @@ with pestana_programa:
             value=titulo_preview, 
             key=f"live_text_input_edit_{k}"
         )
-        
         if texto_editado_usuario != titulo_preview:
             if "<br/>" in titulo_bruto:
                 partes_brutas = titulo_bruto.split("<br/>")
