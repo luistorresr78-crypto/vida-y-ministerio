@@ -242,7 +242,7 @@ with pestana_programa:
     
     if presi_limpio != "Por asignar": historial_asig_semana.append(presi_limpio)
     if ora_limpia != "Por asignar": historial_asig_semana.append(ora_limpia)
-      for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
+    for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias_dinamicas[k]
         tipo_seccion = m.get("seccion", "Tesoros")
         
