@@ -187,14 +187,28 @@ with pestana_programa:
     st.markdown("---")
     st.markdown("Copia la Guía de Actividades completa desde **JW.org**, pégala abajo y presiona el botón para procesar.")
 
+    # SISTEMA REPARADO: Creamos un disparador en st.session_state para poder vaciar el texto con un solo clic
+    if "contenido_jw_caja_borrador" not in st.session_state:
+        st.session_state["contenido_jw_caja_borrador"] = ""
+
     texto_jw_entrada = st.text_area(
         "Pega aquí el texto completo copiado de JW.org:", 
+        value=st.session_state["contenido_jw_caja_borrador"],
         height=180, 
         placeholder="Puntos de la reunión...",
         key="txt_jw_live"
     )
 
-    boton_armar_pdf = st.button("⚙️ Procesar Datos para Asignación (Paso 1)", use_container_width=True)
+    # LA MEJORA DE LUIS: Botonera doble para procesar o borrar toda la caja de texto con un solo clic
+    c_proc, c_limp_caja = st.columns([3, 1])
+    with c_proc:
+        boton_armar_pdf = st.button("⚙️ Procesar Datos para Asignación (Paso 1)", use_container_width=True)
+    with c_limp_caja:
+        btn_vaciar_caja_jw = st.button("🗑️ BORRAR GUÍA", use_container_width=True)
+        if btn_vaciar_caja_jw:
+            st.session_state["contenido_jw_caja_borrador"] = ""
+            st.success("¡Caja limpiada!")
+            st.rerun()
 
     l_jw, c_apertura_live, c_intermedia_live, c_conclusion_live, materias_dinamicas = procesar_texto_plano_reunion(texto_jw_entrada)
 
@@ -209,10 +223,7 @@ with pestana_programa:
     with st.sidebar:
         st.header("⚙️ Control de Operación")
         coordinador_activo = st.selectbox("¿Quién está assigning hoy?", ["Sergio", "Jonathan", "Luis"], key="coord_act_live")
-
     st.markdown("### 🎚️ Asignar Privilegios para el Folleto PDF")
-
-    historial_actual_para_conteo = cargar_historial()
 
     col_p1, col_p2 = st.columns(2)
     with col_p1:
@@ -242,6 +253,9 @@ with pestana_programa:
     presi_limpio = re.sub(r"\s*\(Uso:\s*\d+\)", "", presidente).strip()
     ora_limpia = re.sub(r"\s*\(Uso:\s*\d+\)", "", oracion_inicial).strip()
     
+    if presi_limpio != "Por asignar": historial_asig_semana.append(presi_limpio)
+    if ora_limpia != "Por asignar": historial_asig_semana.append(ora_limpia)
+
     if presi_limpio != "Por asignar": historial_asig_semana.append(presi_limpio)
     if ora_limpia != "Por asignar": historial_asig_semana.append(ora_limpia)
     for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
