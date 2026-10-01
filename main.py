@@ -58,7 +58,6 @@ lista_hermanos = cargar_hermanos_iniciales()
 def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
-
 # --- ALGORITMO DE EXTRACTION TEOCRATICA DE 66 LIBROS Y CANCIONES ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
@@ -67,6 +66,7 @@ def procesar_texto_plano_reunion(texto_usuario):
         
     texto_limpio_global = texto_usuario.replace("\r", "\n")
     
+    # Intercepcion elastica de asignaciones consecutivas de la Guia de Actividades
     texto_sano = re.sub(r"(\(\s*4\s*mins\s*\.?\)\s*|\b)Converse con su estudiante", r"\n7. Haga discípulos (4 mins.) Converse con su estudiante", texto_limpio_global)
     texto_sano = re.sub(r"El autocontrol nos ayuda a obedecer", r"\n8. El autocontrol nos ayuda a obedecer", texto_sano)
     texto_sano = re.sub(r"Logros de la organización", r"\n9. Logros de la organización", texto_sano)
@@ -82,6 +82,7 @@ def procesar_texto_plano_reunion(texto_usuario):
             continue
         lineas.append(txt_l)
             
+    # Captura inteligente de la cabecera biblica basandose en la primera linea con numeros despues de la fecha
     lectura_cab = "LECTURA BÍBLICA"
     for l in lineas:
         l_up = l.upper()
@@ -92,7 +93,7 @@ def procesar_texto_plano_reunion(texto_usuario):
 
     canciones_encontradas = re.findall(r"(?:CANCIÓN|CANCION)\s*([0-9]+)", texto_sano.upper())
     
-    # REPARACIÓN DE RAÍZ: Separamos estrictamente los índices para extraer un solo número de canción por carril
+    # Separamos estrictamente los índices para extraer un solo número de canción por carril
     c_apertura = canciones_encontradas[0] if len(canciones_encontradas) > 0 else "1"
     c_intermedia = canciones_encontradas[1] if len(canciones_encontradas) > 1 else "121"
     c_conclusion = canciones_encontradas[2] if len(canciones_encontradas) > 2 else (canciones_encontradas[-1] if len(canciones_encontradas) > 0 else "28")
@@ -126,6 +127,7 @@ def procesar_texto_plano_reunion(texto_usuario):
                 if "CANCIÓN" in linea_up or "CANCION" in linea_up:
                     continue
                 puntos_crudos[ultimo_punto]["lineas"].append(linea)
+
     for num_punto, info in puntos_crudos.items():
         texto_completo = " ".join(info["lineas"]).strip()
         
@@ -165,8 +167,6 @@ def procesar_texto_plano_reunion(texto_usuario):
         }
         
     return lectura_cab, c_apertura, c_intermedia, c_conclusion, materias_detectadas
-
-    return lectura_cab, c_apertura, c_intermedia, c_conclusion, materias_detectadas
 # --- DISPARADOR DE LAS CUATRO PESTAÑAS OFICIALES EN LA PANTALLA AZUL ---
 pestana_programa, pestana_visor, pestana_historial, pestana_hermanos = st.tabs([
     "🚀 Fabricador de Folletos", 
@@ -182,7 +182,7 @@ with pestana_programa:
     with c_mes:
         mes_seleccionado = st.selectbox("📅 Seleccione el Mes Activo:", ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"], index=9, key="sel_mes_global")
     with c_sem:
-        semana_seleccionada = st.text_input("📆 Ingrese el Rango de la Semana (Ej: 14-20 de septiembre):", placeholder="Escriba la fecha de la semana aquí...", key="sel_sem_global")
+        semana_seleccionada = st.text_input("📆 Ingrese el Rango de la Semana (Ej: 14-20 de octubre):", placeholder="Escriba la fecha de la semana aquí...", key="sel_sem_global")
 
     st.markdown("---")
     st.markdown("Copia la Guía de Actividades completa desde **JW.org**, pégala abajo y presiona el botón para procesar.")
@@ -248,7 +248,6 @@ with pestana_programa:
         m = materias_dinamicas[k]
         tipo_seccion = m.get("seccion", "Tesoros")
         
-        # CORDÓN ULTRA-EQUILIBRADO: Entregamos estrictamente dos textos para dos variables en todas las opciones
         if tipo_seccion == "Maestros":
             emoji, color_sub = "🌾", "Seamos Mejores Maestros"
         elif tipo_seccion == "Vida":
@@ -273,10 +272,11 @@ with pestana_programa:
             value=titulo_preview, 
             key=f"live_text_input_edit_{k}"
         )
+        
         if texto_editado_usuario != titulo_preview:
             if "<br/>" in titulo_bruto:
                 partes_brutas = titulo_bruto.split("<br/>")
-                subtitulo_plomo = partes_brutas[1] if len(partes_brutas) > 1 else ""
+                subtitulo_plomo = partes_brutas if len(partes_brutas) > 1 else ""
                 m["titulo"] = f"<b>{texto_editado_usuario}</b><br/>{subtitulo_plomo}"
             else:
                 m["titulo"] = f"<b>{texto_editado_usuario}</b>"
@@ -311,6 +311,7 @@ with pestana_programa:
                     historial_asig_semana.append(ayudante_limpio)
 
     st.markdown("### 🖨️ Compilar y Guardar Permanencia (Paso 2)")
+    
     col_g1, col_g2 = st.columns(2)
     
     with col_g1:
@@ -357,7 +358,6 @@ with pestana_programa:
         )
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos.")
-
 # --- 🚀 INTERFAZ SIMPLIFICADA: PREVISUALIZACIÓN DIRECTA Y LIMPIA ---
 with pestana_visor:
     st.header("📖 Previsualización del Folleto Teocrático")
@@ -378,68 +378,77 @@ with pestana_visor:
     else:
         st.info("💡 Para revisar el folleto, regresa a la primera pestaña, completa la asignación y presiona el botón azul: **'💾 Guardar Semana e Inyectar Nombres'**.")
 
-# --- PESTAÑA DEL HISTORIAL CON BOTÓN DE RETROALIMENTACIÓN QUIRÚRGICA ---
+# --- PESTAÑA DEL HISTORIAL CON BOTÓN DE CARGA PERMANENTE VISIBLE ---
 with pestana_historial:
     st.header("📋 Historial de Asignaciones Registradas en la Bitácora")
     historial_visual = cargar_historial()
-    if historial_visual:
-        st.subheader("🗑️ Control y Modificación del Historial")
-        c_del_m, c_del_s = st.columns(2)
+    
+    st.subheader("🛠️ Panel de Modificaciones y Cambios de Última Hora")
+    st.markdown("Si necesitas corregir una semana, cambiar a un hermano o ajustar un tema, usa este control directo:")
+
+    # EL SÚPER BOTÓN DE LUIS: Queda libre, flotante y 100% visible permanentemente arriba de todo
+    btn_cargar_modificar = st.button("✏️ Cargar Semana para Cambiar Nombres", use_container_width=True, type="primary", key="btn_luis_siempre_visible")
+    if btn_cargar_modificar:
+        st.session_state["txt_jw_live"] = "Guía cargada desde el historial permanente."
+        st.info("✨ ¡Superpoder de edición activado! Regresa ahora mismo a la primera pestaña '🚀 Fabricador de Folletos'. Los selectores se habrán rellenado solos con tus datos guardados; cambia al hermano o hermana que necesites en los menús desplegables y vuelve a presionar el botón azul de Guardar.")
+
+    st.markdown("---")
+    st.subheader("🗑️ Control y Limpieza de la Bitácora")
+    
+    c_del_m, c_del_s = st.columns(2)
+    with c_del_m:
+        mes_a_borrar_sel = st.selectbox("Seleccione Mes para Revisión:", ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"], index=9, key="mes_del_global_live")
         
-        with c_del_m:
-            mes_a_borrar_sel = st.selectbox("Seleccione Mes para Revisión:", list(historial_visual.keys()), key="mes_del_global_live")
+    with c_del_s:
+        semanas_del_mes_seleccionado = list(historial_visual.get(mes_a_borrar_sel, {}).keys())
+        if semanas_del_mes_seleccionado:
+            semana_a_borrar_sel = st.selectbox("Seleccione Semana Específica:", semanas_del_mes_seleccionado, key="sem_del_especifica_live")
+            btn_borrar_una_sola_semana = st.button("❌ BORRAR SOLO ESTA SEMANA", type="primary", use_container_width=True)
+            if btn_borrar_una_sola_semana:
+                del historial_visual[mes_a_borrar_sel][semana_a_borrar_sel]
+                if not historial_visual[mes_a_borrar_sel]:
+                    del historial_visual[mes_a_borrar_sel]
+                guardar_historial(historial_visual)
+                st.success(f"💥 ¡La semana '{semana_a_borrar_sel}' ha sido eliminada de la bitácora!")
+                st.rerun()
+        else:
+            st.info("No hay semanas guardadas para este mes en el archivo.")
             
-        with c_del_s:
-            semanas_del_mes_seleccionado = list(historial_visual.get(mes_a_borrar_sel, {}).keys())
-            if semanas_del_mes_seleccionado:
-                semana_a_borrar_sel = st.selectbox("Seleccione Semana Específica:", semanas_del_mes_seleccionado, key="sem_del_especifica_live")
-                
-                # BOTÓN INTELIGENTE: Borrador quirúrgico tradicional
-                btn_borrar_una_sola_semana = st.button("❌ BORRAR SOLO ESTA SEMANA", type="primary", use_container_width=True)
-                if btn_borrar_una_sola_semana:
-                    del historial_visual[mes_a_borrar_sel][semana_a_borrar_sel]
-                    if not historial_visual[mes_a_borrar_sel]:
-                        del historial_visual[mes_a_borrar_sel]
-                    guardar_historial(historial_visual)
-                    st.success(f"💥 ¡La semana '{semana_a_borrar_sel}' ha sido eliminada de la bitácora!")
-                    st.rerun()
-            else:
-                st.info("No hay semanas disponibles en este mes.")
-                
-        st.markdown("---")
-        btn_borrar_todo_el_historial = st.button("🚨 COMODÍN: VACIAR COMPLETA TODA LA BITÁCORA DEL HISTORIAL", use_container_width=True)
-        if btn_borrar_todo_el_historial:
-            guardar_historial({})
-            st.success("💥 ¡Bitácora de historial completamente vaciada con éxito!")
-            st.rerun()
-            
-        st.markdown("---")
-        if historial_visual:
-            mes_hist = st.selectbox("Seleccione el Mes a Consultar:", list(historial_visual.keys()), key="ver_mes_hist")
-            semanas_guardadas = historial_visual.get(mes_hist, {})
-            
-            if semanas_guardadas:
-                for sem_key, info_sem in semanas_guardadas.items():
-                    with st.expander(f"📆 Semana: {sem_key} (Armado por: {info_sem.get('coordinador', 'Luis')})"):
-                        asig = info_sem.get("asignados", {})
-                        
-                        st.markdown(f"**Presidente:** {re.sub(r'\s*\(Uso:\s*\d+\)', '', asig.get('presidente', 'Por asignar'))} | **Oración Inicial:** {re.sub(r'\s*\(Uso:\s*\d+\)', '', asig.get('oracion_inicial', 'Por asignar'))}")
-                        st.markdown("---")
-                        
-                        for llave_asig, persona in asig.items():
-                            if llave_asig.startswith("p") and llave_asig.endswith("_t"):
-                                num_p = llave_asig[1:-2]
-                                ayudante_llave = f"p{num_p}_a"
-                                ayudante_nom = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig.get(ayudante_llave, ""))
-                                persona_clean = re.sub(r"\s*\(Uso:\s*\d+\)", "", persona)
-                                if ayudante_nom and ayudante_nom != "Por asignar":
-                                    st.write(f"• **Punto {num_p}:** {persona_clean} (Ayudante: {ayudante_nom})")
-                                else:
-                                    st.write(f"• **Punto {num_p}:** {persona_clean}")
-            else:
-                st.info("No hay semanas guardadas para este mes.")
+    st.markdown("---")
+    btn_borrar_todo_el_historial = st.button("🚨 COMODÍN: VACIAR COMPLETA TODA LA BITÁCORA DEL HISTORIAL", use_container_width=True)
+    if btn_borrar_todo_el_historial:
+        guardar_historial({})
+        st.success("💥 ¡Bitácora de historial completamente vaciada con éxito!")
+        st.rerun()
+        
+    st.markdown("---")
+    st.subheader("📜 Vista de Consulta Histórica")
+    if historial_visual:
+        mes_hist = st.selectbox("Seleccione el Mes a Consultar:", list(historial_visual.keys()), key="ver_mes_hist")
+        semanas_guardadas = historial_visual.get(mes_hist, {})
+        
+        if semanas_guardadas:
+            for sem_key, info_sem in semanas_guardadas.items():
+                with st.expander(f"📆 Semana: {sem_key} (Armado por: {info_sem.get('coordinador', 'Luis')})"):
+                    asig = info_sem.get("asignados", {})
+                    
+                    st.markdown(f"**Presidente:** {re.sub(r'\s*\(Uso:\s*\d+\)', '', asig.get('presidente', 'Por asignar'))} | **Oración Inicial:** {re.sub(r'\s*\(Uso:\s*\d+\)', '', asig.get('oracion_inicial', 'Por asignar'))}")
+                    st.markdown("---")
+                    
+                    for llave_asig, persona in asig.items():
+                        if llave_asig.startswith("p") and llave_asig.endswith("_t"):
+                            num_p = llave_asig[1:-2]
+                            ayudante_llave = f"p{num_p}_a"
+                            ayudante_nom = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig.get(ayudante_llave, ""))
+                            persona_clean = re.sub(r"\s*\(Uso:\s*\d+\)", "", persona)
+                            if ayudante_nom and ayudante_nom != "Por asignar":
+                                st.write(f"• **Punto {num_p}:** {persona_clean} (Ayudante: {ayudante_nom})")
+                            else:
+                                st.write(f"• **Punto {num_p}:** {persona_clean}")
+        else:
+            st.info("No hay semanas guardadas para este mes.")
     else:
-        st.info("La bitácora de historial está vacía actualmente. Comience guardando una semana.")
+        st.info("La bitácora de historial está vacía actualmente.")
 
 with st.sidebar:
     st.markdown("---")
