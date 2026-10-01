@@ -9,16 +9,22 @@ import base64
 st.set_page_config(page_title="Mesa de Asignaciones Teocraticas", page_icon="📝", layout="wide")
 
 FICHERO_HERMANOS = "hermanos.json"
+FICHERO_HISTORIAL = "historial_reuniones.json"
 
-# --- BLINDAJE ULTRA-RESISTENTE DE BITÁCORA CONTRA CAÍDAS DE SERVIDOR ---
-if "historial_memoria_eterna" not in st.session_state:
-    st.session_state["historial_memoria_eterna"] = {}
-
+# --- ALMACENAMIENTO FISICO PERSISTENTE CONTRA CAIDAS DEL SERVIDOR ---
 def cargar_historial():
-    return st.session_state["historial_memoria_eterna"]
+    if not os.path.exists(FICHERO_HISTORIAL):
+        with open(FICHERO_HISTORIAL, "w", encoding="utf-8") as f:
+            json.dump({}, f, ensure_ascii=False, indent=4)
+    try:
+        with open(FICHERO_HISTORIAL, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return {}
 
 def guardar_historial(datos):
-    st.session_state["historial_memoria_eterna"] = datos
+    with open(FICHERO_HISTORIAL, "w", encoding="utf-8") as f:
+        json.dump(datos, f, ensure_ascii=False, indent=4)
 
 def cargar_hermanos_iniciales():
     if os.path.exists(FICHERO_HERMANOS):
@@ -52,7 +58,8 @@ lista_hermanos = cargar_hermanos_iniciales()
 def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
-# --- ALGORITMO DE EXTRACCIÓN TEOCRÁTICA UNIVERSAL DE 66 LIBROS Y CANCIONES ---
+
+# --- ALGORITMO DE EXTRACTION TEOCRATICA DE 66 LIBROS Y CANCIONES ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
@@ -60,7 +67,6 @@ def procesar_texto_plano_reunion(texto_usuario):
         
     texto_limpio_global = texto_usuario.replace("\r", "\n")
     
-    # Intercepcion elastica de asignaciones consecutivas de la Guia de Actividades
     texto_sano = re.sub(r"(\(\s*4\s*mins\s*\.?\)\s*|\b)Converse con su estudiante", r"\n7. Haga discípulos (4 mins.) Converse con su estudiante", texto_limpio_global)
     texto_sano = re.sub(r"El autocontrol nos ayuda a obedecer", r"\n8. El autocontrol nos ayuda a obedecer", texto_sano)
     texto_sano = re.sub(r"Logros de la organización", r"\n9. Logros de la organización", texto_sano)
@@ -76,7 +82,6 @@ def procesar_texto_plano_reunion(texto_usuario):
             continue
         lineas.append(txt_l)
             
-    # Captura inteligente de la cabecera biblica basandose en la primera linea con numeros despues de la fecha
     lectura_cab = "LECTURA BÍBLICA"
     for l in lineas:
         l_up = l.upper()
@@ -85,11 +90,10 @@ def procesar_texto_plano_reunion(texto_usuario):
                 lectura_cab = l.strip()
                 break
 
-    # RASTREADOR DE PATRONES NUMÉRICOS: Succiona los digitos reales de las tres canciones
     canciones_encontradas = re.findall(r"(?:CANCIÓN|CANCION)\s*([0-9]+)", texto_sano.upper())
     
-    c_apertura = canciones_encontradas[0] if len(canciones_encontradas) > 0 else "1"
-    c_intermedia = canciones_encontradas[1] if len(canciones_encontradas) > 1 else "121"
+    c_apertura = canciones_encontradas if len(canciones_encontradas) > 0 else "1"
+    c_intermedia = canciones_encontradas if len(canciones_encontradas) > 1 else "121"
     c_conclusion = canciones_encontradas[-1] if len(canciones_encontradas) > 2 else "28"
 
     seccion_actual_texto = "Tesoros"
@@ -242,6 +246,7 @@ with pestana_programa:
         m = materias_dinamicas[k]
         tipo_seccion = m.get("seccion", "Tesoros")
         
+        # CORDÓN ULTRA-EQUILIBRADO: Entregamos estrictamente dos textos para dos variables en todas las opciones
         if tipo_seccion == "Maestros":
             emoji, color_sub = "🌾", "Seamos Mejores Maestros"
         elif tipo_seccion == "Vida":
@@ -249,7 +254,7 @@ with pestana_programa:
         elif tipo_seccion == "Lectura":
             emoji, color_sub = "📖", "Lectura"
         else:
-            emoji, color_sub = "Tesoros"
+            emoji, color_sub = "💎", "Tesoros"
             
         titulo_bruto = str(m.get('titulo', ''))
         if titulo_bruto.startswith("[") and "']" in titulo_bruto:
@@ -266,11 +271,10 @@ with pestana_programa:
             value=titulo_preview, 
             key=f"live_text_input_edit_{k}"
         )
-        
         if texto_editado_usuario != titulo_preview:
             if "<br/>" in titulo_bruto:
                 partes_brutas = titulo_bruto.split("<br/>")
-                subtitulo_plomo = partes_brutas if len(partes_brutas) > 1 else ""
+                subtitulo_plomo = partes_brutas[1] if len(partes_brutas) > 1 else ""
                 m["titulo"] = f"<b>{texto_editado_usuario}</b><br/>{subtitulo_plomo}"
             else:
                 m["titulo"] = f"<b>{texto_editado_usuario}</b>"
@@ -286,7 +290,7 @@ with pestana_programa:
             
             titular_limpio = re.sub(r"\s*\(Uso:\s*\d+\)", "", titular).strip()
             if titular_limpio != "Por asignar" and titular_limpio in historial_asig_semana:
-                st.warning(f"⚠️ ¡Atención! El hermano **{titular_limpio}** ya tiene asignada otra intervención in esta reunión.")
+                st.warning(f"⚠️ ¡Atención! El hermano **{titular_limpio}** ya tiene asignada otra intervención en esta reunión.")
             elif titular_limpio != "Por asignar":
                 historial_asig_semana.append(titular_limpio)
             
@@ -352,7 +356,7 @@ with pestana_programa:
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos.")
 
-# --- 🚀 NUEVA INTERFAZ INYECTADA: VISOR INTERACTIVO EN PANTALLA AZUL ---
+# --- 🚀 INTERFAZ INYECTADA: VISOR INTERACTIVO EN PANTALLA AZUL ---
 with pestana_visor:
     st.header("📖 Visor del Folleto Teocrático en Vivo")
     st.markdown("Revisa el diseño final del documento físico en tiempo real aquí mismo antes de enviarlo por WhatsApp.")
