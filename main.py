@@ -378,7 +378,7 @@ with pestana_visor:
     else:
         st.info("💡 Para revisar el folleto, regresa a la primera pestaña, completa la asignación y presiona el botón azul: **'💾 Guardar Semana e Inyectar Nombres'**.")
 
-# --- PESTAÑA DEL HISTORIAL CON BOTÓN DE CARGA PERMANENTE VISIBLE ---
+# --- PESTAÑA DEL HISTORIAL CON LLAVE INTERNA REPARADA ---
 with pestana_historial:
     st.header("📋 Historial de Asignaciones Registradas en la Bitácora")
     historial_visual = cargar_historial()
@@ -386,8 +386,8 @@ with pestana_historial:
     st.subheader("🛠️ Panel de Modificaciones y Cambios de Última Hora")
     st.markdown("Si necesitas corregir una semana, cambiar a un hermano o ajustar un tema, usa este control directo:")
 
-    # EL SÚPER BOTÓN DE LUIS: Queda libre, flotante y 100% visible permanentemente arriba de todo
-    btn_cargar_modificar = st.button("✏️ Cargar Semana para Cambiar Nombres", use_container_width=True, type="primary", key="btn_luis_siempre_visible")
+    # LLAVE SANADA: Le asignamos un identificador unico exclusivo para destruir el error de duplicados
+    btn_cargar_modificar = st.button("✏️ Cargar Semana para Cambiar Nombres", use_container_width=True, type="primary", key="llave_unica_boton_luis_v2")
     if btn_cargar_modificar:
         st.session_state["txt_jw_live"] = "Guía cargada desde el historial permanente."
         st.info("✨ ¡Superpoder de edición activado! Regresa ahora mismo a la primera pestaña '🚀 Fabricador de Folletos'. Los selectores se habrán rellenado solos con tus datos guardados; cambia al hermano o hermana que necesites en los menús desplegables y vuelve a presionar el botón azul de Guardar.")
@@ -398,7 +398,6 @@ with pestana_historial:
     c_del_m, c_del_s = st.columns(2)
     with c_del_m:
         mes_a_borrar_sel = st.selectbox("Seleccione Mes para Revisión:", ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"], index=9, key="mes_del_global_live")
-        
     with c_del_s:
         semanas_del_mes_seleccionado = list(historial_visual.get(mes_a_borrar_sel, {}).keys())
         if semanas_del_mes_seleccionado:
