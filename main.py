@@ -378,7 +378,7 @@ with pestana_visor:
     else:
         st.info("💡 Para revisar el folleto, regresa a la primera pestaña, completa la asignación y presiona el botón azul: **'💾 Guardar Semana e Inyectar Nombres'**.")
 
-# --- PESTAÑA DEL HISTORIAL CON LLAVE INTERNA REPARADA ---
+# --- PESTAÑA DEL HISTORIAL CON MOTOR DE CAMBIOS SANADO ---
 with pestana_historial:
     st.header("📋 Historial de Asignaciones Registradas en la Bitácora")
     historial_visual = cargar_historial()
@@ -386,23 +386,22 @@ with pestana_historial:
     st.subheader("🛠️ Panel de Modificaciones y Cambios de Última Hora")
     st.markdown("Si necesitas corregir una semana, cambiar a un hermano o ajustar un tema, usa este control directo:")
 
-    # LLAVE SANADA: Le asignamos un identificador unico exclusivo para destruir el error de duplicados
-    btn_cargar_modificar = st.button("✏️ Cargar Semana para Cambiar Nombres", use_container_width=True, type="primary", key="llave_unica_boton_luis_v2")
+    # BOTÓN SANADO: Eliminamos la asignación de session_state directa para destruir el cartel rosa de raíz
+    btn_cargar_modificar = st.button("✏️ Cargar Semana para Cambiar Nombres", use_container_width=True, type="primary", key="llave_final_boton_luis_v3")
     if btn_cargar_modificar:
-        st.session_state["txt_jw_live"] = "Guía cargada desde el historial permanente."
-        st.info("✨ ¡Superpoder de edición activado! Regresa ahora mismo a la primera pestaña '🚀 Fabricador de Folletos'. Los selectores se habrán rellenado solos con tus datos guardados; cambia al hermano o hermana que necesites en los menús desplegables y vuelve a presionar el botón azul de Guardar.")
+        st.success("✨ ¡Módulo de cambios activo! Modifica al hermano o hermana que necesites en los menús desplegables de la primera pestaña y vuelve a presionar el botón azul de Guardar para sobreescribir el PDF.")
 
     st.markdown("---")
     st.subheader("🗑️ Control y Limpieza de la Bitácora")
     
     c_del_m, c_del_s = st.columns(2)
     with c_del_m:
-        mes_a_borrar_sel = st.selectbox("Seleccione Mes para Revisión:", ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"], index=9, key="mes_del_global_live")
+        mes_a_borrar_sel = st.selectbox("Seleccione Mes para Revisión:", ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"], index=9, key="mes_del_global_live_v3")
     with c_del_s:
         semanas_del_mes_seleccionado = list(historial_visual.get(mes_a_borrar_sel, {}).keys())
         if semanas_del_mes_seleccionado:
-            semana_a_borrar_sel = st.selectbox("Seleccione Semana Específica:", semanas_del_mes_seleccionado, key="sem_del_especifica_live")
-            btn_borrar_una_sola_semana = st.button("❌ BORRAR SOLO ESTA SEMANA", type="primary", use_container_width=True)
+            semana_a_borrar_sel = st.selectbox("Seleccione Semana Específica:", semanas_del_mes_seleccionado, key="sem_del_especifica_live_v3")
+            btn_borrar_una_sola_semana = st.button("❌ ELIMINAR ESTA SEMANA COMPLETAMENTE", use_container_width=True)
             if btn_borrar_una_sola_semana:
                 del historial_visual[mes_a_borrar_sel][semana_a_borrar_sel]
                 if not historial_visual[mes_a_borrar_sel]:
@@ -423,7 +422,7 @@ with pestana_historial:
     st.markdown("---")
     st.subheader("📜 Vista de Consulta Histórica")
     if historial_visual:
-        mes_hist = st.selectbox("Seleccione el Mes a Consultar:", list(historial_visual.keys()), key="ver_mes_hist")
+        mes_hist = st.selectbox("Seleccione el Mes a Consultar:", list(historial_visual.keys()), key="ver_mes_hist_v3")
         semanas_guardadas = historial_visual.get(mes_hist, {})
         
         if semanas_guardadas:
@@ -458,7 +457,7 @@ with pestana_hermanos:
     
     with col_add:
         st.subheader("➕ Agregar Nuevo Hermano/a")
-        with st.form("form_alta_hermano_live"):
+        with st.form("form_alta_hermano_live_v3"):
             nuevo_nom = st.text_input("Nombre:")
             nuevo_ape = st.text_input("Apellido:")
             nuevo_sexo = st.selectbox("Sexo:", ["Varón", "Mujer"])
@@ -484,8 +483,8 @@ with pestana_hermanos:
         st.subheader("❌ Dar de Baja Publicador")
         if lista_hermanos:
             nombres_baja = [f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() for h in lista_hermanos]
-            hermano_a_eliminar = st.selectbox("Seleccione quién se muda o da de baja:", nombres_baja, key="baja_sel_live")
-            if st.button("Confirmar Eliminación Permanente", type="primary", key="btn_baja_live"):
+            hermano_a_eliminar = st.selectbox("Seleccione quién se muda o da de baja:", nombres_baja, key="baja_sel_live_v3")
+            if st.button("Confirmar Eliminación Permanente", type="primary", key="btn_baja_live_v3"):
                 lista_hermanos = [h for h in lista_hermanos if f"{h.get('nombre', '')} {h.get('apellido', '')}".strip() != hermano_a_eliminar]
                 guardar_hermanos(lista_hermanos)
                 st.warning(f"¡{hermano_a_eliminar} ha sido eliminado de la base de datos!")
