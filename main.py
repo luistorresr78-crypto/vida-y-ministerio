@@ -358,17 +358,22 @@ with pestana_programa:
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos.")
 
-# --- 🚀 INTERFAZ INYECTADA: VISOR INTERACTIVO EN PANTALLA AZUL ---
+# --- 🚀 INTERFAZ REPARADA: VISOR INTERACTIVO NATIVO DESBLOQUEADO ---
 with pestana_visor:
     st.header("📖 Visor del Folleto Teocrático en Vivo")
     st.markdown("Revisa el diseño final del documento físico en tiempo real aquí mismo antes de enviarlo por WhatsApp.")
     
     if os.path.exists(archivo_encontrado_fisco):
-        with open(archivo_encontrado_fisco, "rb") as f:
-            base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-        
-        pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf"></iframe>'
-        st.markdown(pdf_display, unsafe_allow_html=True)
+        try:
+            from streamlit_pdf_viewer import pdf_viewer
+            # Cargamos el documento de forma nativa para romper el bloqueo del circulo rojo de internet
+            pdf_viewer(input=archivo_encontrado_fisco, width=800, height=800)
+        except Exception as e:
+            # Plan B de respaldo por si el servidor no tiene instalada la libreria externa publica
+            with open(archivo_encontrado_fisco, "rb") as f:
+                base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+            pdf_display = f'<embed src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf">'
+            st.markdown(pdf_display, unsafe_allow_html=True)
     else:
         st.info("💡 Para visualizar el folleto en vivo en esta pantalla, regresa a la primera pestaña, completa la asignación y presiona el botón azul: **'💾 Guardar Semana e Inyectar Nombres'**.")
 
@@ -376,7 +381,6 @@ with pestana_visor:
 with pestana_historial:
     st.header("📋 Historial de Asignaciones Registradas en la Bitácora")
     historial_visual = cargar_historial()
-    
     if historial_visual:
         st.subheader("🗑️ Control y Limpieza del Historial")
         c_del_m, c_del_s = st.columns(2)
@@ -400,7 +404,7 @@ with pestana_historial:
                 st.info("No hay semanas disponibles en este mes.")
                 
         st.markdown("---")
-        btn_borrar_todo_el_historial = st.button("🚨 COMODÍN: VACIAR COMPLETA TODA LA BITÁCORA DEL HISTORIAL", use_container_width=True)
+        btn_borrar_todo_el_historial = st.button("🚨 COMODÍN: VACIAR COMPLETA TADA LA BITÁCORA DEL HISTORIAL", use_container_width=True)
         if btn_borrar_todo_el_historial:
             guardar_historial({})
             st.success("💥 ¡Bitácora de historial completamente vaciada con éxito!")
