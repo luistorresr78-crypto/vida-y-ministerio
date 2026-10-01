@@ -358,101 +358,43 @@ with pestana_programa:
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos.")
 
-# --- 🚀 INTERFAZ POTENCIADA: CATÁLOGO MENSUAL Y EDITORES ESPEJO ---
+# --- 🚀 INTERFAZ SIMPLIFICADA: PREVISUALIZACIÓN DIRECTA Y LIMPIA ---
 with pestana_visor:
-    st.header("📖 Centro de Control y Previsualización de Folletos")
-    st.markdown("Consulta cualquier documento guardado en el mes, descárgalo o edita los nombres en tiempo real.")
+    st.header("📖 Previsualización del Folleto Teocrático")
+    st.markdown("Revisa el diseño final del documento físico abriéndolo directamente en tu navegador.")
     
-    historial_visor = cargar_historial()
-    
-    st.subheader("📁 Catálogo de Archivos del Mes")
-    c_v_mes, c_v_sem = st.columns(2)
-    
-    with c_v_mes:
-        mes_visor_sel = st.selectbox("Seleccione el Mes a Consultar:", ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"], index=9, key="mes_visor_live_select")
-    
-    semanas_disponibles_visor = list(historial_visor.get(mes_visor_sel, {}).keys())
-    
-    with c_v_sem:
-        if semanas_disponibles_visor:
-            semana_visor_sel = st.selectbox("Seleccione la Semana a Visualizar:", semanas_disponibles_visor, key="sem_visor_live_select")
-            datos_semana_guardada = historial_visor[mes_visor_sel][semana_visor_sel]
-            asignados_visor = datos_semana_guardada.get("asignados", {})
-        else:
-            st.info("💡 No hay semanas guardadas todavía en este mes. Se mostrará la semana en edición activa abajo.")
-            semana_visor_sel = f_cab_clean
-            datos_semana_guardada = None
-            asignados_visor = asignados_en_vivo
-    st.markdown("---")
-    st.subheader(f"🛠️ Panel de Edición Rápida: Semana {semana_visor_sel}")
-    
-    # Preparamos los datos dinamicos para ReportLab en base a la seleccion del catalogo
-    if datos_semana_guardada:
-        st.caption(f"📋 Revisando registro permanente (Coordinador: {datos_semana_guardada.get('coordinador', 'Luis')})")
-    else:
-        st.caption("⚡ Editando la mesa de trabajo en vivo")
-
-    # EDITORES ESPEJO INTERACTIVOS: Te permiten cambiar los nombres directamente en esta pestaña
-    c_e1, c_e2 = st.columns(2)
-    with c_e1:
-        v_presi = st.text_input("Modificar Presidente:", value=str(asignados_visor.get("presidente", "Por asignar")), key="v_edit_presi")
-        v_cap = st.text_input("Modificar Canción Apertura:", value=str(asignados_visor.get("c_apertura", "1")), key="v_edit_cap")
-    with c_e2:
-        v_ora = st.text_input("Modificar Oración Inicial:", value=str(asignados_visor.get("oracion_inicial", "Por asignar")), key="v_edit_ora")
-        v_cint = st.text_input("Modificar Canción Intermedia:", value=str(asignados_visor.get("c_intermedia", "121")), key="v_edit_cint")
-
-    # Actualizamos el diccionario con los cambios que hagas en el espejo
-    asignados_visor["presidente"] = v_presi
-    asignados_visor["oracion_inicial"] = v_ora
-    asignados_visor["c_apertura"] = v_cap
-    asignados_visor["c_intermedia"] = v_cint
-
-    # Boton de regeneracion automatica y sobreescritura de ReportLab
-    btn_actualizar_pdf_visor = st.button("🔄 Guardar Cambios y Forzar Reimpresión del PDF", use_container_width=True, type="primary")
-    
-    if btn_actualizar_pdf_visor:
-        if datos_semana_guardada:
-            # Si es una semana del pasado, guardamos los cambios en el historial permanente
-            historial_visor[mes_visor_sel][semana_visor_sel]["asignados"] = asignados_visor
-            guardar_historial(historial_visor)
-        
-        try:
-            reglas.generar_pdf_estilo_oficial(l_cab_clean, semana_visor_sel, materias_dinamicas, asignados_visor)
-            st.success("✨ ¡Folleto re-compilado con éxito! Los nuevos nombres y canciones se fijaron en el PDF.")
-        except Exception as e:
-            st.error(f"Error al inyectar ReportLab: {e}")
-
-    st.markdown("---")
-    
-    # BOTONERA DE ACCESO EXTERNO LIBRE DE CANDADOS DE NAVEGADOR
     if os.path.exists(archivo_encontrado_fisco):
         with open(archivo_encontrado_fisco, "rb") as f:
             pdf_bytes_v = f.read()
         base64_pdf_v = base64.b64encode(pdf_bytes_v).decode('utf-8')
         
+        st.success("✨ ¡Folleto listo para revisión! Haz clic en el botón azul marino de abajo:")
+        
         c_vb1, c_vis_down = st.columns(2)
         with c_vb1:
             st.markdown(f'<a href="data:application/pdf;base64,{base64_pdf_v}" target="_blank" style="text-decoration:none;"><button style="width:100%; height:45px; background-color:#1A365D; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">🔍 Abrir Folleto en Pestaña Nueva</button></a>', unsafe_allow_html=True)
         with c_vis_down:
-            st.download_button(label="📥 Descargar Folleto del Catálogo (.pdf)", data=pdf_bytes_v, file_name=f"Folleto_{mes_visor_sel}_{semana_visor_sel.replace(' ', '_')}.pdf", mime="application/pdf", key="down_pdf_visor_final_live")
+            st.download_button(label="📥 Descargar Folleto (.pdf)", data=pdf_bytes_v, file_name=f"Folleto_Reunion_{mes_seleccionado}.pdf", mime="application/pdf", key="down_pdf_visor_final_clean")
     else:
-        st.warning("⚠️ No se ha detectado ningún archivo compilado para esta semana. Presione el botón azul de arriba para forzar la impresión.")
+        st.info("💡 Para revisar el folleto, regresa a la primera pestaña, completa la asignación y presiona el botón azul: **'💾 Guardar Semana e Inyectar Nombres'**.")
 
-# --- PESTAÑA DEL HISTORIAL EN TIEMPO REAL CON BORRADO QUIRÚRGICO PERMANENTE ---
+# --- PESTAÑA DEL HISTORIAL CON BOTÓN DE RETROALIMENTACIÓN QUIRÚRGICA ---
 with pestana_historial:
     st.header("📋 Historial de Asignaciones Registradas en la Bitácora")
     historial_visual = cargar_historial()
     if historial_visual:
-        st.subheader("🗑️ Control y Limpieza del Historial")
+        st.subheader("🗑️ Control y Modificación del Historial")
         c_del_m, c_del_s = st.columns(2)
         
         with c_del_m:
-            mes_a_borrar_sel = st.selectbox("Seleccione Mes para Limpieza:", list(historial_visual.keys()), key="mes_del_global_live")
+            mes_a_borrar_sel = st.selectbox("Seleccione Mes para Revisión:", list(historial_visual.keys()), key="mes_del_global_live")
             
         with c_del_s:
             semanas_del_mes_seleccionado = list(historial_visual.get(mes_a_borrar_sel, {}).keys())
             if semanas_del_mes_seleccionado:
-                semana_a_borrar_sel = st.selectbox("Seleccione Semana Específica a Eliminar:", semanas_del_mes_seleccionado, key="sem_del_especifica_live")
+                semana_a_borrar_sel = st.selectbox("Seleccione Semana Específica:", semanas_del_mes_seleccionado, key="sem_del_especifica_live")
+                
+                # BOTÓN INTELIGENTE: Borrador quirúrgico tradicional
                 btn_borrar_una_sola_semana = st.button("❌ BORRAR SOLO ESTA SEMANA", type="primary", use_container_width=True)
                 if btn_borrar_una_sola_semana:
                     del historial_visual[mes_a_borrar_sel][semana_a_borrar_sel]
