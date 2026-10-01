@@ -225,6 +225,9 @@ with pestana_programa:
         coordinador_activo = st.selectbox("¿Quién está assigning hoy?", ["Sergio", "Jonathan", "Luis"], key="coord_act_live")
     st.markdown("### 🎚️ Asignar Privilegios para el Folleto PDF")
 
+    # REPARACIÓN DE RAÍZ: Declaramos la variable de conteo justo aquí para destruir el NameError antes de llamar al Presidente
+    historial_actual_para_conteo = cargar_historial()
+
     col_p1, col_p2 = st.columns(2)
     with col_p1:
         opciones_presi = reglas.filtrar_ayudantes_inteligente("", lista_hermanos, "Presidencia", mes_seleccionado, historial_actual_para_conteo)
@@ -237,7 +240,6 @@ with pestana_programa:
         nom_ora = [h.get("nombre", "").strip() for h in opciones_ora]
         if "Por asignar" not in nom_ora: nom_ora.insert(0, "Por asignar")
         oracion_inicial = st.selectbox("Oración Inicial", nom_ora, key="p_ora_live")
-
     st.markdown("---")
     st.markdown("### 📝 Ajustar Temas de Intervenciones y Asignar Hermanos")
     
@@ -256,8 +258,6 @@ with pestana_programa:
     if presi_limpio != "Por asignar": historial_asig_semana.append(presi_limpio)
     if ora_limpia != "Por asignar": historial_asig_semana.append(ora_limpia)
 
-    if presi_limpio != "Por asignar": historial_asig_semana.append(presi_limpio)
-    if ora_limpia != "Por asignar": historial_asig_semana.append(ora_limpia)
     for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias_dinamicas[k]
         tipo_seccion = m.get("seccion", "Tesoros")
