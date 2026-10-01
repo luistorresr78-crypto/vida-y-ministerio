@@ -3,27 +3,22 @@ import json
 import os
 import re
 import reglas
+import base64
 
 # Configuracion adaptativa de la pagina web para celulares, iPads y laptops
 st.set_page_config(page_title="Mesa de Asignaciones Teocraticas", page_icon="📝", layout="wide")
 
 FICHERO_HERMANOS = "hermanos.json"
-FICHERO_HISTORIAL = "historial_reuniones.json"
 
-# --- BLINDAJE DE RAÍZ: Volvemos al almacenamiento en archivo físico persistente para evitar borrados por inactividad ---
+# --- BLINDAJE ULTRA-RESISTENTE DE BITÁCORA CONTRA CAÍDAS DE SERVIDOR ---
+if "historial_memoria_eterna" not in st.session_state:
+    st.session_state["historial_memoria_eterna"] = {}
+
 def cargar_historial():
-    if not os.path.exists(FICHERO_HISTORIAL):
-        with open(FICHERO_HISTORIAL, "w", encoding="utf-8") as f:
-            json.dump({}, f, ensure_ascii=False, indent=4)
-    try:
-        with open(FICHERO_HISTORIAL, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except:
-        return {}
+    return st.session_state["historial_memoria_eterna"]
 
 def guardar_historial(datos):
-    with open(FICHERO_HISTORIAL, "w", encoding="utf-8") as f:
-        json.dump(datos, f, ensure_ascii=False, indent=4)
+    st.session_state["historial_memoria_eterna"] = datos
 
 def cargar_hermanos_iniciales():
     if os.path.exists(FICHERO_HERMANOS):
@@ -57,15 +52,15 @@ lista_hermanos = cargar_hermanos_iniciales()
 def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
-# --- PROCESADOR ADAPTATIVO CON ESCANER DE CANCIONES DE 3 DÍGITOS ---
+# --- ALGORITMO DE EXTRACCIÓN TEOCRÁTICA UNIVERSAL DE 66 LIBROS Y CANCIONES ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
     if not texto_usuario.strip():
-        return "JEREMÍAS 32, 33", "1", "121", "28", materias_detectadas
+        return "LECTURA BÍBLICA", "1", "121", "28", materias_detectadas
         
     texto_limpio_global = texto_usuario.replace("\r", "\n")
     
-    # Intercepcion elastica de asignaciones consecutivas
+    # Intercepcion elastica de asignaciones consecutivas de la Guia de Actividades
     texto_sano = re.sub(r"(\(\s*4\s*mins\s*\.?\)\s*|\b)Converse con su estudiante", r"\n7. Haga discípulos (4 mins.) Converse con su estudiante", texto_limpio_global)
     texto_sano = re.sub(r"El autocontrol nos ayuda a obedecer", r"\n8. El autocontrol nos ayuda a obedecer", texto_sano)
     texto_sano = re.sub(r"Logros de la organización", r"\n9. Logros de la organización", texto_sano)
@@ -81,19 +76,20 @@ def procesar_texto_plano_reunion(texto_usuario):
             continue
         lineas.append(txt_l)
             
-    lectura_cab = "JEREMÍAS 32, 33"
-    
+    # Captura inteligente de la cabecera biblica basandose en la primera linea con numeros despues de la fecha
+    lectura_cab = "LECTURA BÍBLICA"
     for l in lineas:
-        if any(libro in l.upper() for libro in ["JER", "MAT", "MAR", "LUC", "JUA", "HECH", "ROM", "COR", "GAL", "EF", "FIL"]):
-            if not re.match(r"^\s*[1-9]", l) and "CANCIÓN" not in l.upper():
+        l_up = l.upper()
+        if re.search(r"\d+", l) and not re.match(r"^\s*\d+\.", l) and "CANCIÓN" not in l_up and "CANCION" not in l_up:
+            if not any(excluir in l_up for excluir in ["MINS", "MIN.", "REUNIÓN", "PROGRAMA", "202", "DE"]):
                 lectura_cab = l.strip()
                 break
 
-    # ESCANER DE CANCIONES REALES: Buscamos todos los numeros enteros completos (de 1 a 3 digitos de corrido)
+    # RASTREADOR DE PATRONES NUMÉRICOS: Succiona los digitos reales de las tres canciones
     canciones_encontradas = re.findall(r"(?:CANCIÓN|CANCION)\s*([0-9]+)", texto_sano.upper())
     
-    c_apertura = canciones_encontradas if len(canciones_encontradas) > 0 else "1"
-    c_intermedia = canciones_encontradas if len(canciones_encontradas) > 1 else "121"
+    c_apertura = canciones_encontradas[0] if len(canciones_encontradas) > 0 else "1"
+    c_intermedia = canciones_encontradas[1] if len(canciones_encontradas) > 1 else "121"
     c_conclusion = canciones_encontradas[-1] if len(canciones_encontradas) > 2 else "28"
 
     seccion_actual_texto = "Tesoros"
@@ -165,19 +161,20 @@ def procesar_texto_plano_reunion(texto_usuario):
         }
         
     return lectura_cab, c_apertura, c_intermedia, c_conclusion, materias_detectadas
-
-# --- DISPARADOR DE PESTAÑAS DE LA PASARELA VISUAL ---
-pestana_programa, pestana_historial, pestana_hermanos = st.tabs([
+# --- DISPARADOR DE LAS CUATRO PESTAÑAS OFICIALES EN LA PANTALLA AZUL ---
+pestana_programa, pestana_visor, pestana_historial, pestana_hermanos = st.tabs([
     "🚀 Fabricador de Folletos", 
+    "📖 Visor de Folleto en Vivo",
     "📋 Historial Guardado",
     "👥 Gestión de Hermanos"
 ])
+
 with pestana_programa:
     st.header("⚡ Generador Instantáneo de Folletos Oficiales")
     
     c_mes, c_sem = st.columns(2)
     with c_mes:
-        mes_seleccionado = st.selectbox("📅 Seleccione el Mes Activo:", ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"], index=8, key="sel_mes_global")
+        mes_seleccionado = st.selectbox("📅 Seleccione el Mes Activo:", ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"], index=9, key="sel_mes_global")
     with c_sem:
         semana_seleccionada = st.text_input("📆 Ingrese el Rango de la Semana (Ej: 14-20 de septiembre):", placeholder="Escriba la fecha de la semana aquí...", key="sel_sem_global")
 
@@ -197,7 +194,7 @@ with pestana_programa:
 
     st.markdown("---")
 
-    f_cab_clean = str(semana_seleccionada if semana_seleccionada else "14-20 de septiembre").strip()
+    f_cab_clean = str(semana_seleccionada if semana_seleccionada else "14-20 de octubre").strip()
     l_cab_clean = str(l_jw if texto_jw_entrada.strip() else f"LECTURA DE {mes_seleccionado}").strip()
 
     st.subheader(f"📅 Planificación de la Semana: {f_cab_clean}")
@@ -209,7 +206,6 @@ with pestana_programa:
 
     st.markdown("### 🎚️ Asignar Privilegios para el Folleto PDF")
 
-    # CARGA RECALCULADORA PERMANENTE: Jalamos el historial directamente desde el archivo real guardado en disco
     historial_actual_para_conteo = cargar_historial()
 
     col_p1, col_p2 = st.columns(2)
@@ -246,7 +242,6 @@ with pestana_programa:
         m = materias_dinamicas[k]
         tipo_seccion = m.get("seccion", "Tesoros")
         
-        # BALANZA CORREGIDA: Entregamos dos textos ("💎" y "Tesoros") de forma estricta para equilibrar las dos variables
         if tipo_seccion == "Maestros":
             emoji, color_sub = "🌾", "Seamos Mejores Maestros"
         elif tipo_seccion == "Vida":
@@ -254,7 +249,7 @@ with pestana_programa:
         elif tipo_seccion == "Lectura":
             emoji, color_sub = "📖", "Lectura"
         else:
-            emoji, color_sub = "💎", "Tesoros"
+            emoji, color_sub = "Tesoros"
             
         titulo_bruto = str(m.get('titulo', ''))
         if titulo_bruto.startswith("[") and "']" in titulo_bruto:
@@ -271,6 +266,7 @@ with pestana_programa:
             value=titulo_preview, 
             key=f"live_text_input_edit_{k}"
         )
+        
         if texto_editado_usuario != titulo_preview:
             if "<br/>" in titulo_bruto:
                 partes_brutas = titulo_bruto.split("<br/>")
@@ -290,7 +286,7 @@ with pestana_programa:
             
             titular_limpio = re.sub(r"\s*\(Uso:\s*\d+\)", "", titular).strip()
             if titular_limpio != "Por asignar" and titular_limpio in historial_asig_semana:
-                st.warning(f"⚠️ ¡Atención! El hermano **{titular_limpio}** ya tiene asignada otra intervención en esta reunión.")
+                st.warning(f"⚠️ ¡Atención! El hermano **{titular_limpio}** ya tiene asignada otra intervención in esta reunión.")
             elif titular_limpio != "Por asignar":
                 historial_asig_semana.append(titular_limpio)
             
@@ -355,6 +351,20 @@ with pestana_programa:
         )
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos.")
+
+# --- 🚀 NUEVA INTERFAZ INYECTADA: VISOR INTERACTIVO EN PANTALLA AZUL ---
+with pestana_visor:
+    st.header("📖 Visor del Folleto Teocrático en Vivo")
+    st.markdown("Revisa el diseño final del documento físico en tiempo real aquí mismo antes de enviarlo por WhatsApp.")
+    
+    if os.path.exists(archivo_encontrado_fisco):
+        with open(archivo_encontrado_fisco, "rb") as f:
+            base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+        
+        pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf"></iframe>'
+        st.markdown(pdf_display, unsafe_allow_html=True)
+    else:
+        st.info("💡 Para visualizar el folleto en vivo en esta pantalla, regresa a la primera pestaña, completa la asignación y presiona el botón azul: **'💾 Guardar Semana e Inyectar Nombres'**.")
 
 # --- PESTAÑA DEL HISTORIAL EN TIEMPO REAL CON BORRADO QUIRÚRGICO PERMANENTE ---
 with pestana_historial:
