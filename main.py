@@ -92,9 +92,10 @@ def procesar_texto_plano_reunion(texto_usuario):
 
     canciones_encontradas = re.findall(r"(?:CANCIÓN|CANCION)\s*([0-9]+)", texto_sano.upper())
     
-    c_apertura = canciones_encontradas if len(canciones_encontradas) > 0 else "1"
-    c_intermedia = canciones_encontradas if len(canciones_encontradas) > 1 else "121"
-    c_conclusion = canciones_encontradas[-1] if len(canciones_encontradas) > 2 else "28"
+    # REPARACIÓN DE RAÍZ: Separamos estrictamente los índices para extraer un solo número de canción por carril
+    c_apertura = canciones_encontradas[0] if len(canciones_encontradas) > 0 else "1"
+    c_intermedia = canciones_encontradas[1] if len(canciones_encontradas) > 1 else "121"
+    c_conclusion = canciones_encontradas[2] if len(canciones_encontradas) > 2 else (canciones_encontradas[-1] if len(canciones_encontradas) > 0 else "28")
 
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
@@ -125,7 +126,6 @@ def procesar_texto_plano_reunion(texto_usuario):
                 if "CANCIÓN" in linea_up or "CANCION" in linea_up:
                     continue
                 puntos_crudos[ultimo_punto]["lineas"].append(linea)
-
     for num_punto, info in puntos_crudos.items():
         texto_completo = " ".join(info["lineas"]).strip()
         
@@ -164,6 +164,8 @@ def procesar_texto_plano_reunion(texto_usuario):
             "seccion": seccion_filtrado
         }
         
+    return lectura_cab, c_apertura, c_intermedia, c_conclusion, materias_detectadas
+
     return lectura_cab, c_apertura, c_intermedia, c_conclusion, materias_detectadas
 # --- DISPARADOR DE LAS CUATRO PESTAÑAS OFICIALES EN LA PANTALLA AZUL ---
 pestana_programa, pestana_visor, pestana_historial, pestana_hermanos = st.tabs([
