@@ -187,29 +187,29 @@ with pestana_programa:
     st.markdown("---")
     st.markdown("Copia la Guía de Actividades completa desde **JW.org**, pégala abajo y presiona el botón para procesar.")
 
-    # SISTEMA REPARADO: Creamos un disparador en st.session_state para poder vaciar el texto con un solo clic
+      # SISTEMA REPARADO CON FORMULARIO INTEGRADO NATIVO PARA BORRADO SEGURO
     if "contenido_jw_caja_borrador" not in st.session_state:
         st.session_state["contenido_jw_caja_borrador"] = ""
 
-    texto_jw_entrada = st.text_area(
-        "Pega aquí el texto completo copiado de JW.org:", 
-        value=st.session_state["contenido_jw_caja_borrador"],
-        height=180, 
-        placeholder="Puntos de la reunión...",
-        key="txt_jw_live"
-    )
-
-    # LA MEJORA DE LUIS: Botonera doble para procesar o borrar toda la caja de texto con un solo clic
-    c_proc, c_limp_caja = st.columns([3, 1])
-    with c_proc:
-        boton_armar_pdf = st.button("⚙️ Procesar Datos para Asignación (Paso 1)", use_container_width=True)
-    with c_limp_caja:
-        btn_vaciar_caja_jw = st.button("🗑️ BORRAR GUÍA", use_container_width=True)
-        if btn_vaciar_caja_jw:
-            st.session_state["contenido_jw_caja_borrador"] = ""
-            st.success("¡Caja limpiada!")
-            st.rerun()
-
+    # Envolvemos la caja en un contenedor para que el borrado tenga efecto directo en la pantalla
+    with st.form("bloque_limpiador_jw_luis", clear_on_submit=True):
+        texto_jw_entrada = st.text_area(
+            "Pega aquí el texto completo copiado de JW.org:", 
+            value=st.session_state["contenido_jw_caja_borrador"],
+            height=180, 
+            placeholder="Puntos de la reunión...",
+            key="txt_jw_live"
+        )
+        
+        c_proc, c_limp_caja = st.columns(2)
+        with c_proc:
+            boton_armar_pdf = st.form_submit_button("⚙️ Procesar Datos para Asignación (Paso 1)", use_container_width=True)
+        with c_limp_caja:
+            btn_vaciar_caja_jw = st.form_submit_button("🗑️ BORRAR GUÍA Y MESA", use_container_width=True)
+            if btn_vaciar_caja_jw:
+                st.session_state["contenido_jw_caja_borrador"] = ""
+                st.success("🧼 ¡Mesa de trabajo completamente limpia! Ya puedes pegar la nueva semana.")
+                st.rerun()
     l_jw, c_apertura_live, c_intermedia_live, c_conclusion_live, materias_dinamicas = procesar_texto_plano_reunion(texto_jw_entrada)
 
     st.markdown("---")
@@ -223,6 +223,7 @@ with pestana_programa:
     with st.sidebar:
         st.header("⚙️ Control de Operación")
         coordinador_activo = st.selectbox("¿Quién está assigning hoy?", ["Sergio", "Jonathan", "Luis"], key="coord_act_live")
+
     st.markdown("### 🎚️ Asignar Privilegios para el Folleto PDF")
 
     # REPARACIÓN DE RAÍZ: Declaramos la variable de conteo justo aquí para destruir el NameError antes de llamar al Presidente
