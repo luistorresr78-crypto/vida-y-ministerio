@@ -358,24 +358,26 @@ with pestana_programa:
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos.")
 
-# --- 🚀 INTERFAZ REPARADA: VISOR INTERACTIVO NATIVO DESBLOQUEADO ---
+# --- 🚀 INTERFAZ REPARADA: ENLACE DE PREVISUALIZACIÓN NATIVA DESBLOQUEADA ---
 with pestana_visor:
-    st.header("📖 Visor del Folleto Teocrático en Vivo")
-    st.markdown("Revisa el diseño final del documento físico en tiempo real aquí mismo antes de enviarlo por WhatsApp.")
+    st.header("📖 Previsualización del Folleto Teocrático")
+    st.markdown("Revisa el diseño final del documento físico abriéndolo directamente en tu navegador antes de enviarlo por WhatsApp.")
     
     if os.path.exists(archivo_encontrado_fisco):
-        try:
-            from streamlit_pdf_viewer import pdf_viewer
-            # Cargamos el documento de forma nativa para romper el bloqueo del circulo rojo de internet
-            pdf_viewer(input=archivo_encontrado_fisco, width=800, height=800)
-        except Exception as e:
-            # Plan B de respaldo por si el servidor no tiene instalada la libreria externa publica
-            with open(archivo_encontrado_fisco, "rb") as f:
-                base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-            pdf_display = f'<embed src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf">'
-            st.markdown(pdf_display, unsafe_allow_html=True)
+        with open(archivo_encontrado_fisco, "rb") as f:
+            pdf_bytes = f.read()
+        base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+        
+        st.success("✨ ¡Folleto generado con éxito! Elige cómo deseas revisarlo abajo:")
+        
+        # Sistema de triple botonera limpia para visualizacion externa directa libre de candados de navegador
+        c_vis1, c_vis2 = st.columns(2)
+        with c_vis1:
+            st.markdown(f'<a href="data:application/pdf;base64,{base64_pdf}" target="_blank" style="text-decoration:none;"><button style="width:100%; height:45px; background-color:#1A365D; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">🔍 Abrir Previsualización en Pestaña Nueva</button></a>', unsafe_allow_html=True)
+        with c_vis2:
+            st.download_button(label="📥 Descargar Copia Directa", data=pdf_bytes, file_name=f"Reunion_{mes_seleccionado}_{f_cab_clean.replace(' ', '_')}.pdf", mime="application/pdf", key="down_pdf_visor_alt")
     else:
-        st.info("💡 Para visualizar el folleto en vivo en esta pantalla, regresa a la primera pestaña, completa la asignación y presiona el botón azul: **'💾 Guardar Semana e Inyectar Nombres'**.")
+        st.info("💡 Para revisar el folleto en esta pantalla, regresa a la primera pestaña, completa la asignación y presiona el botón azul: **'💾 Guardar Semana e Inyectar Nombres'**.")
 
 # --- PESTAÑA DEL HISTORIAL EN TIEMPO REAL CON BORRADO QUIRÚRGICO PERMANENTE ---
 with pestana_historial:
@@ -404,7 +406,7 @@ with pestana_historial:
                 st.info("No hay semanas disponibles en este mes.")
                 
         st.markdown("---")
-        btn_borrar_todo_el_historial = st.button("🚨 COMODÍN: VACIAR COMPLETA TADA LA BITÁCORA DEL HISTORIAL", use_container_width=True)
+        btn_borrar_todo_el_historial = st.button("🚨 COMODÍN: VACIAR COMPLETA TODA LA BITÁCORA DEL HISTORIAL", use_container_width=True)
         if btn_borrar_todo_el_historial:
             guardar_historial({})
             st.success("💥 ¡Bitácora de historial completamente vaciada con éxito!")
