@@ -374,10 +374,10 @@ with pestana_programa:
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos.")
 
-# --- 🚀 INTERFAZ CORREGIDA: PREVISUALIZACIÓN DE CORRIDO VERTICAL PARA CELULARES Y LAPTOPS ---
+# --- 🚀 INTERFAZ REPARADA DE RAÍZ: VISOR NATIVO ELÁSTICO 100% COMPATIBLE CON CELULARES ---
 with pestana_visor:
     st.markdown("<h2 style='text-align: center; color: #1A365D;'>📖 PREVISUALIZACIÓN DE GALA</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #4A5568;'>Deslice libremente hacia abajo para examinar el programa completo de la reunión.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #4A5568;'>Examine el programa completo de la reunión de corrido hacia abajo de forma adaptativa.</p>", unsafe_allow_html=True)
     
     historial_visor = cargar_historial()
     semanas_totales_mes = list(historial_visor.get(mes_seleccionado, {}).keys())
@@ -404,76 +404,49 @@ with pestana_visor:
     c_int = asig_render.get("c_intermedia", "121")
     c_con = asig_render.get("c_conclusion", "28")
 
-    # SOLUCIÓN DE RAÍZ: Eliminamos restricciones internas de desborde horizontal molestas
-    tabla_html = f"""
-    <div style="width: 100%; font-family: Arial, sans-serif; margin-bottom: 15px;">
-        <div style="border: 2px solid #2D3748; padding: 12px; background-color: #FFFFFF; font-family: Arial, sans-serif; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
-            
-            <div style="text-align: center; border-bottom: 2px solid #1A365D; padding-bottom: 8px; margin-bottom: 12px;">
-                <h3 style="color: #1A365D; margin: 0; font-size: 18px; text-transform: uppercase;">Vida y Ministerio Cristianos</h3>
-                <p style="color: #4A5568; margin: 4px 0 0 0; font-weight: bold; font-size: 13px;">📅 SEMANA: {semana_render_actual}</p>
-            </div>
-            
-            <div style="background-color: #EDF2F7; padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 12px; border-left: 4px solid #2B6CB0; color: #2D3748; line-height: 1.4;">
-                <b>🎵 CANCIÓN APERTURA:</b> {c_ap} &nbsp;|&nbsp; <b>👤 PRESIDENTE:</b> {p_presi} &nbsp;|&nbsp; <b>🙏 ORACIÓN:</b> {p_ora}
-            </div>
-            
-            <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 10px; color: #2D3748;">
-                <thead>
-                    <tr style="background-color: #1A365D; color: white; text-align: left;">
-                        <th style="padding: 6px; border-top-left-radius: 4px; border-bottom-left-radius: 4px; width: 20%;">Punto</th>
-                        <th style="padding: 6px; width: 50%;">Intervención / Tema Asignado</th>
-                        <th style="padding: 6px; border-top-right-radius: 4px; border-bottom-right-radius: 4px; width: 30%;">Asignado</th>
-                    </tr>
-                </thead>
-                <tbody>
-    """
-    
-    for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
-        m = materias_dinamicas[k]
-        t_sec = m.get("seccion", "Tesoros")
-        tit_clean = re.sub(r"<[^>]*>", "", m.get("titulo", "")).strip()
+    # --- CONTENEDOR MAESTRO DE IMPRENTA: Forzamos el estiramiento puro usando elementos nativos de Streamlit ---
+    with st.container(border=True):
+        st.markdown(f"<div style='text-align: center; border-bottom: 2px solid #1A365D; padding-bottom: 8px;'>""<h3 style='color: #1A365D; margin: 0; font-size: 20px;'>VIDA Y MINISTERIO CRISTIANOS</h3>""<p style='color: #4A5568; font-weight: bold; margin: 5px 0 0 0;'>📅 SEMANA: " + semana_render_actual + "</p>""</div>", unsafe_allow_html=True)
         
-        if t_sec == "Maestros": bg_color, emj = "#FEFCBF", "🌾"
-        elif t_sec == "Vida": bg_color, emj = "#EBF8FF", "🐑"
-        elif t_sec == "Lectura": bg_color, emj = "#E6FFFA", "📖"
-        else: bg_color, emj = "#EDF2F7", "💎"
+        st.markdown("<br/>", unsafe_allow_html=True)
+        st.info(f"🎵 **CANCIÓN DE APERTURA:** {c_ap} &nbsp;|&nbsp; 👤 **PRESIDENTE:** {p_presi} &nbsp;|&nbsp; 🙏 **ORACIÓN:** {p_ora}")
+        
+        st.markdown("### 📜 Puntos del Programa:")
+        
+        # Desplegamos los puntos uno por uno usando bloques nativos apilados en vertical para romper el bloqueo celular
+        for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
+            m = materias_dinamicas[k]
+            t_sec = m.get("seccion", "Tesoros")
+            tit_clean = re.sub(r"<[^>]*>", "", m.get("titulo", "")).strip()
+            
+            titular_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get(f"p{k}_t", "Por asignar")).strip()
+            ayudante_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get(f"p{k}_a", "")).strip()
+            
+            # Formateamos las franjas de colores nativas según la sección teocrática
+            if t_sec == "Maestros":
+                franja_estilo = f"🌾 **Punto {k} (Maestros):** {tit_clean}"
+                with st.container():
+                    st.markdown(f"<div style='background-color: #FEFCBF; padding: 10px; border-radius: 5px; border-left: 5px solid #D69E2E; color: #2D3748; margin-bottom: 8px;'>""<b>" + franja_estilo + "</b><br/>""🎙️ <b>Asignado:</b> " + titular_p + (" &nbsp;|&nbsp; 👥 <b>Ayudante:</b> " + ayudante_p if (ayudante_p and ayudante_p != "Por asignar") else "") + "</div>", unsafe_allow_html=True)
+            elif t_sec == "Vida":
+                franja_estilo = f"🐑 **Punto {k} (Vida Cristiana):** {tit_clean}"
+                with st.container():
+                    st.markdown(f"<div style='background-color: #EBF8FF; padding: 10px; border-radius: 5px; border-left: 5px solid #2B6CB0; color: #2D3748; margin-bottom: 8px;'>""<b>" + franja_estilo + "</b><br/>""🎙️ <b>Asignado:</b> " + titular_p + "</div>", unsafe_allow_html=True)
+            elif t_sec == "Lectura":
+                franja_estilo = f"📖 **Punto {k} (Lectura Bíblica):** {tit_clean}"
+                with st.container():
+                    st.markdown(f"<div style='background-color: #E6FFFA; padding: 10px; border-radius: 5px; border-left: 5px solid #319795; color: #2D3748; margin-bottom: 8px;'>""<b>" + franja_estilo + "</b><br/>""🎙️ <b>Asignado:</b> " + titular_p + "</div>", unsafe_allow_html=True)
+            else:
+                franja_estilo = f"💎 **Punto {k} (Tesoros):** {tit_clean}"
+                with st.container():
+                    st.markdown(f"<div style='background-color: #EDF2F7; padding: 10px; border-radius: 5px; border-left: 5px solid #4A5568; color: #2D3748; margin-bottom: 8px;'>""<b>" + franja_estilo + "</b><br/>""🎙️ <b>Asignado:</b> " + titular_p + "</div>", unsafe_allow_html=True)
 
-        titular_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get(f"p{k}_t", "Por asignar")).strip()
-        ayudante_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get(f"p{k}_a", "")).strip()
-        
-        persona_final = titular_p
-        if ayudante_p and ayudante_p != "Por asignar":
-            persona_final += f" <br/><span style='color:#718096; font-size:9px;'>👤 Ayud.: {ayudante_p}</span>"
-            
-        tabla_html += f"""
-                <tr style="background-color: {bg_color}; border-bottom: 1px solid #CBD5E0;">
-                    <td style="padding: 6px; font-weight: bold;">{emj} N° {k}</td>
-                    <td style="padding: 6px;">{tit_clean}</td>
-                    <td style="padding: 6px; font-weight: bold; color: #1A365D;">{persona_final}</td>
-                </tr>
-        """
-        
-        if k == "6" or (k == "5" and "6" not in materias_dinamicas):
-            tabla_html += f"""
-                <tr style="background-color: #EDF2F7; border-bottom: 1px solid #CBD5E0; font-weight: bold; border-left: 4px solid #2B6CB0;">
-                    <td colspan="2" style="padding: 6px;">🎵 CANCIÓN INTERMEDIA: {c_int}</td>
-                    <td style="padding: 6px; color: #718096; font-style: italic;">Vida Cristiana</td>
-                </tr>
-            """
+            # Inyección de la canción intermedia en su carril correspondiente
+            if k == "6" or (k == "5" and "6" not in materias_dinamicas):
+                st.warning(f"🎵 **CANCIÓN INTERMEDIA:** {c_int} &nbsp;|&nbsp; 📋 Inicio de la Sección Vida Cristiana")
+                
+        st.markdown("<br/>", unsafe_allow_html=True)
+        st.success(f"🎵 **CANCIÓN DE CONCLUSIÓN:** {c_con} &nbsp;|&nbsp; ⏱️ **PALABRAS FINALES:** {coordinador_activo}")
 
-    tabla_html += f"""
-            </tbody>
-        </table>
-        <div style="background-color: #EDF2F7; padding: 8px; border-radius: 4px; font-size: 12px; border-left: 4px solid #2B6CB0; margin-top: 5px; color: #2D3748;">
-            <b>🎵 CANCIÓN CONCLUSIÓN:</b> {c_con} &nbsp;&nbsp;|&nbsp;&nbsp; <b>⏱️ FINAL:</b> {coordinador_activo}
-        </div>
-    </div>
-    </div>
-    """
-    
-    # REPARACIÓN SUPREMA: Expandimos la altura ('height=950') para que quepa el programa entero estirado de largo en vertical en pantallas móviles
-    st.components.v1.html(tabla_html, height=950, scrolling=False)
     st.markdown("---")
     c_nav1, c_nav2, c_nav3, c_nav4 = st.columns([1.5, 2, 2, 1.5])
     
