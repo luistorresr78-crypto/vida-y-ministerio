@@ -374,7 +374,7 @@ with pestana_programa:
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos.")
 
-# --- 🚀 INTERFAZ CORREGIDA DE RAÍZ: VISOR NATIVO ELÁSTICO CON FRONTERA DE CANCIÓN DINÁMICA ---
+# --- 🚀 INTERFAZ CORREGIDA DE RAÍZ: VISOR NATIVO ELÁSTICO CON PALABRAS FINALES ADAPTADAS AL PRESIDENTE ---
 with pestana_visor:
     st.markdown("<h2 style='text-align: center; color: #1A365D;'>📖 PREVISUALIZACIÓN DE GALA</h2>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #4A5568;'>Examine el programa completo de la reunión de corrido hacia abajo de forma adaptativa.</p>", unsafe_allow_html=True)
@@ -423,7 +423,6 @@ with pestana_visor:
         else:
             lista_ordenada_claves = sorted(puntos_guardados_para_bucle.keys(), key=lambda x: int(x) if x.isdigit() else 999)
             
-            # LOCALIZADOR DE FRONTERA: Identificamos con precision matematica cual es el ultimo punto real de Maestros
             ultimo_punto_maestros = "6"
             for n_p in lista_ordenada_claves:
                 if n_p in ["4", "5", "6", "7", "8"]:
@@ -447,12 +446,12 @@ with pestana_visor:
                 with st.container():
                     st.markdown(f"<div style='background-color: {bg_color}; padding: 10px; border-radius: 5px; border-left: 5px solid {border_col}; color: #2D3748; margin-bottom: 8px;'>""<b>" + franja_estilo + "</b><br/>""🎙️ <b>Asignado:</b> " + titular_p + (" &nbsp;|&nbsp; 👥 <b>Ayudante:</b> " + ayudante_p if (ayudante_p and ayudante_p != "Por asignar") else "") + "</div>", unsafe_allow_html=True)
 
-                # REUBICACIÓN DINÁMICA: Estampamos la cancion intermedia estrictamente cuando termina el ultimo Maestros real
                 if k == ultimo_punto_maestros:
                     st.warning(f"🎵 **CANCIÓN INTERMEDIA:** {c_int} &nbsp;|&nbsp; 📋 Inicio de la Sección Vida Cristiana")
                 
         st.markdown("<br/>", unsafe_allow_html=True)
-        st.success(f"🎵 **CANCIÓN DE CONCLUSIÓN:** {c_con} &nbsp;|&nbsp; ⏱️ **PALABRAS FINALES:** {coordinador_activo}")
+        # REPARACIÓN SUPREMA: Conectamos la conclusión dinámicamente con p_presi para reflejar al hermano real asignado
+        st.success(f"🎵 **CANCIÓN DE CONCLUSIÓN:** {c_con} &nbsp;|&nbsp; ⏱️ **PALABRAS FINALES:** {p_presi}")
 
     st.markdown("---")
     c_nav1, c_nav2, c_nav3, c_nav4 = st.columns([1.5, 2, 2, 1.5])
