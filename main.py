@@ -373,93 +373,118 @@ with pestana_programa:
         )
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos.")
-# --- 🚀 INTERFAZ SIMPLIFICADA: PREVISUALIZACIÓN DIRECTA Y LIMPIA ---
+# --- 🚀 INTERFAZ REPOTENCIADA: ESTACIÓN VISUAL DE FOLLETOS ESTILO LUIS ---
 with pestana_visor:
-    st.header("📖 Previsualización del Folleto Teocrático")
-    st.markdown("Revisa el diseño final del documento físico abriéndolo directamente en tu navegador.")
+    st.markdown("<h2 style='text-align: center; color: #1A365D;'>📋 PREVISUALIZACIÓN DE GALA</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #4A5568;'>Examine el diseño final de la hoja impresa antes de descargar o compartir.</p>", unsafe_allow_html=True)
     
     if os.path.exists(archivo_encontrado_fisco):
         with open(archivo_encontrado_fisco, "rb") as f:
             pdf_bytes_v = f.read()
         base64_pdf_v = base64.b64encode(pdf_bytes_v).decode('utf-8')
         
-        st.success("✨ ¡Folleto listo para revisión! Haz clic en el botón azul marino de abajo:")
+        # --- CUADRO ESPECULAR ESTILO LUIS: Centrado, con bordes y look profesional de imprenta ---
+        st.markdown('<div style="display: flex; justify-content: center; margin-bottom: 20px;"><div style="border: 4px solid #2D3748; padding: 10px; background-color: #F7FAFC; box-shadow: 5px 5px 15px rgba(0,0,0,0.2); width: 85%; max-width: 750px; border-radius: 8px;"><iframe src="data:application/pdf;base64,' + base64_pdf_v + '" width="100%" height="680" style="border: none;"></iframe></div></div>', unsafe_allow_html=True)
         
-        c_vb1, c_vis_down = st.columns(2)
-        with c_vb1:
-            st.markdown(f'<a href="data:application/pdf;base64,{base64_pdf_v}" target="_blank" style="text-decoration:none;"><button style="width:100%; height:45px; background-color:#1A365D; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">🔍 Abrir Folleto en Pestaña Nueva</button></a>', unsafe_allow_html=True)
-        with c_vis_down:
-            st.download_button(label="📥 Descargar Folleto (.pdf)", data=pdf_bytes_v, file_name=f"Folleto_Reunion_{mes_seleccionado}.pdf", mime="application/pdf", key="down_pdf_visor_final_clean")
+        st.markdown("---")
+        
+        # --- BOTONERA DE CONTROL HORIZONTAL: Replicamos tus flechas direccionales e iconos de impresion ---
+        c_nav1, c_nav2, c_nav3, c_nav4 = st.columns([1.5, 2, 2, 1.5])
+        
+        with c_nav2:
+            btn_prev_hoja = st.button("⬅️ Página Anterior", use_container_width=True, key="btn_hojear_izq_luis")
+            if btn_prev_hoja:
+                st.toast("💡 Folleto de una sola página estricta optimizada.")
+                
+        with c_nav3:
+            btn_sig_hoja = st.button("Página Siguiente ➡️", use_container_width=True, key="btn_hojear_der_luis")
+            if btn_sig_hoja:
+                st.toast("💡 Folleto de una sola página estricta optimizada.")
+        # Fila horizontal inferior para la descarga e impresion directa de gala
+        st.markdown("<br/>", unsafe_allow_html=True)
+        c_print1, c_print_centro, c_print2 = st.columns([2, 3, 2])
+        with c_print_centro:
+            st.download_button(
+                label="🖨️ EMITIR Y DESCARGAR FOLLETO PARA IMPRESIÓN", 
+                data=pdf_bytes_v, 
+                file_name=f"Folleto_Reunion_{mes_seleccionado}_{f_cab_clean.replace(' ', '_')}.pdf", 
+                mime="application/pdf", 
+                key="down_pdf_visor_final_Luis_style",
+                use_container_width=True
+            )
     else:
-        st.info("💡 Para revisar el folleto, regresa a la primera pestaña, completa la asignación y presiona el botón azul: **'💾 Guardar Semana e Inyectar Nombres'**.")
+        st.info("💡 Para visualizar el folleto de gala en este cuadro, regresa a la primera pestaña, completa la asignación y presiona el botón azul: **'💾 Guardar Semana e Inyectar Nombres'**.")
 
-# --- PESTAÑA DEL HISTORIAL CON MOTOR DE CAMBIOS SANADO ---
+# --- PESTAÑA DEL HISTORIAL CON REYECTÓMETRO DE CARGA DIRECTA ---
 with pestana_historial:
     st.header("📋 Historial de Asignaciones Registradas en la Bitácora")
     historial_visual = cargar_historial()
     
-    st.subheader("🛠️ Panel de Modificaciones y Cambios de Última Hora")
-    st.markdown("Si necesitas corregir una semana, cambiar a un hermano o ajustar un tema, usa este control directo:")
-
-    # BOTÓN SANADO: Eliminamos la asignación de session_state directa para destruir el cartel rosa de raíz
-    btn_cargar_modificar = st.button("✏️ Cargar Semana para Cambiar Nombres", use_container_width=True, type="primary", key="llave_final_boton_luis_v3")
-    if btn_cargar_modificar:
-        st.success("✨ ¡Módulo de cambios activo! Modifica al hermano o hermana que necesites en los menús desplegables de la primera pestaña y vuelve a presionar el botón azul de Guardar para sobreescribir el PDF.")
-
-    st.markdown("---")
-    st.subheader("🗑️ Control y Limpieza de la Bitácora")
-    
-    c_del_m, c_del_s = st.columns(2)
-    with c_del_m:
-        mes_a_borrar_sel = st.selectbox("Seleccione Mes para Revisión:", ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"], index=9, key="mes_del_global_live_v3")
-    with c_del_s:
-        semanas_del_mes_seleccionado = list(historial_visual.get(mes_a_borrar_sel, {}).keys())
-        if semanas_del_mes_seleccionado:
-            semana_a_borrar_sel = st.selectbox("Seleccione Semana Específica:", semanas_del_mes_seleccionado, key="sem_del_especifica_live_v3")
-            btn_borrar_una_sola_semana = st.button("❌ ELIMINAR ESTA SEMANA COMPLETAMENTE", use_container_width=True)
-            if btn_borrar_una_sola_semana:
-                del historial_visual[mes_a_borrar_sel][semana_a_borrar_sel]
-                if not historial_visual[mes_a_borrar_sel]:
-                    del historial_visual[mes_a_borrar_sel]
-                guardar_historial(historial_visual)
-                st.success(f"💥 ¡La semana '{semana_a_borrar_sel}' ha sido eliminada de la bitácora!")
-                st.rerun()
-        else:
-            st.info("No hay semanas guardadas para este mes en el archivo.")
-            
-    st.markdown("---")
-    btn_borrar_todo_el_historial = st.button("🚨 COMODÍN: VACIAR COMPLETA TODA LA BITÁCORA DEL HISTORIAL", use_container_width=True)
-    if btn_borrar_todo_el_historial:
-        guardar_historial({})
-        st.success("💥 ¡Bitácora de historial completamente vaciada con éxito!")
-        st.rerun()
-        
-    st.markdown("---")
-    st.subheader("📜 Vista de Consulta Histórica")
     if historial_visual:
-        mes_hist = st.selectbox("Seleccione el Mes a Consultar:", list(historial_visual.keys()), key="ver_mes_hist_v3")
-        semanas_guardadas = historial_visual.get(mes_hist, {})
+        st.subheader("🗑️ Control y Modificación del Historial")
         
-        if semanas_guardadas:
-            for sem_key, info_sem in semanas_guardadas.items():
-                with st.expander(f"📆 Semana: {sem_key} (Armado por: {info_sem.get('coordinador', 'Luis')})"):
-                    asig = info_sem.get("asignados", {})
+        c_del_m, c_del_s = st.columns(2)
+        with c_del_m:
+            mes_a_borrar_sel = st.selectbox("Seleccione Mes para Revisión o Cambios:", list(historial_visual.keys()), key="mes_del_global_live_v3")
+        with c_del_s:
+            semanas_del_mes_seleccionado = list(historial_visual.get(mes_a_borrar_sel, {}).keys())
+            if semanas_del_mes_seleccionado:
+                semana_a_borrar_sel = st.selectbox("Seleccione la Semana que desea Modificar:", semanas_del_mes_seleccionado, key="sem_del_especifica_live_v3")
+            else:
+                semana_a_borrar_sel = None
+
+        if semana_a_borrar_sel:
+            st.markdown("### 🛠️ Acciones Disponibles para esta Semana:")
+            c_btn_mod, c_btn_del = st.columns(2)
+            
+            with c_btn_mod:
+                btn_cargar_modificar = st.button("✏️ Cargar Semana para Cambiar Nombres", use_container_width=True, type="primary", key="llave_final_boton_luis_v3")
+                if btn_cargar_modificar:
+                    st.success("✨ ¡Módulo de cambios activo! Modifica al hermano o hermana que necesites en los menús desplegables de la primera pestaña y vuelve a presionar el botón azul de Guardar para sobreescribir el PDF.")
+            
+            with c_btn_del:
+                btn_borrar_una_sola_semana = st.button("❌ ELIMINAR ESTA SEMANA COMPLETAMENTE", use_container_width=True, key="btn_borrar_una_sem_v3")
+                if btn_borrar_una_sola_semana:
+                    del historial_visual[mes_a_borrar_sel][semana_a_borrar_sel]
+                    if not historial_visual[mes_a_borrar_sel]:
+                        del historial_visual[mes_a_borrar_sel]
+                    guardar_historial(historial_visual)
+                    st.success(f"💥 ¡La semana '{semana_a_borrar_sel}' ha sido eliminada de la bitácora!")
+                    st.rerun()
                     
-                    st.markdown(f"**Presidente:** {re.sub(r'\s*\(Uso:\s*\d+\)', '', asig.get('presidente', 'Por asignar'))} | **Oración Inicial:** {re.sub(r'\s*\(Uso:\s*\d+\)', '', asig.get('oracion_inicial', 'Por asignar'))}")
-                    st.markdown("---")
-                    
-                    for llave_asig, persona in asig.items():
-                        if llave_asig.startswith("p") and llave_asig.endswith("_t"):
-                            num_p = llave_asig[1:-2]
-                            ayudante_llave = f"p{num_p}_a"
-                            ayudante_nom = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig.get(ayudante_llave, ""))
-                            persona_clean = re.sub(r"\s*\(Uso:\s*\d+\)", "", persona)
-                            if ayudante_nom and ayudante_nom != "Por asignar":
-                                st.write(f"• **Punto {num_p}:** {persona_clean} (Ayudante: {ayudante_nom})")
-                            else:
-                                st.write(f"• **Punto {num_p}:** {persona_clean}")
-        else:
-            st.info("No hay semanas guardadas para este mes.")
+        st.markdown("---")
+        btn_borrar_todo_el_historial = st.button("🚨 COMODÍN: VACIAR COMPLETA TODA LA BITÁCORA DEL HISTORIAL", use_container_width=True, key="btn_vaciar_todo_hist_v3")
+        if btn_borrar_todo_el_historial:
+            guardar_historial({})
+            st.success("💥 ¡Bitácora de historial completamente vaciada con éxito!")
+            st.rerun()
+            
+        st.markdown("---")
+        st.subheader("📜 Vista de Consulta Histórica")
+        if historial_visual:
+            mes_hist = st.selectbox("Seleccione el Mes a Consultar:", list(historial_visual.keys()), key="ver_mes_hist_v3")
+            semanas_guardadas = historial_visual.get(mes_hist, {})
+            
+            if semanas_guardadas:
+                for sem_key, info_sem in semanas_guardadas.items():
+                    with st.expander(f"📆 Semana: {sem_key} (Armado por: {info_sem.get('coordinador', 'Luis')})"):
+                        asig = info_sem.get("asignados", {})
+                        
+                        st.markdown(f"**Presidente:** {re.sub(r'\s*\(Uso:\s*\d+\)', '', asig.get('presidente', 'Por asignar'))} | **Oración Inicial:** {re.sub(r'\s*\(Uso:\s*\d+\)', '', asig.get('oracion_inicial', 'Por asignar'))}")
+                        st.markdown("---")
+                        
+                        for llave_asig, persona in asig.items():
+                            if llave_asig.startswith("p") and llave_asig.endswith("_t"):
+                                num_p = llave_asig[1:-2]
+                                ayudante_llave = f"p{num_p}_a"
+                                ayudante_nom = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig.get(ayudante_llave, ""))
+                                persona_clean = re.sub(r"\s*\(Uso:\s*\d+\)", "", persona)
+                                if ayudante_nom and ayudante_nom != "Por asignar":
+                                    st.write(f"• **Punto {num_p}:** {persona_clean} (Ayudante: {ayudante_nom})")
+                                else:
+                                    st.write(f"• **Punto {num_p}:** {persona_clean}")
+            else:
+                st.info("No hay semanas guardadas para este mes.")
     else:
         st.info("La bitácora de historial está vacía actualmente.")
 
