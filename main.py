@@ -263,6 +263,7 @@ with pestana_programa:
         m = materias_dinamicas[k]
         tipo_seccion = m.get("seccion", "Tesoros")
         
+        # AJUSTE DE APRENDIZAJE: Sincronizamos de forma exacta la aptitud de "Lectura" para liberar el Punto 3
         if tipo_seccion == "Maestros":
             emoji, color_sub = "🌾", "Seamos Mejores Maestros"
         elif tipo_seccion == "Vida":
@@ -326,7 +327,6 @@ with pestana_programa:
                     historial_asig_semana.append(ayudante_limpio)
 
     st.markdown("### 🖨️ Compilar y Guardar Permanencia (Paso 2)")
-    
     col_g1, col_g2 = st.columns(2)
     
     with col_g1:
@@ -373,36 +373,30 @@ with pestana_programa:
         )
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos.")
-# --- 🚀 INTERFAZ REPOTENCIADA: ESTACIÓN VISUAL DE FOLLETOS ESTILO LUIS ---
+
+# --- 🚀 INTERFAZ SANADA: PREVISUALIZACIÓN DIRECTA LIBRE DE RESTRICCIONES ---
 with pestana_visor:
     st.markdown("<h2 style='text-align: center; color: #1A365D;'>📋 PREVISUALIZACIÓN DE GALA</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #4A5568;'>Examine el diseño final de la hoja impresa antes de descargar o compartir.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #4A5568;'>Examine el diseño final de la hoja impresa abriéndola de forma segura en su navegador.</p>", unsafe_allow_html=True)
     
     if os.path.exists(archivo_encontrado_fisco):
         with open(archivo_encontrado_fisco, "rb") as f:
             pdf_bytes_v = f.read()
         base64_pdf_v = base64.b64encode(pdf_bytes_v).decode('utf-8')
         
-        # --- CUADRO ESPECULAR ESTILO LUIS: Centrado, con bordes y look profesional de imprenta ---
-        st.markdown('<div style="display: flex; justify-content: center; margin-bottom: 20px;"><div style="border: 4px solid #2D3748; padding: 10px; background-color: #F7FAFC; box-shadow: 5px 5px 15px rgba(0,0,0,0.2); width: 85%; max-width: 750px; border-radius: 8px;"><iframe src="data:application/pdf;base64,' + base64_pdf_v + '" width="100%" height="680" style="border: none;"></iframe></div></div>', unsafe_allow_html=True)
+        st.markdown('<div style="display: flex; justify-content: center; margin-bottom: 20px;"><div style="border: 4px solid #2D3748; padding: 25px; background-color: #EDF2F7; text-align: center; width: 85%; max-width: 750px; border-radius: 8px;"><h4 style="color: #2B6CB0; margin-bottom: 10px;">✨ ¡Folleto de Gala Generado con Éxito!</h4><p style="color: #4A5568; font-size: 14px; margin-bottom: 20px;">Haga clic en el botón azul marino para abrir el visor grande interactivo en una pestaña nueva o descárguelo directamente.</p><a href="data:application/pdf;base64,' + base64_pdf_v + '" target="_blank" style="text-decoration:none;"><button style="width:70%; height:45px; background-color:#1A365D; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🔍 Abrir Folleto en Pestaña Nueva</button></a></div></div>', unsafe_allow_html=True)
         
         st.markdown("---")
-        
-        # --- BOTONERA DE CONTROL HORIZONTAL: Replicamos tus flechas direccionales e iconos de impresion ---
         c_nav1, c_nav2, c_nav3, c_nav4 = st.columns([1.5, 2, 2, 1.5])
-        
         with c_nav2:
             btn_prev_hoja = st.button("⬅️ Página Anterior", use_container_width=True, key="btn_hojear_izq_luis")
-            if btn_prev_hoja:
-                st.toast("💡 Folleto de una sola página estricta optimizada.")
-                
+            if btn_prev_hoja: st.toast("💡 Folleto de una sola página estricta optimizada.")
         with c_nav3:
             btn_sig_hoja = st.button("Página Siguiente ➡️", use_container_width=True, key="btn_hojear_der_luis")
-            if btn_sig_hoja:
-                st.toast("💡 Folleto de una sola página estricta optimizada.")
-        # Fila horizontal inferior para la descarga e impresion directa de gala
+            if btn_sig_hoja: st.toast("💡 Folleto de una sola página estricta optimizada.")
+            
         st.markdown("<br/>", unsafe_allow_html=True)
-        c_print1, c_print_centro, c_print2 = st.columns([2, 3, 2])
+        c_print1, c_print_centro, c_print2 = st.columns()
         with c_print_centro:
             st.download_button(
                 label="🖨️ EMITIR Y DESCARGAR FOLLETO PARA IMPRESIÓN", 
