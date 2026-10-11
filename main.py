@@ -461,7 +461,7 @@ with pestana_historial:
             semanas_guardadas = historial_visual.get(mes_hist, {})
             
             if semanas_guardadas:
-                for ... in semanas_guardadas.items():
+            for ... in semanas_guardadas.items():
                     with st.expander(f"📆 Semana: {sem_key} (Armado por: {info_sem.get('coordinador', 'Luis')})"):
                         asig = info_sem.get("asignados", {})
                         
