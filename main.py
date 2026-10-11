@@ -374,7 +374,7 @@ with pestana_programa:
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos.")
 
-# --- 🚀 INTERFAZ REPARADA DE RAÍZ: VISOR NATIVO ELÁSTICO 100% COMPATIBLE CON CELULARES ---
+# --- 🚀 INTERFAZ CORREGIDA DE RAÍZ: VISOR BASADO EN REGISTRO PERMANENTE COMPATIBLE CON TODO DISPOSITIVO ---
 with pestana_visor:
     st.markdown("<h2 style='text-align: center; color: #1A365D;'>📖 PREVISUALIZACIÓN DE GALA</h2>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #4A5568;'>Examine el programa completo de la reunión de corrido hacia abajo de forma adaptativa.</p>", unsafe_allow_html=True)
@@ -385,6 +385,7 @@ with pestana_visor:
     if "indice_semana_visor" not in st.session_state:
         st.session_state["indice_semana_visor"] = 0
         
+    # Sincronizamos los datos estrictamente desde el archivo json rigido para que no se borren al cambiar de pestaña
     if semanas_totales_mes:
         if st.session_state["indice_semana_visor"] >= len(semanas_totales_mes):
             st.session_state["indice_semana_visor"] = len(semanas_totales_mes) - 1
@@ -396,7 +397,7 @@ with pestana_visor:
     else:
         semana_render_actual = f_cab_clean
         asig_render = asignados_en_vivo
-        st.caption("⚡ Viendo la mesa de trabajo activa actual")
+        st.caption("⚡ Viendo la mesa de trabajo activa actual (Guarde la semana para activar los puntos)")
 
     p_presi = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get("presidente", "Por asignar")).strip()
     p_ora = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get("oracion_inicial", "Por asignar")).strip()
@@ -404,7 +405,7 @@ with pestana_visor:
     c_int = asig_render.get("c_intermedia", "121")
     c_con = asig_render.get("c_conclusion", "28")
 
-    # --- CONTENEDOR MAESTRO DE IMPRENTA: Forzamos el estiramiento puro usando elementos nativos de Streamlit ---
+    # --- CONTENEDOR MAESTRO DE IMPRENTA NATIVO CONTRA RECORTE MÓVIL ---
     with st.container(border=True):
         st.markdown(f"<div style='text-align: center; border-bottom: 2px solid #1A365D; padding-bottom: 8px;'>""<h3 style='color: #1A365D; margin: 0; font-size: 20px;'>VIDA Y MINISTERIO CRISTIANOS</h3>""<p style='color: #4A5568; font-weight: bold; margin: 5px 0 0 0;'>📅 SEMANA: " + semana_render_actual + "</p>""</div>", unsafe_allow_html=True)
         
@@ -413,36 +414,37 @@ with pestana_visor:
         
         st.markdown("### 📜 Puntos del Programa:")
         
-        # Desplegamos los puntos uno por uno usando bloques nativos apilados en vertical para romper el bloqueo celular
-        for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
-            m = materias_dinamicas[k]
-            t_sec = m.get("seccion", "Tesoros")
-            tit_clean = re.sub(r"<[^>]*>", "", m.get("titulo", "")).strip()
-            
-            titular_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get(f"p{k}_t", "Por asignar")).strip()
-            ayudante_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get(f"p{k}_a", "")).strip()
-            
-            # Formateamos las franjas de colores nativas según la sección teocrática
-            if t_sec == "Maestros":
-                franja_estilo = f"🌾 **Punto {k} (Maestros):** {tit_clean}"
+        # PROCESADOR SEGURO: Jala la estructura de materias guardada para que no aparezca en blanco en celulares
+        puntos_guardados_para_bucle = {}
+        for clave_asig in asig_render.keys():
+            if clave_asig.startswith("p") and clave_asig.endswith("_t"):
+                num_p = clave_asig[1:-2]
+                puntos_guardados_para_bucle[num_p] = True
+                
+        if not puntos_guardados_para_bucle:
+            # Si no hay puntos guardados en esta semana, mostramos un aviso guia amigable
+            st.warning("💡 Por favor, ve a la primera pestaña, completa las asignaciones de hermanos y presiona el botón azul '💾 Guardar Semana e Inyectar Nombres' para ver el listado completo aquí.")
+        else:
+            for k in sorted(puntos_guardados_para_bucle.keys(), key=lambda x: int(x) if x.isdigit() else 999):
+                titular_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get(f"p{k}_t", "Por asignar")).strip()
+                ayudante_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get(f"p{k}_a", "")).strip()
+                
+                # Determinamos visualmente las secciones teocráticas en base a la lógica de los puntos oficiales
+                if k in ["1", "2"]:
+                    bg_color, border_col, emj, secc_nom = "#EDF2F7", "#4A5568", "💎", "Tesoros"
+                elif k == "3":
+                    bg_color, border_col, emj, secc_nom = "#E6FFFA", "#319795", "📖", "Lectura Bíblica"
+                elif k in ["4", "5", "6", "7"] and (int(k) < 8 if k.isdigit() else True):
+                    bg_color, border_col, emj, secc_nom = "#FEFCBF", "#D69E2E", "🌾", "Maestros"
+                else:
+                    bg_color, border_col, emj, secc_nom = "#EBF8FF", "#2B6CB0", "🐑", "Vida Cristiana"
+                    
+                franja_estilo = f"{emj} Intervención N° {k} ({secc_nom})"
                 with st.container():
-                    st.markdown(f"<div style='background-color: #FEFCBF; padding: 10px; border-radius: 5px; border-left: 5px solid #D69E2E; color: #2D3748; margin-bottom: 8px;'>""<b>" + franja_estilo + "</b><br/>""🎙️ <b>Asignado:</b> " + titular_p + (" &nbsp;|&nbsp; 👥 <b>Ayudante:</b> " + ayudante_p if (ayudante_p and ayudante_p != "Por asignar") else "") + "</div>", unsafe_allow_html=True)
-            elif t_sec == "Vida":
-                franja_estilo = f"🐑 **Punto {k} (Vida Cristiana):** {tit_clean}"
-                with st.container():
-                    st.markdown(f"<div style='background-color: #EBF8FF; padding: 10px; border-radius: 5px; border-left: 5px solid #2B6CB0; color: #2D3748; margin-bottom: 8px;'>""<b>" + franja_estilo + "</b><br/>""🎙️ <b>Asignado:</b> " + titular_p + "</div>", unsafe_allow_html=True)
-            elif t_sec == "Lectura":
-                franja_estilo = f"📖 **Punto {k} (Lectura Bíblica):** {tit_clean}"
-                with st.container():
-                    st.markdown(f"<div style='background-color: #E6FFFA; padding: 10px; border-radius: 5px; border-left: 5px solid #319795; color: #2D3748; margin-bottom: 8px;'>""<b>" + franja_estilo + "</b><br/>""🎙️ <b>Asignado:</b> " + titular_p + "</div>", unsafe_allow_html=True)
-            else:
-                franja_estilo = f"💎 **Punto {k} (Tesoros):** {tit_clean}"
-                with st.container():
-                    st.markdown(f"<div style='background-color: #EDF2F7; padding: 10px; border-radius: 5px; border-left: 5px solid #4A5568; color: #2D3748; margin-bottom: 8px;'>""<b>" + franja_estilo + "</b><br/>""🎙️ <b>Asignado:</b> " + titular_p + "</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='background-color: {bg_color}; padding: 10px; border-radius: 5px; border-left: 5px solid {border_col}; color: #2D3748; margin-bottom: 8px;'>""<b>" + franja_estilo + "</b><br/>""🎙️ <b>Asignado:</b> " + titular_p + (" &nbsp;|&nbsp; 👥 <b>Ayudante:</b> " + ayudante_p if (ayudante_p and ayudante_p != "Por asignar") else "") + "</div>", unsafe_allow_html=True)
 
-            # Inyección de la canción intermedia en su carril correspondiente
-            if k == "6" or (k == "5" and "6" not in materias_dinamicas):
-                st.warning(f"🎵 **CANCIÓN INTERMEDIA:** {c_int} &nbsp;|&nbsp; 📋 Inicio de la Sección Vida Cristiana")
+                if k == "6" or (k == "5" and "6" not in puntos_guardados_para_bucle):
+                    st.warning(f"🎵 **CANCIÓN INTERMEDIA:** {c_int} &nbsp;|&nbsp; 📋 Inicio de la Sección Vida Cristiana")
                 
         st.markdown("<br/>", unsafe_allow_html=True)
         st.success(f"🎵 **CANCIÓN DE CONCLUSIÓN:** {c_con} &nbsp;|&nbsp; ⏱️ **PALABRAS FINALES:** {coordinador_activo}")
