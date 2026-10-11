@@ -377,10 +377,10 @@ with pestana_programa:
         )
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul para fijar los datos.")
-# --- 🚀 INTERFAZ COMPLETAMENTE REPARADA: VISOR FIJO SEGÚN REGISTRO HISTÓRICO DE MATERIAS RÍGIDAS ---
+# --- 🚀 INTERFAZ REPARADA DE RAÍZ: VISOR ADAPTATIVO COMPATIBLE CON HISTORIAL VIEJO Y NUEVO ---
 with pestana_visor:
     st.markdown("<h2 style='text-align: center; color: #1A365D;'>📖 PREVISUALIZACIÓN DE GALA</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #4A5568;'>Examine el programa completo de la reunión adaptado de forma exacta a las secciones de la semana.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #4A5568;'>Examine el programa de la reunión adaptado de forma exacta a las secciones de la semana.</p>", unsafe_allow_html=True)
     
     historial_visor = cargar_historial()
     semanas_totales_mes = list(historial_visor.get(mes_seleccionado, {}).keys())
@@ -388,7 +388,6 @@ with pestana_visor:
     if "indice_semana_visor" not in st.session_state:
         st.session_state["indice_semana_visor"] = 0
         
-    # Extraemos la información estructural blindada para que el visor móvil y de laptop dibuje todo perfecto
     if semanas_totales_mes:
         if st.session_state["indice_semana_visor"] >= len(semanas_totales_mes):
             st.session_state["indice_semana_visor"] = len(semanas_totales_mes) - 1
@@ -397,13 +396,13 @@ with pestana_visor:
         datos_semana_render = historial_visor[mes_seleccionado][semana_render_actual]
         asig_render = datos_semana_render.get("asignados", {})
         l_cab_visor = datos_semana_render.get("texto_cabecera_biblica", l_cab_clean)
-        materias_visor_fijas = datos_semana_render.get("materias_guia_estructura", materias_dinamicas)
+        materias_visor_fijas = datos_semana_render.get("materias_guia_estructura", {})
         st.caption(f"✨ Viendo semana guardada en bitácora (Índice: {st.session_state['indice_semana_visor'] + 1} de {len(semanas_totales_mes)})")
     else:
         semana_render_actual = f_cab_clean
         asig_render = asignados_en_vivo
         l_cab_visor = l_cab_clean
-        materias_visor_fijas = materias_dinamicas
+        materias_visor_fijas = {}
         st.caption("⚡ Viendo la mesa de trabajo activa actual (Guarde la semana para activar los puntos)")
 
     p_presi = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get("presidente", "Por asignar")).strip()
@@ -430,26 +429,35 @@ with pestana_visor:
             st.warning("💡 Por favor, ve a la primera pestaña, completa las asignaciones de hermanos y presiona el botón azul '💾 Guardar Semana e Inyectar Nombres' para ver el listado completo aquí.")
         else:
             lista_ordenada_claves = sorted(puntos_guardados_para_bucle.keys(), key=lambda x: int(x) if x.isdigit() else 999)
-            
-            # BLOQUEO INTELIGENTE: Buscamos con total precisión matemática en qué punto real inicia la Vida Cristiana según el JSON guardado
-            primer_punto_vida_cristiana = None
-            for n_p in lista_ordenada_claves:
-                m_info = materias_visor_fijas.get(n_p, {})
-                if m_info.get("seccion") == "Vida":
-                    primer_punto_vida_cristiana = n_p
-                    break
 
             for k in lista_ordenada_claves:
                 titular_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get(f"p{k}_t", "Por asignar")).strip()
                 ayudante_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get(f"p{k}_a", "")).strip()
                 
-                # Sincronización absoluta con el archivo json blindado en la nube
-                m_din = materias_visor_fijas.get(k, {})
-                t_sec_real = m_din.get("seccion", "Tesoros")
-                tit_clean = re.sub(r"<[^>]*>", "", m_din.get("titulo", "Intervención del programa")).strip()
+                # REPARACIÓN SUPREMA CONTRA REGISTROS PASADOS EN BLANCO: Clasificador inteligente adaptativo
+                t_sec_real = "Tesoros"
+                tit_clean = "Intervención del programa de la reunión"
                 
-                # Clavamos la canción intermedia exactamente en la frontera antes de que inicie la primera de Vida Cristiana
-                if primer_punto_vida_cristiana and k == primer_punto_vida_cristiana:
+                if materias_visor_fijas and k in materias_visor_fijas:
+                    t_sec_real = materias_visor_fijas[k].get("seccion", "Tesoros")
+                    tit_clean = re.sub(r"<[^>]*>", "", materias_visor_fijas[k].get("titulo", "")).strip()
+                else:
+                    # Plan de rescate adaptativo por aproximación teocrática inteligente para semanas viejas
+                    if k == "3":
+                        t_sec_real = "Lectura"
+                        tit_clean = "Lectura de la Biblia"
+                    elif ayudante_p and ayudante_p != "Por asignar":
+                        t_sec_real = "Maestros"
+                        tit_clean = "Asignación estudiantil con ayudante"
+                    elif int(k) >= 7 if k.isdigit() else False:
+                        t_sec_real = "Vida"
+                        tit_clean = "Necesidades o punto de Nuestra Vida Cristiana"
+                    elif k in ["4", "5", "6"]:
+                        t_sec_real = "Maestros"
+                        tit_clean = "Seamos Mejores Maestros (Intervención consecutiva)"
+
+                # Colocamos la canción intermedia de forma exacta separando la sección de Maestros de Vida Cristiana
+                if k == "7" or (k == "6" and "7" not in puntos_guardados_para_bucle):
                     st.warning(f"🎵 **CANCIÓN INTERMEDIA:** {c_int} &nbsp;|&nbsp; 📋 Inicio de la Sección Vida Cristiana")
                 
                 if t_sec_real == "Maestros":
@@ -463,7 +471,7 @@ with pestana_visor:
                     
                 franja_estilo = f"{emj} Intervención N° {k} ({secc_nom})"
                 with st.container():
-                    st.markdown(f"<div style='background-color: {bg_color}; padding: 10px; border-radius: 5px; border-left: 5px solid {border_col}; color: #2D3748; margin-bottom: 8px;'>""<b>" + franja_estilo + "</b><br/>""🎙️ <b>Asignado:</b> " + titular_p + (" &nbsp;|&nbsp; 👥 <b>Ayudante:</b> " + ayudante_p if (ayudante_p and ayudante_p != "Por asignar") else "") + "</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='background-color: {bg_color}; padding: 10px; border-radius: 5px; border-left: 5px solid {border_col}; color: #2D3748; margin-bottom: 8px;'>""<b>" + franja_estilo + "</b><br/>""📢 <b>Tema aproximado:</b> " + tit_clean + "<br/>""🎙️ <b>Asignado:</b> " + titular_p + (" &nbsp;|&nbsp; 👥 <b>Ayudante:</b> " + ayudante_p if (ayudante_p and ayudante_p != "Por asignar") else "") + "</div>", unsafe_allow_html=True)
 
         st.markdown("<br/>", unsafe_allow_html=True)
         st.success(f"🎵 **CANCIÓN DE CONCLUSIÓN:** {c_con} &nbsp;|&nbsp; ⏱️ **PALABRAS FINALES:** {p_presi}")
