@@ -377,10 +377,11 @@ with pestana_programa:
         )
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul para fijar los datos.")
-# --- 🚀 INTERFAZ REPARADA DE RAÍZ: VISOR ADAPTATIVO COMPATIBLE CON HISTORIAL VIEJO Y NUEVO ---
+
+# --- 🚀 INTERFAZ REPARADA CON EL ALGORITMO DE CATEGORÍAS DE LUIS TORRES ---
 with pestana_visor:
     st.markdown("<h2 style='text-align: center; color: #1A365D;'>📖 PREVISUALIZACIÓN DE GALA</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #4A5568;'>Examine el programa de la reunión adaptado de forma exacta a las secciones de la semana.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #4A5568;'>Examine el programa completo adaptado de forma exacta mediante el localizador de categorías.</p>", unsafe_allow_html=True)
     
     historial_visor = cargar_historial()
     semanas_totales_mes = list(historial_visor.get(mes_seleccionado, {}).keys())
@@ -430,35 +431,40 @@ with pestana_visor:
         else:
             lista_ordenada_claves = sorted(puntos_guardados_para_bucle.keys(), key=lambda x: int(x) if x.isdigit() else 999)
 
+            # PASO 1 INTERNO: Pre-calculamos las categorías de cada punto de forma exacta para ubicar la frontera real
+            categorias_calculadas = {}
+            for n_p in lista_ordenada_claves:
+                ayudante_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get(f"p{n_p}_a", "")).strip()
+                
+                if materias_visor_fijas and n_p in materias_visor_fijas:
+                    categorias_calculadas[n_p] = materias_visor_fijas[n_p].get("seccion", "Tesoros")
+                else:
+                    if n_p == "3": categorias_calculadas[n_p] = "Lectura"
+                    elif ayudante_p and ayudante_p != "Por asignar": categorias_calculadas[n_p] = "Maestros"
+                    elif int(n_p) >= 8 if n_p.isdigit() else False: categorias_calculadas[n_p] = "Vida"
+                    elif n_p in ["4", "5", "6", "7"]: categorias_calculadas[n_p] = "Maestros"
+                    else: categorias_calculadas[n_p] = "Tesoros"
+
+            # ALGORITMO DE LUIS: Buscamos con precisión cuál es el último punto real clasificado como Maestros en la lista
+            ultimo_punto_maestros = None
+            for n_p in lista_ordenada_claves:
+                if categorias_calculadas[n_p] == "Maestros":
+                    ultimo_punto_maestros = n_p
+
+            # Dibujamos las tarjetas en base al mapeo de categorías verificado
             for k in lista_ordenada_claves:
                 titular_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get(f"p{k}_t", "Por asignar")).strip()
                 ayudante_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get(f"p{k}_a", "")).strip()
                 
-                # REPARACIÓN SUPREMA CONTRA REGISTROS PASADOS EN BLANCO: Clasificador inteligente adaptativo
-                t_sec_real = "Tesoros"
-                tit_clean = "Intervención del programa de la reunión"
+                t_sec_real = categorias_calculadas[k]
                 
                 if materias_visor_fijas and k in materias_visor_fijas:
-                    t_sec_real = materias_visor_fijas[k].get("seccion", "Tesoros")
                     tit_clean = re.sub(r"<[^>]*>", "", materias_visor_fijas[k].get("titulo", "")).strip()
                 else:
-                    # Plan de rescate adaptativo por aproximación teocrática inteligente para semanas viejas
-                    if k == "3":
-                        t_sec_real = "Lectura"
-                        tit_clean = "Lectura de la Biblia"
-                    elif ayudante_p and ayudante_p != "Por asignar":
-                        t_sec_real = "Maestros"
-                        tit_clean = "Asignación estudiantil con ayudante"
-                    elif int(k) >= 7 if k.isdigit() else False:
-                        t_sec_real = "Vida"
-                        tit_clean = "Necesidades o punto de Nuestra Vida Cristiana"
-                    elif k in ["4", "5", "6"]:
-                        t_sec_real = "Maestros"
-                        tit_clean = "Seamos Mejores Maestros (Intervención consecutiva)"
-
-                # Colocamos la canción intermedia de forma exacta separando la sección de Maestros de Vida Cristiana
-                if k == "7" or (k == "6" and "7" not in puntos_guardados_para_bucle):
-                    st.warning(f"🎵 **CANCIÓN INTERMEDIA:** {c_int} &nbsp;|&nbsp; 📋 Inicio de la Sección Vida Cristiana")
+                    if t_sec_real == "Lectura": tit_clean = "Lectura de la Biblia"
+                    elif t_sec_real == "Maestros": tit_clean = "Asignación estudiantil con ayudante"
+                    elif t_sec_real == "Vida": tit_clean = "Necesidades o punto de Nuestra Vida Cristiana"
+                    else: tit_clean = "Tesoros de la Biblia"
                 
                 if t_sec_real == "Maestros":
                     bg_color, border_col, emj, secc_nom = "#FEFCBF", "#D69E2E", "🌾", "Seamos Mejores Maestros"
@@ -472,6 +478,13 @@ with pestana_visor:
                 franja_estilo = f"{emj} Intervención N° {k} ({secc_nom})"
                 with st.container():
                     st.markdown(f"<div style='background-color: {bg_color}; padding: 10px; border-radius: 5px; border-left: 5px solid {border_col}; color: #2D3748; margin-bottom: 8px;'>""<b>" + franja_estilo + "</b><br/>""📢 <b>Tema aproximado:</b> " + tit_clean + "<br/>""🎙️ <b>Asignado:</b> " + titular_p + (" &nbsp;|&nbsp; 👥 <b>Ayudante:</b> " + ayudante_p if (ayudante_p and ayudante_p != "Por asignar") else "") + "</div>", unsafe_allow_html=True)
+
+                # INYECCIÓN MAESTRA: Colocamos la canción intermedia exactamente en la frontera entre ambas categorías
+                if ultimo_punto_maestros and k == ultimo_punto_maestros:
+                    st.warning(f"🎵 **CANCIÓN INTERMEDIA:** {c_int} &nbsp;|&nbsp; 📋 Inicio de la Sección Vida Cristiana")
+                elif not ultimo_punto_maestros and k == "3":
+                    # Respaldo de seguridad por si una semana no viene con puntos de Maestros
+                    st.warning(f"🎵 **CANCIÓN INTERMEDIA:** {c_int} &nbsp;|&nbsp; 📋 Inicio de la Sección Vida Cristiana")
 
         st.markdown("<br/>", unsafe_allow_html=True)
         st.success(f"🎵 **CANCIÓN DE CONCLUSIÓN:** {c_con} &nbsp;|&nbsp; ⏱️ **PALABRAS FINALES:** {p_presi}")
@@ -534,7 +547,7 @@ with pestana_historial:
             else:
                 semana_a_borrar_sel = None
 
-        if semana_a_borrar_sel:
+        if ...:
             st.markdown("### 🛠️ Acciones Disponibles para esta Semana:")
             c_btn_mod, c_btn_del = st.columns(2)
             
