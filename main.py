@@ -374,20 +374,105 @@ with pestana_programa:
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos.")
 
-# --- 🚀 INTERFAZ SANADA: PREVISUALIZACIÓN DIRECTA LIBRE DE RESTRICCIONES ---
+# --- 🚀 INTERFAZ REPARADA: PREVISUALIZACIÓN EN MODO DE TABLA / REJILLA ESTILO PDF ---
 with pestana_visor:
-    st.markdown("<h2 style='text-align: center; color: #1A365D;'>📋 PREVISUALIZACIÓN DE GALA</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #4A5568;'>Examine el diseño final de la hoja impresa abriéndola de forma segura en su navegador.</p>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: #1A365D;'>📖 PREVISUALIZACIÓN DE GALA</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #4A5568;'>Examine la estructura y el diseño de tabla del folleto en tiempo real aquí mismo.</p>", unsafe_allow_html=True)
     
+    # Extraemos los datos limpios en vivo para armar el espejo visual de la tabla
+    p_presi = re.sub(r"\s*\(Uso:\s*\d+\)", "", asignados_en_vivo.get("presidente", "Por asignar")).strip()
+    p_ora = re.sub(r"\s*\(Uso:\s*\d+\)", "", asignados_en_vivo.get("oracion_inicial", "Por asignar")).strip()
+    c_ap = asignados_en_vivo.get("c_apertura", "1")
+    c_int = asignados_en_vivo.get("c_intermedia", "121")
+    c_con = asignados_en_vivo.get("c_conclusion", "28")
+
+    # --- EL RETO DE LUIS: Construimos un Grid de simulación HTML idéntico a la estructura del PDF ---
+    tabla_html = f"""
+    <div style="display: flex; justify-content: center; margin-bottom: 25px;">
+        <div style="border: 3px solid #2D3748; padding: 20px; background-color: #FFFFFF; box-shadow: 0 10px 25px rgba(0,0,0,0.15); width: 90%; max-width: 750px; border-radius: 8px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+            
+            <!-- Encabezado del Programa -->
+            <div style="text-align: center; border-bottom: 2px solid #1A365D; padding-bottom: 10px; margin-bottom: 15px;">
+                <h3 style="color: #1A365D; margin: 0; font-size: 20px; text-transform: uppercase;">Vida y Ministerio Cristianos</h3>
+                <p style="color: #4A5568; margin: 5px 0 0 0; font-weight: bold; font-size: 14px;">📅 SEMANA: {f_cab_clean} | 📖 {l_cab_clean}</p>
+            </div>
+            
+            <!-- Fila de Inicio -->
+            <div style="background-color: #EDF2F7; padding: 10px; border-radius: 4px; margin-bottom: 12px; font-size: 13px; border-left: 5px solid #2B6CB0;">
+                <b>🎵 CANCIÓN DE APERTURA:</b> {c_ap} &nbsp;&nbsp;|&nbsp;&nbsp; <b>👤 PRESIDENTE:</b> {p_presi} &nbsp;&nbsp;|&nbsp;&nbsp; <b>🙏 ORACIÓN:</b> {p_ora}
+            </div>
+            
+            <!-- Bloque Dinámico de Puntos -->
+            <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 12px;">
+                <thead>
+                    <tr style="background-color: #1A365D; color: white; text-align: left;">
+                        <th style="padding: 8px; border-top-left-radius: 4px; border-bottom-left-radius: 4px; width: 15%;">Punto</th>
+                        <th style="padding: 8px; width: 55%;">Intervención / Tema Asignado</th>
+                        <th style="padding: 8px; border-top-right-radius: 4px; border-bottom-right-radius: 4px; width: 30%;">Hermano Asignado</th>
+                    </tr>
+                </thead>
+                <tbody>
+    """
+    
+    # Inyectamos dinámicamente cada fila del programa adentro de la rejilla
+    for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
+        m = materias_dinamicas[k]
+        t_sec = m.get("seccion", "Tesoros")
+        tit_clean = re.sub(r"<[^>]*>", "", m.get("titulo", "")).strip()
+        
+        # Asignamos colores de fondo a las celdas según la franja teocrática correspondientemente
+        if t_sec == "Maestros":
+            bg_color, emj = "#FEFCBF", "🌾" # Amarillo Seamos Mejores Maestros
+        elif t_sec == "Vida":
+            bg_color, emj = "#EBF8FF", "🐑" # Azul Vida Cristiana
+        elif t_sec == "Lectura":
+            bg_color, emj = "#E6FFFA", "📖" # Verde Lectura
+        else:
+            bg_color, emj = "#EDF2F7", "💎" # Gris Tesoros
+
+        titular_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asignados_en_vivo.get(f"p{k}_t", "Por asignar")).strip()
+        ayudante_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asignados_en_vivo.get(f"p{k}_a", "")).strip()
+        
+        persona_final = titular_p
+        if ayudante_p and ayudante_p != "Por asignar":
+            persona_final += f" <br/><span style='color:#718096; font-size:10px;'>👤 Ayudante: {ayudante_p}</span>"
+            
+        tabla_html += f"""
+                    <tr style="background-color: {bg_color}; border-bottom: 1px solid #CBD5E0;">
+                        <td style="padding: 8px; font-weight: bold;">{emj} N° {k}</td>
+                        <td style="padding: 8px; color: #2D3748;">{tit_clean}</td>
+                        <td style="padding: 8px; font-weight: 500; color: #1A365D;">{persona_final}</td>
+                    </tr>
+        """
+        
+        # Interceptamos la sección intermedia de la Vida Cristiana para pintar la Canción del medio sola en su carril
+        if k == "6" or (k == "5" and "6" not in materias_dinamicas):
+            tabla_html += f"""
+                    <tr style="background-color: #EDF2F7; border-bottom: 1px solid #CBD5E0; font-weight: bold; border-left: 5px solid #2B6CB0;">
+                        <td colspan="2" style="padding: 8px;">🎵 CANCIÓN INTERMEDIA: {c_int}</td>
+                        <td style="padding: 8px; color: #718096; font-style: italic;">Sección Vida Cristiana</td>
+                    </tr>
+            """
+
+    # Fila de Cierre y Conclusión
+    tabla_html += f"""
+                </tbody>
+            </table>
+            <div style="background-color: #EDF2F7; padding: 10px; border-radius: 4px; font-size: 13px; border-left: 5px solid #2B6CB0; margin-top: 5px;">
+                <b>🎵 CANCIÓN DE CONCLUSIÓN:</b> {c_con} &nbsp;&nbsp;|&nbsp;&nbsp; <b>⏱️ PALABRAS FINALES:</b> {coordinador_activo}
+            </div>
+            
+        </div>
+    </div>
+    """
+    
+    # Desplegamos la cuadrícula espejo limpia y libre de candados en la pantalla azul
+    st.markdown(tabla_html, unsafe_allow_html=True)
+    st.markdown("---")
     if os.path.exists(archivo_encontrado_fisco):
         with open(archivo_encontrado_fisco, "rb") as f:
             pdf_bytes_v = f.read()
-        base64_pdf_v = base64.b64encode(pdf_bytes_v).decode('utf-8')
-        
-        st.markdown('<div style="display: flex; justify-content: center; margin-bottom: 20px;"><div style="border: 4px solid #2D3748; padding: 25px; background-color: #EDF2F7; text-align: center; width: 85%; max-width: 750px; border-radius: 8px;"><h4 style="color: #2B6CB0; margin-bottom: 10px;">✨ ¡Folleto de Gala Generado con Éxito!</h4><p style="color: #4A5568; font-size: 14px; margin-bottom: 20px;">Haga clic en el botón azul marino para abrir el visor grande interactivo en una pestaña nueva o descárguelo directamente.</p><a href="data:application/pdf;base64,' + base64_pdf_v + '" target="_blank" style="text-decoration:none;"><button style="width:70%; height:45px; background-color:#1A365D; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🔍 Abrir Folleto en Pestaña Nueva</button></a></div></div>', unsafe_allow_html=True)
-        
-        st.markdown("---")
-        
+            
         c_nav1, c_nav2, c_nav3, c_nav4 = st.columns([1.5, 2, 2, 1.5])
         with c_nav2:
             btn_prev_hoja = st.button("⬅️ Página Anterior", use_container_width=True, key="btn_hojear_izq_luis")
@@ -397,7 +482,6 @@ with pestana_visor:
             if btn_sig_hoja: st.toast("💡 Folleto de una sola página estricta optimizada.")
             
         st.markdown("<br/>", unsafe_allow_html=True)
-        # SINTAXIS CORREGIDA: Le indicamos explícitamente el número 3 a st.columns para equilibrar las variables de la izquierda
         c_print1, c_print_centro, c_print2 = st.columns(3)
         with c_print_centro:
             st.download_button(
@@ -409,7 +493,7 @@ with pestana_visor:
                 use_container_width=True
             )
     else:
-        st.info("💡 Para visualizar el folleto de gala en este cuadro, regresa a la primera pestaña, completa la asignación y presiona el botón azul: **'💾 Guardar Semana e Inyectar Nombres'**.")
+        st.info("💡 Para visualizar la cuadrícula del folleto de gala en este cuadro, regresa a la primera pestaña, completa la asignación y presiona el botón azul: **'💾 Guardar Semana e Inyectar Nombres'**.")
 
 # --- PESTAÑA DEL HISTORIAL CON REYECTÓMETRO DE CARGA DIRECTA ---
 with pestana_historial:
@@ -462,10 +546,10 @@ with pestana_historial:
             semanas_guardadas = historial_visual.get(mes_hist, {})
             
             if semanas_guardadas:
-                # REPARACIÓN SUPREMA: Cambiamos los puntos suspensivos por las variables reales de desempaquetado teocrático
                 for sem_key, info_sem in semanas_guardadas.items():
                     with st.expander(f"📆 Semana: {sem_key} (Armado por: {info_sem.get('coordinador', 'Luis')})"):
                         asig = info_sem.get("asignados", {})
+                        
                         st.markdown(f"**Presidente:** {re.sub(r'\s*\(Uso:\s*\d+\)', '', asig.get('presidente', 'Por asignar'))} | **Oración Inicial:** {re.sub(r'\s*\(Uso:\s*\d+\)', '', asig.get('oracion_inicial', 'Por asignar'))}")
                         st.markdown("---")
                         
