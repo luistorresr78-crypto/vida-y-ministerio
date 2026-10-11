@@ -374,22 +374,45 @@ with pestana_programa:
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos.")
 
-# --- 🚀 INTERFAZ REPARADA: PREVISUALIZACIÓN EN MODO DE TABLA / REJILLA ESTILO PDF ---
+# --- 🚀 INTERFAZ REPARADA: PREVISUALIZACIÓN EN MODO DE TABLA CON NAVEGACIÓN SECUENCIAL ACTIVA ---
 with pestana_visor:
     st.markdown("<h2 style='text-align: center; color: #1A365D;'>📖 PREVISUALIZACIÓN DE GALA</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #4A5568;'>Examine la estructura y el diseño de tabla del folleto en tiempo real aquí mismo.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #4A5568;'>Examine la estructura y el diseño de tabla de las semanas guardadas en el mes.</p>", unsafe_allow_html=True)
     
-    p_presi = re.sub(r"\s*\(Uso:\s*\d+\)", "", asignados_en_vivo.get("presidente", "Por asignar")).strip()
-    p_ora = re.sub(r"\s*\(Uso:\s*\d+\)", "", asignados_en_vivo.get("oracion_inicial", "Por asignar")).strip()
-    c_ap = asignados_en_vivo.get("c_apertura", "1")
-    c_int = asignados_en_vivo.get("c_intermedia", "121")
-    c_con = asignados_en_vivo.get("c_conclusion", "28")
+    historial_visor = cargar_historial()
+    semanas_totales_mes = list(historial_visor.get(mes_seleccionado, {}).keys())
+    
+    # SISTEMA DE MEMORIA SECUENCIAL: Controlamos el índice de la semana que el usuario está hojeando
+    if "indice_semana_visor" not in st.session_state:
+        st.session_state["indice_semana_visor"] = 0
+        
+    if semanas_totales_mes:
+        # Si hay semanas guardadas, nos aseguramos de no salirnos de los límites del arreglo
+        if st.session_state["indice_semana_visor"] >= len(semanas_totales_mes):
+            st.session_state["indice_semana_visor"] = len(semanas_totales_mes) - 1
+        
+        semana_render_actual = semanas_totales_mes[st.session_state["indice_semana_visor"]]
+        datos_semana_render = historial_visor[mes_seleccionado][semana_render_actual]
+        asig_render = datos_semana_render.get("asignados", {})
+        st.caption(f"✨ Viendo semana guardada en bitácora (Índice: {st.session_state['indice_semana_visor'] + 1} de {len(semanas_totales_mes)})")
+    else:
+        # Si la bitácora está limpia tras un deploy, mostramos por defecto la mesa de trabajo activa
+        semana_render_actual = f_cab_clean
+        asig_render = asignados_en_vivo
+        st.caption("⚡ Viendo la mesa de trabajo activa actual")
 
+    p_presi = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get("presidente", "Por asignar")).strip()
+    p_ora = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get("oracion_inicial", "Por asignar")).strip()
+    c_ap = asig_render.get("c_apertura", "1")
+    c_int = asig_render.get("c_intermedia", "121")
+    c_con = asig_render.get("c_conclusion", "28")
+
+    # Dibujamos el Grid de Gala interactivo
     tabla_html = f"""
     <div style="border: 3px solid #2D3748; padding: 20px; background-color: #FFFFFF; box-shadow: 0 10px 25px rgba(0,0,0,0.15); font-family: Arial, sans-serif; border-radius: 8px;">
         <div style="text-align: center; border-bottom: 2px solid #1A365D; padding-bottom: 10px; margin-bottom: 15px;">
             <h3 style="color: #1A365D; margin: 0; font-size: 20px; text-transform: uppercase;">Vida y Ministerio Cristianos</h3>
-            <p style="color: #4A5568; margin: 5px 0 0 0; font-weight: bold; font-size: 14px;">📅 SEMANA: {f_cab_clean} | 📖 {l_cab_clean}</p>
+            <p style="color: #4A5568; margin: 5px 0 0 0; font-weight: bold; font-size: 14px;">📅 SEMANA: {semana_render_actual} | 📖 {l_cab_clean}</p>
         </div>
         
         <div style="background-color: #EDF2F7; padding: 10px; border-radius: 4px; margin-bottom: 12px; font-size: 13px; border-left: 5px solid #2B6CB0; color: #2D3748;">
@@ -412,17 +435,13 @@ with pestana_visor:
         t_sec = m.get("seccion", "Tesoros")
         tit_clean = re.sub(r"<[^>]*>", "", m.get("titulo", "")).strip()
         
-        if t_sec == "Maestros":
-            bg_color, emj = "#FEFCBF", "🌾"
-        elif t_sec == "Vida":
-            bg_color, emj = "#EBF8FF", "🐑"
-        elif t_sec == "Lectura":
-            bg_color, emj = "#E6FFFA", "📖"
-        else:
-            bg_color, emj = "#EDF2F7", "💎"
+        if t_sec == "Maestros": bg_color, emj = "#FEFCBF", "🌾"
+        elif t_sec == "Vida": bg_color, emj = "#EBF8FF", "🐑"
+        elif t_sec == "Lectura": bg_color, emj = "#E6FFFA", "📖"
+        else: bg_color, emj = "#EDF2F7", "💎"
 
-        titular_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asignados_en_vivo.get(f"p{k}_t", "Por asignar")).strip()
-        ayudante_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asignados_en_vivo.get(f"p{k}_a", "")).strip()
+        titular_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get(f"p{k}_t", "Por asignar")).strip()
+        ayudante_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get(f"p{k}_a", "")).strip()
         
         persona_final = titular_p
         if ayudante_p and ayudante_p != "Por asignar":
@@ -453,34 +472,48 @@ with pestana_visor:
     </div>
     """
     
-    # REPARACIÓN DE RAÍZ: Envolvemos con st.components.v1.html para forzar al navegador a dibujar la tabla en vivo de gala
-    st.components.v1.html(tabla_html, height=650, scrolling=True)
+    st.components.v1.html(tabla_html, height=540, scrolling=True)
     st.markdown("---")
+    # ACTUADORES MATEMÁTICOS: Vinculamos los clics de las flechas para modificar el indice secuencial
+    c_nav1, c_nav2, c_nav3, c_nav4 = st.columns([1.5, 2, 2, 1.5])
+    
+    with c_nav2:
+        btn_prev_hoja = st.button("⬅️ Página Anterior", use_container_width=True, key="btn_hojear_izq_luis")
+        if btn_prev_hoja and semanas_totales_mes:
+            if st.session_state["indice_semana_visor"] > 0:
+                st.session_state["indice_semana_visor"] -= 1
+                st.rerun()
+            else:
+                st.toast("📌 Ya estás en la primera semana registrada de este mes.")
+            
+    with c_nav3:
+        btn_sig_hoja = st.button("Página Siguiente ➡️", use_container_width=True, key="btn_hojear_der_luis")
+        if btn_sig_hoja and semanas_totales_mes:
+            if st.session_state["indice_semana_visor"] < len(semanas_totales_mes) - 1:
+                st.session_state["indice_semana_visor"] += 1
+                st.rerun()
+            else:
+                st.toast("📌 Ya estás en la última semana registrada de este mes.")
+        
+    st.markdown("<br/>", unsafe_allow_html=True)
+    
+    # Buscamos si existe el PDF fisico correspondiente a la semana que se esta hojeando en pantalla
     if os.path.exists(archivo_encontrado_fisco):
         with open(archivo_encontrado_fisco, "rb") as f:
             pdf_bytes_v = f.read()
             
-        c_nav1, c_nav2, c_nav3, c_nav4 = st.columns([1.5, 2, 2, 1.5])
-        with c_nav2:
-            btn_prev_hoja = st.button("⬅️ Página Anterior", use_container_width=True, key="btn_hojear_izq_luis")
-            if btn_prev_hoja: st.toast("💡 Folleto de una sola página estricta optimizada.")
-        with c_nav3:
-            btn_sig_hoja = st.button("Página Siguiente ➡️", use_container_width=True, key="btn_hojear_der_luis")
-            if btn_sig_hoja: st.toast("💡 Folleto de una sola página estricta optimizada.")
-            
-        st.markdown("<br/>", unsafe_allow_html=True)
         c_print1, c_print_centro, c_print2 = st.columns(3)
         with c_print_centro:
             st.download_button(
                 label="🖨️ EMITIR Y DESCARGAR FOLLETO PARA IMPRESIÓN", 
                 data=pdf_bytes_v, 
-                file_name=f"Folleto_Reunion_{mes_seleccionado}_{f_cab_clean.replace(' ', '_')}.pdf", 
+                file_name=f"Folleto_Reunion_{mes_seleccionado}_{semana_render_actual.replace(' ', '_')}.pdf", 
                 mime="application/pdf", 
                 key="down_pdf_visor_final_Luis_style",
                 use_container_width=True
             )
     else:
-        st.info("💡 Para visualizar la cuadrícula del folleto de gala en este cuadro, regresa a la primera pestaña, completa la asignación y presiona el botón azul: **'💾 Guardar Semana e Inyectar Nombres'**.")
+        st.info("💡 Para habilitar el botón de descarga física de esta semana, presione '💾 Guardar Semana e Inyectar Nombres' en la pestaña principal.")
 
 # --- PESTAÑA DEL HISTORIAL CON REYECTÓMETRO DE CARGA DIRECTA ---
 with pestana_historial:
