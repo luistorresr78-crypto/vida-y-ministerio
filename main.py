@@ -415,6 +415,7 @@ with pestana_visor:
 with pestana_historial:
     st.header("📋 Historial de Asignaciones Registradas en la Bitácora")
     historial_visual = cargar_historial()
+    
     if historial_visual:
         st.subheader("🗑️ Control y Modificación del Historial")
         
@@ -428,7 +429,7 @@ with pestana_historial:
             else:
                 semana_a_borrar_sel = None
 
-        if ...:
+        if semana_a_borrar_sel:
             st.markdown("### 🛠️ Acciones Disponibles para esta Semana:")
             c_btn_mod, c_btn_del = st.columns(2)
             
@@ -461,10 +462,10 @@ with pestana_historial:
             semanas_guardadas = historial_visual.get(mes_hist, {})
             
             if semanas_guardadas:
-                 for ... in semanas_guardadas.items():
+                # REPARACIÓN SUPREMA: Cambiamos los puntos suspensivos por las variables reales de desempaquetado teocrático
+                for sem_key, info_sem in semanas_guardadas.items():
                     with st.expander(f"📆 Semana: {sem_key} (Armado por: {info_sem.get('coordinador', 'Luis')})"):
                         asig = info_sem.get("asignados", {})
-                        
                         st.markdown(f"**Presidente:** {re.sub(r'\s*\(Uso:\s*\d+\)', '', asig.get('presidente', 'Por asignar'))} | **Oración Inicial:** {re.sub(r'\s*\(Uso:\s*\d+\)', '', asig.get('oracion_inicial', 'Por asignar'))}")
                         st.markdown("---")
                         
