@@ -326,7 +326,7 @@ with pestana_programa:
                 elif ayudante_limpio != "Por asignar":
                     historial_asig_semana.append(ayudante_limpio)
 
-       st.markdown("### 🖨️ Compilar y Guardar Permanencia (Paso 2)")
+    st.markdown("### 🖨️ Compilar y Guardar Permanencia (Paso 2)")
     
     col_g1, col_g2 = st.columns(2)
     
