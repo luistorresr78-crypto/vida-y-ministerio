@@ -387,6 +387,7 @@ with pestana_visor:
         st.markdown('<div style="display: flex; justify-content: center; margin-bottom: 20px;"><div style="border: 4px solid #2D3748; padding: 25px; background-color: #EDF2F7; text-align: center; width: 85%; max-width: 750px; border-radius: 8px;"><h4 style="color: #2B6CB0; margin-bottom: 10px;">✨ ¡Folleto de Gala Generado con Éxito!</h4><p style="color: #4A5568; font-size: 14px; margin-bottom: 20px;">Haga clic en el botón azul marino para abrir el visor grande interactivo en una pestaña nueva o descárguelo directamente.</p><a href="data:application/pdf;base64,' + base64_pdf_v + '" target="_blank" style="text-decoration:none;"><button style="width:70%; height:45px; background-color:#1A365D; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer; font-size:15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🔍 Abrir Folleto en Pestaña Nueva</button></a></div></div>', unsafe_allow_html=True)
         
         st.markdown("---")
+        
         c_nav1, c_nav2, c_nav3, c_nav4 = st.columns([1.5, 2, 2, 1.5])
         with c_nav2:
             btn_prev_hoja = st.button("⬅️ Página Anterior", use_container_width=True, key="btn_hojear_izq_luis")
@@ -396,7 +397,8 @@ with pestana_visor:
             if btn_sig_hoja: st.toast("💡 Folleto de una sola página estricta optimizada.")
             
         st.markdown("<br/>", unsafe_allow_html=True)
-        c_print1, c_print_centro, c_print2 = st.columns()
+        # SINTAXIS CORREGIDA: Le indicamos explícitamente el número 3 a st.columns para equilibrar las variables de la izquierda
+        c_print1, c_print_centro, c_print2 = st.columns(3)
         with c_print_centro:
             st.download_button(
                 label="🖨️ EMITIR Y DESCARGAR FOLLETO PARA IMPRESIÓN", 
@@ -413,7 +415,6 @@ with pestana_visor:
 with pestana_historial:
     st.header("📋 Historial de Asignaciones Registradas en la Bitácora")
     historial_visual = cargar_historial()
-    
     if historial_visual:
         st.subheader("🗑️ Control y Modificación del Historial")
         
@@ -427,7 +428,7 @@ with pestana_historial:
             else:
                 semana_a_borrar_sel = None
 
-        if semana_a_borrar_sel:
+        if ...:
             st.markdown("### 🛠️ Acciones Disponibles para esta Semana:")
             c_btn_mod, c_btn_del = st.columns(2)
             
@@ -460,7 +461,7 @@ with pestana_historial:
             semanas_guardadas = historial_visual.get(mes_hist, {})
             
             if semanas_guardadas:
-                for sem_key, info_sem in semanas_guardadas.items():
+                for ... in semanas_guardadas.items():
                     with st.expander(f"📆 Semana: {sem_key} (Armado por: {info_sem.get('coordinador', 'Luis')})"):
                         asig = info_sem.get("asignados", {})
                         
