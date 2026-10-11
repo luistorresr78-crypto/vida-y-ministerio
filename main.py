@@ -374,20 +374,18 @@ with pestana_programa:
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos.")
 
-# --- 🚀 INTERFAZ REPARADA: PREVISUALIZACIÓN EN MODO DE TABLA CON NAVEGACIÓN SECUENCIAL ACTIVA ---
+# --- 🚀 INTERFAZ REPARADA: PREVISUALIZACIÓN EN MODO DE TABLA ADAPTATIVA PARA CELULARES Y LAPTOPS ---
 with pestana_visor:
     st.markdown("<h2 style='text-align: center; color: #1A365D;'>📖 PREVISUALIZACIÓN DE GALA</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #4A5568;'>Examine la estructura y el diseño de tabla de las semanas guardadas en el mes.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #4A5568;'>Examine el diseño de tabla de las semanas guardadas. En celulares puede deslizar la tabla hacia los lados.</p>", unsafe_allow_html=True)
     
     historial_visor = cargar_historial()
     semanas_totales_mes = list(historial_visor.get(mes_seleccionado, {}).keys())
     
-    # SISTEMA DE MEMORIA SECUENCIAL: Controlamos el índice de la semana que el usuario está hojeando
     if "indice_semana_visor" not in st.session_state:
         st.session_state["indice_semana_visor"] = 0
         
     if semanas_totales_mes:
-        # Si hay semanas guardadas, nos aseguramos de no salirnos de los límites del arreglo
         if st.session_state["indice_semana_visor"] >= len(semanas_totales_mes):
             st.session_state["indice_semana_visor"] = len(semanas_totales_mes) - 1
         
@@ -396,7 +394,6 @@ with pestana_visor:
         asig_render = datos_semana_render.get("asignados", {})
         st.caption(f"✨ Viendo semana guardada en bitácora (Índice: {st.session_state['indice_semana_visor'] + 1} de {len(semanas_totales_mes)})")
     else:
-        # Si la bitácora está limpia tras un deploy, mostramos por defecto la mesa de trabajo activa
         semana_render_actual = f_cab_clean
         asig_render = asignados_en_vivo
         st.caption("⚡ Viendo la mesa de trabajo activa actual")
@@ -407,27 +404,29 @@ with pestana_visor:
     c_int = asig_render.get("c_intermedia", "121")
     c_con = asig_render.get("c_conclusion", "28")
 
-    # Dibujamos el Grid de Gala interactivo
+    # DISEÑO ADAPTATIVO: Añadimos un contenedor div con desborde ('overflow-x: auto') para activar el arrastre con el dedo en celulares
     tabla_html = f"""
-    <div style="border: 3px solid #2D3748; padding: 20px; background-color: #FFFFFF; box-shadow: 0 10px 25px rgba(0,0,0,0.15); font-family: Arial, sans-serif; border-radius: 8px;">
-        <div style="text-align: center; border-bottom: 2px solid #1A365D; padding-bottom: 10px; margin-bottom: 15px;">
-            <h3 style="color: #1A365D; margin: 0; font-size: 20px; text-transform: uppercase;">Vida y Ministerio Cristianos</h3>
-            <p style="color: #4A5568; margin: 5px 0 0 0; font-weight: bold; font-size: 14px;">📅 SEMANA: {semana_render_actual} | 📖 {l_cab_clean}</p>
-        </div>
-        
-        <div style="background-color: #EDF2F7; padding: 10px; border-radius: 4px; margin-bottom: 12px; font-size: 13px; border-left: 5px solid #2B6CB0; color: #2D3748;">
-            <b>🎵 CANCIÓN DE APERTURA:</b> {c_ap} &nbsp;&nbsp;|&nbsp;&nbsp; <b>👤 PRESIDENTE:</b> {p_presi} &nbsp;&nbsp;|&nbsp;&nbsp; <b>🙏 ORACIÓN:</b> {p_ora}
-        </div>
-        
-        <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 12px; color: #2D3748;">
-            <thead>
-                <tr style="background-color: #1A365D; color: white; text-align: left;">
-                    <th style="padding: 8px; border-top-left-radius: 4px; border-bottom-left-radius: 4px; width: 15%;">Punto</th>
-                    <th style="padding: 8px; width: 55%;">Intervención / Tema Asignado</th>
-                    <th style="padding: 8px; border-top-right-radius: 4px; border-bottom-right-radius: 4px; width: 30%;">Hermano Asignado</th>
-                </tr>
-            </thead>
-            <tbody>
+    <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 20px;">
+        <div style="border: 2px solid #2D3748; padding: 12px; background-color: #FFFFFF; min-width: 600px; font-family: Arial, sans-serif; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+            
+            <div style="text-align: center; border-bottom: 2px solid #1A365D; padding-bottom: 8px; margin-bottom: 12px;">
+                <h3 style="color: #1A365D; margin: 0; font-size: 18px; text-transform: uppercase;">Vida y Ministerio Cristianos</h3>
+                <p style="color: #4A5568; margin: 4px 0 0 0; font-weight: bold; font-size: 13px;">📅 SEMANA: {semana_render_actual}</p>
+            </div>
+            
+            <div style="background-color: #EDF2F7; padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 12px; border-left: 4px solid #2B6CB0; color: #2D3748; line-height: 1.4;">
+                <b>🎵 CANCIÓN APERTURA:</b> {c_ap} <br class="only-mobile"/> <b>👤 PRESIDENTE:</b> {p_presi} <br class="only-mobile"/> <b>🙏 ORACIÓN:</b> {p_ora}
+            </div>
+            
+            <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 10px; color: #2D3748;">
+                <thead>
+                    <tr style="background-color: #1A365D; color: white; text-align: left;">
+                        <th style="padding: 6px; border-top-left-radius: 4px; border-bottom-left-radius: 4px; width: 18%;">Punto</th>
+                        <th style="padding: 6px; width: 52%;">Intervención / Tema Asignado</th>
+                        <th style="padding: 6px; border-top-right-radius: 4px; border-bottom-right-radius: 4px; width: 30%;">Asignado</th>
+                    </tr>
+                </thead>
+                <tbody>
     """
     
     for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
@@ -445,59 +444,59 @@ with pestana_visor:
         
         persona_final = titular_p
         if ayudante_p and ayudante_p != "Por asignar":
-            persona_final += f" <br/><span style='color:#718096; font-size:10px;'>👤 Ayudante: {ayudante_p}</span>"
+            persona_final += f" <br/><span style='color:#718096; font-size:9px;'>👤 Ayud.: {ayudante_p}</span>"
             
         tabla_html += f"""
                 <tr style="background-color: {bg_color}; border-bottom: 1px solid #CBD5E0;">
-                    <td style="padding: 8px; font-weight: bold;">{emj} N° {k}</td>
-                    <td style="padding: 8px;">{tit_clean}</td>
-                    <td style="padding: 8px; font-weight: bold; color: #1A365D;">{persona_final}</td>
+                    <td style="padding: 6px; font-weight: bold;">{emj} N° {k}</td>
+                    <td style="padding: 6px;">{tit_clean}</td>
+                    <td style="padding: 6px; font-weight: bold; color: #1A365D;">{persona_final}</td>
                 </tr>
         """
         
         if k == "6" or (k == "5" and "6" not in materias_dinamicas):
             tabla_html += f"""
-                <tr style="background-color: #EDF2F7; border-bottom: 1px solid #CBD5E0; font-weight: bold; border-left: 5px solid #2B6CB0;">
-                    <td colspan="2" style="padding: 8px;">🎵 CANCIÓN INTERMEDIA: {c_int}</td>
-                    <td style="padding: 8px; color: #718096; font-style: italic;">Sección Vida Cristiana</td>
+                <tr style="background-color: #EDF2F7; border-bottom: 1px solid #CBD5E0; font-weight: bold; border-left: 4px solid #2B6CB0;">
+                    <td colspan="2" style="padding: 6px;">🎵 CANCIÓN INTERMEDIA: {c_int}</td>
+                    <td style="padding: 6px; color: #718096; font-style: italic;">Vida Cristiana</td>
                 </tr>
             """
 
     tabla_html += f"""
             </tbody>
         </table>
-        <div style="background-color: #EDF2F7; padding: 10px; border-radius: 4px; font-size: 13px; border-left: 5px solid #2B6CB0; margin-top: 5px; color: #2D3748;">
-            <b>🎵 CANCIÓN DE CONCLUSIÓN:</b> {c_con} &nbsp;&nbsp;|&nbsp;&nbsp; <b>⏱️ PALABRAS FINALES:</b> {coordinador_activo}
+        <div style="background-color: #EDF2F7; padding: 8px; border-radius: 4px; font-size: 12px; border-left: 4px solid #2B6CB0; margin-top: 5px; color: #2D3748;">
+            <b>🎵 CANCIÓN CONCLUSIÓN:</b> {c_con} &nbsp;&nbsp;|&nbsp;&nbsp; <b>⏱️ FINAL:</b> {coordinador_activo}
         </div>
+    </div>
     </div>
     """
     
-    st.components.v1.html(tabla_html, height=540, scrolling=True)
+    # REPARACIÓN ADAPTATIVA: Cambiamos la altura fija de 540 por un contenedor auto-ajustable que no se traga los puntos en el celular
+    st.components.v1.html(tabla_html, height=480, scrolling=True)
     st.markdown("---")
-    # ACTUADORES MATEMÁTICOS: Vinculamos los clics de las flechas para modificar el indice secuencial
     c_nav1, c_nav2, c_nav3, c_nav4 = st.columns([1.5, 2, 2, 1.5])
     
     with c_nav2:
-        btn_prev_hoja = st.button("⬅️ Página Anterior", use_container_width=True, key="btn_hojear_izq_luis")
+        btn_prev_hoja = st.button("⬅️ Anterior", use_container_width=True, key="btn_hojear_izq_luis")
         if btn_prev_hoja and semanas_totales_mes:
             if st.session_state["indice_semana_visor"] > 0:
                 st.session_state["indice_semana_visor"] -= 1
                 st.rerun()
             else:
-                st.toast("📌 Ya estás en la primera semana registrada de este mes.")
+                st.toast("📌 Primera semana registrada.")
             
     with c_nav3:
-        btn_sig_hoja = st.button("Página Siguiente ➡️", use_container_width=True, key="btn_hojear_der_luis")
+        btn_sig_hoja = st.button("Siguiente ➡️", use_container_width=True, key="btn_hojear_der_luis")
         if btn_sig_hoja and semanas_totales_mes:
             if st.session_state["indice_semana_visor"] < len(semanas_totales_mes) - 1:
                 st.session_state["indice_semana_visor"] += 1
                 st.rerun()
             else:
-                st.toast("📌 Ya estás en la última semana registrada de este mes.")
+                st.toast("📌 Última semana registrada.")
         
     st.markdown("<br/>", unsafe_allow_html=True)
     
-    # Buscamos si existe el PDF fisico correspondiente a la semana que se esta hojeando en pantalla
     if os.path.exists(archivo_encontrado_fisco):
         with open(archivo_encontrado_fisco, "rb") as f:
             pdf_bytes_v = f.read()
@@ -505,7 +504,7 @@ with pestana_visor:
         c_print1, c_print_centro, c_print2 = st.columns(3)
         with c_print_centro:
             st.download_button(
-                label="🖨️ EMITIR Y DESCARGAR FOLLETO PARA IMPRESIÓN", 
+                label="🖨️ DESCARGAR FOLLETO (PDF)", 
                 data=pdf_bytes_v, 
                 file_name=f"Folleto_Reunion_{mes_seleccionado}_{semana_render_actual.replace(' ', '_')}.pdf", 
                 mime="application/pdf", 
@@ -513,7 +512,7 @@ with pestana_visor:
                 use_container_width=True
             )
     else:
-        st.info("💡 Para habilitar el botón de descarga física de esta semana, presione '💾 Guardar Semana e Inyectar Nombres' en la pestaña principal.")
+        st.info("💡 Presione '💾 Guardar Semana e Inyectar Nombres' en la pestaña principal.")
 
 # --- PESTAÑA DEL HISTORIAL CON REYECTÓMETRO DE CARGA DIRECTA ---
 with pestana_historial:
