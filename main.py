@@ -379,56 +379,47 @@ with pestana_visor:
     st.markdown("<h2 style='text-align: center; color: #1A365D;'>📖 PREVISUALIZACIÓN DE GALA</h2>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #4A5568;'>Examine la estructura y el diseño de tabla del folleto en tiempo real aquí mismo.</p>", unsafe_allow_html=True)
     
-    # Extraemos los datos limpios en vivo para armar el espejo visual de la tabla
     p_presi = re.sub(r"\s*\(Uso:\s*\d+\)", "", asignados_en_vivo.get("presidente", "Por asignar")).strip()
     p_ora = re.sub(r"\s*\(Uso:\s*\d+\)", "", asignados_en_vivo.get("oracion_inicial", "Por asignar")).strip()
     c_ap = asignados_en_vivo.get("c_apertura", "1")
     c_int = asignados_en_vivo.get("c_intermedia", "121")
     c_con = asignados_en_vivo.get("c_conclusion", "28")
 
-    # --- EL RETO DE LUIS: Construimos un Grid de simulación HTML idéntico a la estructura del PDF ---
     tabla_html = f"""
-    <div style="display: flex; justify-content: center; margin-bottom: 25px;">
-        <div style="border: 3px solid #2D3748; padding: 20px; background-color: #FFFFFF; box-shadow: 0 10px 25px rgba(0,0,0,0.15); width: 90%; max-width: 750px; border-radius: 8px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
-            
-            <!-- Encabezado del Programa -->
-            <div style="text-align: center; border-bottom: 2px solid #1A365D; padding-bottom: 10px; margin-bottom: 15px;">
-                <h3 style="color: #1A365D; margin: 0; font-size: 20px; text-transform: uppercase;">Vida y Ministerio Cristianos</h3>
-                <p style="color: #4A5568; margin: 5px 0 0 0; font-weight: bold; font-size: 14px;">📅 SEMANA: {f_cab_clean} | 📖 {l_cab_clean}</p>
-            </div>
-            
-            <!-- Fila de Inicio -->
-            <div style="background-color: #EDF2F7; padding: 10px; border-radius: 4px; margin-bottom: 12px; font-size: 13px; border-left: 5px solid #2B6CB0;">
-                <b>🎵 CANCIÓN DE APERTURA:</b> {c_ap} &nbsp;&nbsp;|&nbsp;&nbsp; <b>👤 PRESIDENTE:</b> {p_presi} &nbsp;&nbsp;|&nbsp;&nbsp; <b>🙏 ORACIÓN:</b> {p_ora}
-            </div>
-            
-            <!-- Bloque Dinámico de Puntos -->
-            <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 12px;">
-                <thead>
-                    <tr style="background-color: #1A365D; color: white; text-align: left;">
-                        <th style="padding: 8px; border-top-left-radius: 4px; border-bottom-left-radius: 4px; width: 15%;">Punto</th>
-                        <th style="padding: 8px; width: 55%;">Intervención / Tema Asignado</th>
-                        <th style="padding: 8px; border-top-right-radius: 4px; border-bottom-right-radius: 4px; width: 30%;">Hermano Asignado</th>
-                    </tr>
-                </thead>
-                <tbody>
+    <div style="border: 3px solid #2D3748; padding: 20px; background-color: #FFFFFF; box-shadow: 0 10px 25px rgba(0,0,0,0.15); font-family: Arial, sans-serif; border-radius: 8px;">
+        <div style="text-align: center; border-bottom: 2px solid #1A365D; padding-bottom: 10px; margin-bottom: 15px;">
+            <h3 style="color: #1A365D; margin: 0; font-size: 20px; text-transform: uppercase;">Vida y Ministerio Cristianos</h3>
+            <p style="color: #4A5568; margin: 5px 0 0 0; font-weight: bold; font-size: 14px;">📅 SEMANA: {f_cab_clean} | 📖 {l_cab_clean}</p>
+        </div>
+        
+        <div style="background-color: #EDF2F7; padding: 10px; border-radius: 4px; margin-bottom: 12px; font-size: 13px; border-left: 5px solid #2B6CB0; color: #2D3748;">
+            <b>🎵 CANCIÓN DE APERTURA:</b> {c_ap} &nbsp;&nbsp;|&nbsp;&nbsp; <b>👤 PRESIDENTE:</b> {p_presi} &nbsp;&nbsp;|&nbsp;&nbsp; <b>🙏 ORACIÓN:</b> {p_ora}
+        </div>
+        
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 12px; color: #2D3748;">
+            <thead>
+                <tr style="background-color: #1A365D; color: white; text-align: left;">
+                    <th style="padding: 8px; border-top-left-radius: 4px; border-bottom-left-radius: 4px; width: 15%;">Punto</th>
+                    <th style="padding: 8px; width: 55%;">Intervención / Tema Asignado</th>
+                    <th style="padding: 8px; border-top-right-radius: 4px; border-bottom-right-radius: 4px; width: 30%;">Hermano Asignado</th>
+                </tr>
+            </thead>
+            <tbody>
     """
     
-    # Inyectamos dinámicamente cada fila del programa adentro de la rejilla
     for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias_dinamicas[k]
         t_sec = m.get("seccion", "Tesoros")
         tit_clean = re.sub(r"<[^>]*>", "", m.get("titulo", "")).strip()
         
-        # Asignamos colores de fondo a las celdas según la franja teocrática correspondientemente
         if t_sec == "Maestros":
-            bg_color, emj = "#FEFCBF", "🌾" # Amarillo Seamos Mejores Maestros
+            bg_color, emj = "#FEFCBF", "🌾"
         elif t_sec == "Vida":
-            bg_color, emj = "#EBF8FF", "🐑" # Azul Vida Cristiana
+            bg_color, emj = "#EBF8FF", "🐑"
         elif t_sec == "Lectura":
-            bg_color, emj = "#E6FFFA", "📖" # Verde Lectura
+            bg_color, emj = "#E6FFFA", "📖"
         else:
-            bg_color, emj = "#EDF2F7", "💎" # Gris Tesoros
+            bg_color, emj = "#EDF2F7", "💎"
 
         titular_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asignados_en_vivo.get(f"p{k}_t", "Por asignar")).strip()
         ayudante_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asignados_en_vivo.get(f"p{k}_a", "")).strip()
@@ -438,36 +429,32 @@ with pestana_visor:
             persona_final += f" <br/><span style='color:#718096; font-size:10px;'>👤 Ayudante: {ayudante_p}</span>"
             
         tabla_html += f"""
-                    <tr style="background-color: {bg_color}; border-bottom: 1px solid #CBD5E0;">
-                        <td style="padding: 8px; font-weight: bold;">{emj} N° {k}</td>
-                        <td style="padding: 8px; color: #2D3748;">{tit_clean}</td>
-                        <td style="padding: 8px; font-weight: 500; color: #1A365D;">{persona_final}</td>
-                    </tr>
+                <tr style="background-color: {bg_color}; border-bottom: 1px solid #CBD5E0;">
+                    <td style="padding: 8px; font-weight: bold;">{emj} N° {k}</td>
+                    <td style="padding: 8px;">{tit_clean}</td>
+                    <td style="padding: 8px; font-weight: bold; color: #1A365D;">{persona_final}</td>
+                </tr>
         """
         
-        # Interceptamos la sección intermedia de la Vida Cristiana para pintar la Canción del medio sola en su carril
         if k == "6" or (k == "5" and "6" not in materias_dinamicas):
             tabla_html += f"""
-                    <tr style="background-color: #EDF2F7; border-bottom: 1px solid #CBD5E0; font-weight: bold; border-left: 5px solid #2B6CB0;">
-                        <td colspan="2" style="padding: 8px;">🎵 CANCIÓN INTERMEDIA: {c_int}</td>
-                        <td style="padding: 8px; color: #718096; font-style: italic;">Sección Vida Cristiana</td>
-                    </tr>
+                <tr style="background-color: #EDF2F7; border-bottom: 1px solid #CBD5E0; font-weight: bold; border-left: 5px solid #2B6CB0;">
+                    <td colspan="2" style="padding: 8px;">🎵 CANCIÓN INTERMEDIA: {c_int}</td>
+                    <td style="padding: 8px; color: #718096; font-style: italic;">Sección Vida Cristiana</td>
+                </tr>
             """
 
-    # Fila de Cierre y Conclusión
     tabla_html += f"""
-                </tbody>
-            </table>
-            <div style="background-color: #EDF2F7; padding: 10px; border-radius: 4px; font-size: 13px; border-left: 5px solid #2B6CB0; margin-top: 5px;">
-                <b>🎵 CANCIÓN DE CONCLUSIÓN:</b> {c_con} &nbsp;&nbsp;|&nbsp;&nbsp; <b>⏱️ PALABRAS FINALES:</b> {coordinador_activo}
-            </div>
-            
+            </tbody>
+        </table>
+        <div style="background-color: #EDF2F7; padding: 10px; border-radius: 4px; font-size: 13px; border-left: 5px solid #2B6CB0; margin-top: 5px; color: #2D3748;">
+            <b>🎵 CANCIÓN DE CONCLUSIÓN:</b> {c_con} &nbsp;&nbsp;|&nbsp;&nbsp; <b>⏱️ PALABRAS FINALES:</b> {coordinador_activo}
         </div>
     </div>
     """
     
-    # Desplegamos la cuadrícula espejo limpia y libre de candados en la pantalla azul
-    st.markdown(tabla_html, unsafe_allow_html=True)
+    # REPARACIÓN DE RAÍZ: Envolvemos con st.components.v1.html para forzar al navegador a dibujar la tabla en vivo de gala
+    st.components.v1.html(tabla_html, height=650, scrolling=True)
     st.markdown("---")
     if os.path.exists(archivo_encontrado_fisco):
         with open(archivo_encontrado_fisco, "rb") as f:
