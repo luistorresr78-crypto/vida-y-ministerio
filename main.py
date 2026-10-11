@@ -374,7 +374,7 @@ with pestana_programa:
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos.")
 
-# --- 🚀 INTERFAZ CORREGIDA DE RAÍZ: VISOR BASADO EN REGISTRO PERMANENTE COMPATIBLE CON TODO DISPOSITIVO ---
+# --- 🚀 INTERFAZ CORREGIDA DE RAÍZ: VISOR NATIVO ELÁSTICO CON FRONTERA DE CANCIÓN DINÁMICA ---
 with pestana_visor:
     st.markdown("<h2 style='text-align: center; color: #1A365D;'>📖 PREVISUALIZACIÓN DE GALA</h2>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #4A5568;'>Examine el programa completo de la reunión de corrido hacia abajo de forma adaptativa.</p>", unsafe_allow_html=True)
@@ -385,7 +385,6 @@ with pestana_visor:
     if "indice_semana_visor" not in st.session_state:
         st.session_state["indice_semana_visor"] = 0
         
-    # Sincronizamos los datos estrictamente desde el archivo json rigido para que no se borren al cambiar de pestaña
     if semanas_totales_mes:
         if st.session_state["indice_semana_visor"] >= len(semanas_totales_mes):
             st.session_state["indice_semana_visor"] = len(semanas_totales_mes) - 1
@@ -405,7 +404,6 @@ with pestana_visor:
     c_int = asig_render.get("c_intermedia", "121")
     c_con = asig_render.get("c_conclusion", "28")
 
-    # --- CONTENEDOR MAESTRO DE IMPRENTA NATIVO CONTRA RECORTE MÓVIL ---
     with st.container(border=True):
         st.markdown(f"<div style='text-align: center; border-bottom: 2px solid #1A365D; padding-bottom: 8px;'>""<h3 style='color: #1A365D; margin: 0; font-size: 20px;'>VIDA Y MINISTERIO CRISTIANOS</h3>""<p style='color: #4A5568; font-weight: bold; margin: 5px 0 0 0;'>📅 SEMANA: " + semana_render_actual + "</p>""</div>", unsafe_allow_html=True)
         
@@ -414,7 +412,6 @@ with pestana_visor:
         
         st.markdown("### 📜 Puntos del Programa:")
         
-        # PROCESADOR SEGURO: Jala la estructura de materias guardada para que no aparezca en blanco en celulares
         puntos_guardados_para_bucle = {}
         for clave_asig in asig_render.keys():
             if clave_asig.startswith("p") and clave_asig.endswith("_t"):
@@ -422,19 +419,26 @@ with pestana_visor:
                 puntos_guardados_para_bucle[num_p] = True
                 
         if not puntos_guardados_para_bucle:
-            # Si no hay puntos guardados en esta semana, mostramos un aviso guia amigable
             st.warning("💡 Por favor, ve a la primera pestaña, completa las asignaciones de hermanos y presiona el botón azul '💾 Guardar Semana e Inyectar Nombres' para ver el listado completo aquí.")
         else:
-            for k in sorted(puntos_guardados_para_bucle.keys(), key=lambda x: int(x) if x.isdigit() else 999):
+            lista_ordenada_claves = sorted(puntos_guardados_para_bucle.keys(), key=lambda x: int(x) if x.isdigit() else 999)
+            
+            # LOCALIZADOR DE FRONTERA: Identificamos con precision matematica cual es el ultimo punto real de Maestros
+            ultimo_punto_maestros = "6"
+            for n_p in lista_ordenada_claves:
+                if n_p in ["4", "5", "6", "7", "8"]:
+                    if int(n_p) < 8 if n_p.isdigit() else True:
+                        ultimo_punto_maestros = n_p
+
+            for k in lista_ordenada_claves:
                 titular_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get(f"p{k}_t", "Por asignar")).strip()
                 ayudante_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get(f"p{k}_a", "")).strip()
                 
-                # Determinamos visualmente las secciones teocráticas en base a la lógica de los puntos oficiales
                 if k in ["1", "2"]:
                     bg_color, border_col, emj, secc_nom = "#EDF2F7", "#4A5568", "💎", "Tesoros"
                 elif k == "3":
                     bg_color, border_col, emj, secc_nom = "#E6FFFA", "#319795", "📖", "Lectura Bíblica"
-                elif k in ["4", "5", "6", "7"] and (int(k) < 8 if k.isdigit() else True):
+                elif k in ["4", "5", "6", "7", "8"] and (int(k) < 8 if k.isdigit() else True):
                     bg_color, border_col, emj, secc_nom = "#FEFCBF", "#D69E2E", "🌾", "Maestros"
                 else:
                     bg_color, border_col, emj, secc_nom = "#EBF8FF", "#2B6CB0", "🐑", "Vida Cristiana"
@@ -443,7 +447,8 @@ with pestana_visor:
                 with st.container():
                     st.markdown(f"<div style='background-color: {bg_color}; padding: 10px; border-radius: 5px; border-left: 5px solid {border_col}; color: #2D3748; margin-bottom: 8px;'>""<b>" + franja_estilo + "</b><br/>""🎙️ <b>Asignado:</b> " + titular_p + (" &nbsp;|&nbsp; 👥 <b>Ayudante:</b> " + ayudante_p if (ayudante_p and ayudante_p != "Por asignar") else "") + "</div>", unsafe_allow_html=True)
 
-                if k == "6" or (k == "5" and "6" not in puntos_guardados_para_bucle):
+                # REUBICACIÓN DINÁMICA: Estampamos la cancion intermedia estrictamente cuando termina el ultimo Maestros real
+                if k == ultimo_punto_maestros:
                     st.warning(f"🎵 **CANCIÓN INTERMEDIA:** {c_int} &nbsp;|&nbsp; 📋 Inicio de la Sección Vida Cristiana")
                 
         st.markdown("<br/>", unsafe_allow_html=True)
