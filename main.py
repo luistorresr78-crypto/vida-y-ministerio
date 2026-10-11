@@ -374,10 +374,10 @@ with pestana_programa:
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul '💾 Guardar Semana e Inyectar Nombres' para fijar los datos.")
 
-# --- 🚀 INTERFAZ REPARADA: PREVISUALIZACIÓN EN MODO DE TABLA ADAPTATIVA PARA CELULARES Y LAPTOPS ---
+# --- 🚀 INTERFAZ CORREGIDA: PREVISUALIZACIÓN DE CORRIDO VERTICAL PARA CELULARES Y LAPTOPS ---
 with pestana_visor:
     st.markdown("<h2 style='text-align: center; color: #1A365D;'>📖 PREVISUALIZACIÓN DE GALA</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #4A5568;'>Examine el diseño de tabla de las semanas guardadas. En celulares puede deslizar la tabla hacia los lados.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #4A5568;'>Deslice libremente hacia abajo para examinar el programa completo de la reunión.</p>", unsafe_allow_html=True)
     
     historial_visor = cargar_historial()
     semanas_totales_mes = list(historial_visor.get(mes_seleccionado, {}).keys())
@@ -404,10 +404,10 @@ with pestana_visor:
     c_int = asig_render.get("c_intermedia", "121")
     c_con = asig_render.get("c_conclusion", "28")
 
-    # DISEÑO ADAPTATIVO: Añadimos un contenedor div con desborde ('overflow-x: auto') para activar el arrastre con el dedo en celulares
+    # SOLUCIÓN DE RAÍZ: Eliminamos restricciones internas de desborde horizontal molestas
     tabla_html = f"""
-    <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 20px;">
-        <div style="border: 2px solid #2D3748; padding: 12px; background-color: #FFFFFF; min-width: 600px; font-family: Arial, sans-serif; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+    <div style="width: 100%; font-family: Arial, sans-serif; margin-bottom: 15px;">
+        <div style="border: 2px solid #2D3748; padding: 12px; background-color: #FFFFFF; font-family: Arial, sans-serif; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
             
             <div style="text-align: center; border-bottom: 2px solid #1A365D; padding-bottom: 8px; margin-bottom: 12px;">
                 <h3 style="color: #1A365D; margin: 0; font-size: 18px; text-transform: uppercase;">Vida y Ministerio Cristianos</h3>
@@ -415,14 +415,14 @@ with pestana_visor:
             </div>
             
             <div style="background-color: #EDF2F7; padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 12px; border-left: 4px solid #2B6CB0; color: #2D3748; line-height: 1.4;">
-                <b>🎵 CANCIÓN APERTURA:</b> {c_ap} <br class="only-mobile"/> <b>👤 PRESIDENTE:</b> {p_presi} <br class="only-mobile"/> <b>🙏 ORACIÓN:</b> {p_ora}
+                <b>🎵 CANCIÓN APERTURA:</b> {c_ap} &nbsp;|&nbsp; <b>👤 PRESIDENTE:</b> {p_presi} &nbsp;|&nbsp; <b>🙏 ORACIÓN:</b> {p_ora}
             </div>
             
             <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 10px; color: #2D3748;">
                 <thead>
                     <tr style="background-color: #1A365D; color: white; text-align: left;">
-                        <th style="padding: 6px; border-top-left-radius: 4px; border-bottom-left-radius: 4px; width: 18%;">Punto</th>
-                        <th style="padding: 6px; width: 52%;">Intervención / Tema Asignado</th>
+                        <th style="padding: 6px; border-top-left-radius: 4px; border-bottom-left-radius: 4px; width: 20%;">Punto</th>
+                        <th style="padding: 6px; width: 50%;">Intervención / Tema Asignado</th>
                         <th style="padding: 6px; border-top-right-radius: 4px; border-bottom-right-radius: 4px; width: 30%;">Asignado</th>
                     </tr>
                 </thead>
@@ -472,8 +472,8 @@ with pestana_visor:
     </div>
     """
     
-    # REPARACIÓN ADAPTATIVA: Cambiamos la altura fija de 540 por un contenedor auto-ajustable que no se traga los puntos en el celular
-    st.components.v1.html(tabla_html, height=480, scrolling=True)
+    # REPARACIÓN SUPREMA: Expandimos la altura ('height=950') para que quepa el programa entero estirado de largo en vertical en pantallas móviles
+    st.components.v1.html(tabla_html, height=950, scrolling=False)
     st.markdown("---")
     c_nav1, c_nav2, c_nav3, c_nav4 = st.columns([1.5, 2, 2, 1.5])
     
