@@ -4,6 +4,7 @@ import os
 import re
 import reglas
 import base64
+import requests
 
 # Configuracion adaptativa de la pagina web para celulares, iPads y laptops
 st.set_page_config(page_title="Mesa de Asignaciones Teocraticas", page_icon="📝", layout="wide")
@@ -11,36 +12,84 @@ st.set_page_config(page_title="Mesa de Asignaciones Teocraticas", page_icon="�
 FICHERO_HERMANOS = "hermanos.json"
 FICHERO_HISTORIAL = "historial_reuniones.json"
 
-# --- ALMACENAMIENTO FISICO PERSISTENTE CONTRA CAIDAS DEL SERVIDOR ---
+# --- CONFIGURACIÓN DE SECRETOS SEGUROS CONECTADOS A GITHUB ---
+try:
+    TOKEN_GH = st.secrets["GITHUB_TOKEN"]
+    REPO_GH = st.secrets["GITHUB_REPO"]
+    HEADERS_GH = {
+        "Authorization": f"token {TOKEN_GH}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+except Exception as e:
+    st.error(f"Falta configurar Secrets en Streamlit Cloud: {e}")
+    TOKEN_GH = None
+    REPO_GH = None
+
+# --- SINCRONIZADOR UNIVERSAL CON REPOSITORIO DE GITHUB ---
+def descargar_fichero_github(nombre_fichero):
+    if not TOKEN_GH or not REPO_GH:
+        return None
+    url = f"https://github.com{REPO_GH}/contents/{nombre_fichero}"
+    respuesta = requests.get(url, headers=HEADERS_GH)
+    if respuesta.status_code == 200:
+        info_json = respuesta.json()
+        contenido_b64 = info_json["content"]
+        contenido_bytes = base64.b64decode(contenido_b64)
+        return json.loads(contenido_bytes.decode("utf-8")), info_json["sha"]
+    return None, None
+
+def subir_fichero_github(nombre_fichero, datos, mensaje_commit="Actualizando bitácora"):
+    if not TOKEN_GH or not REPO_GH:
+        return False
+    url = f"https://github.com{REPO_GH}/contents/{nombre_fichero}"
+    
+    # Buscamos primero el SHA del archivo existente para poder pisarlo sin conflicto
+    _, sha_existente = descargar_fichero_github(nombre_fichero)
+    
+    contenido_str = json.dumps(datos, ensure_ascii=False, indent=4)
+    contenido_b64 = base64.b64encode(contenido_str.encode("utf-8")).decode("utf-8")
+    
+    payload = {
+        "message": mensaje_commit,
+        "content": contenido_b64
+    }
+    if sha_existente:
+        payload["sha"] = sha_existente
+        
+    respuesta = requests.put(url, headers=HEADERS_GH, json=payload)
+    return respuesta.status_code in [200, 201]
+
+# --- ALMACENAMIENTO RIGIDO NATIVO SINCRONIZADO CONTRA BORRADOS ---
 def cargar_historial():
-    if not os.path.exists(FICHERO_HISTORIAL):
-        with open(FICHERO_HISTORIAL, "w", encoding="utf-8") as f:
-            json.dump({}, f, ensure_ascii=False, indent=4)
-    try:
-        with open(FICHERO_HISTORIAL, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except:
-        return {}
+    # Intentamos primero descargar la bitácora viva desde tu cuenta permanente de GitHub
+    datos_gh, _ = descargar_fichero_github(FICHERO_HISTORIAL)
+    if datos_gh is not None:
+        return datos_gh
+        
+    # Respaldo local por si no hay internet momentáneamente
+    if os.path.exists(FICHERO_HISTORIAL):
+        try:
+            with open(FICHERO_HISTORIAL, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            pass
+    return {}
 
 def guardar_historial(datos):
+    # Guardamos de corrido tanto en el servidor como directamente en tu repositorio rígido de GitHub
     with open(FICHERO_HISTORIAL, "w", encoding="utf-8") as f:
         json.dump(datos, f, ensure_ascii=False, indent=4)
+    subir_fichero_github(FICHERO_HISTORIAL, datos, "💾 Sello indestructible: Guardando historial de asignación")
 
 def cargar_hermanos_iniciales():
+    datos_gh, _ = descargar_fichero_github(FICHERO_HERMANOS)
+    if datos_gh is not None:
+        return datos_gh
+
     if os.path.exists(FICHERO_HERMANOS):
         try:
             with open(FICHERO_HERMANOS, "r", encoding="utf-8") as f:
-                datos_existentes = json.load(f)
-                if isinstance(datos_existentes, list) and len(datos_existentes) > 0:
-                    lista_limpia = []
-                    for h in datos_existentes:
-                        lista_limpia.append({
-                            "nombre": h.get("nombre", "").strip().title(),
-                            "apellido": h.get("apellido", "").strip().title(),
-                            "sexo": h.get("sexo", "Varón"),
-                            "aptitudes": h.get("aptitudes", [])
-                        })
-                    return lista_limpia
+                return json.load(f)
         except:
             pass
 
@@ -49,8 +98,7 @@ def cargar_hermanos_iniciales():
         {"nombre": "Sergio", "apellido": "Venegas", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
         {"nombre": "Jonathan", "apellido": "Rojas", "sexo": "Varón", "aptitudes": ["Tesoros", "Lectura", "Presidencia", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]}
     ]
-    with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
-        json.dump(hermanos_base, f, ensure_ascii=False, indent=4)
+    guardar_hermanos(hermanos_base)
     return hermanos_base
 
 lista_hermanos = cargar_hermanos_iniciales()
@@ -58,6 +106,7 @@ lista_hermanos = cargar_hermanos_iniciales()
 def guardar_hermanos(lista):
     with open(FICHERO_HERMANOS, "w", encoding="utf-8") as f:
         json.dump(lista, f, ensure_ascii=False, indent=4)
+    subir_fichero_github(FICHERO_HERMANOS, lista, "👥 Sello indestructible: Sincronizando nómina de hermanos")
 # --- ALGORITMO DE EXTRACTION TEOCRATICA DE 66 LIBROS Y CANCIONES ---
 def procesar_texto_plano_reunion(texto_usuario):
     materias_detectadas = {}
@@ -94,9 +143,9 @@ def procesar_texto_plano_reunion(texto_usuario):
     canciones_encontradas = re.findall(r"(?:CANCIÓN|CANCION)\s*([0-9]+)", texto_sano.upper())
     
     # Separamos estrictamente los índices para extraer un solo número de canción por carril
-    c_apertura = canciones_encontradas[0] if len(canciones_encontradas) > 0 else "1"
-    c_intermedia = canciones_encontradas[1] if len(canciones_encontradas) > 1 else "121"
-    c_conclusion = canciones_encontradas[2] if len(canciones_encontradas) > 2 else (canciones_encontradas[-1] if len(canciones_encontradas) > 0 else "28")
+    c_apertura = canciones_encontradas if len(canciones_encontradas) > 0 else "1"
+    c_intermedia = canciones_encontradas if len(canciones_encontradas) > 1 else "121"
+    c_conclusion = canciones_encontradas if len(canciones_encontradas) > 2 else (canciones_encontradas[-1] if len(canciones_encontradas) > 0 else "28")
 
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
@@ -187,11 +236,10 @@ with pestana_programa:
     st.markdown("---")
     st.markdown("Copia la Guía de Actividades completa desde **JW.org**, pégala abajo y presiona el botón para procesar.")
 
-      # SISTEMA REPARADO CON FORMULARIO INTEGRADO NATIVO PARA BORRADO SEGURO
     if "contenido_jw_caja_borrador" not in st.session_state:
         st.session_state["contenido_jw_caja_borrador"] = ""
 
-    # Envolvemos la caja en un contenedor para que el borrado tenga efecto directo en la pantalla
+    # Formulario integrado nativo para el vaciado fisico inmediato de la caja de texto
     with st.form("bloque_limpiador_jw_luis", clear_on_submit=True):
         texto_jw_entrada = st.text_area(
             "Pega aquí el texto completo copiado de JW.org:", 
@@ -210,6 +258,7 @@ with pestana_programa:
                 st.session_state["contenido_jw_caja_borrador"] = ""
                 st.success("🧼 ¡Mesa de trabajo completamente limpia! Ya puedes pegar la nueva semana.")
                 st.rerun()
+
     l_jw, c_apertura_live, c_intermedia_live, c_conclusion_live, materias_dinamicas = procesar_texto_plano_reunion(texto_jw_entrada)
 
     st.markdown("---")
@@ -221,12 +270,11 @@ with pestana_programa:
     st.info(f"📖 Texto Bíblico Extraído: **{l_cab_clean}**")
 
     with st.sidebar:
-        st.header("⚙️ Control de Operación")
+        st.header("⚙️ Control de Operation")
         coordinador_activo = st.selectbox("¿Quién está assigning hoy?", ["Sergio", "Jonathan", "Luis"], key="coord_act_live")
 
     st.markdown("### 🎚️ Asignar Privilegios para el Folleto PDF")
 
-    # REPARACIÓN DE RAÍZ: Declaramos la variable de conteo justo aquí para destruir el NameError antes de llamar al Presidente
     historial_actual_para_conteo = cargar_historial()
 
     col_p1, col_p2 = st.columns(2)
@@ -241,6 +289,7 @@ with pestana_programa:
         nom_ora = [h.get("nombre", "").strip() for h in opciones_ora]
         if "Por asignar" not in nom_ora: nom_ora.insert(0, "Por asignar")
         oracion_inicial = st.selectbox("Oración Inicial", nom_ora, key="p_ora_live")
+
     st.markdown("---")
     st.markdown("### 📝 Ajustar Temas de Intervenciones y Asignar Hermanos")
     
@@ -258,12 +307,10 @@ with pestana_programa:
     
     if presi_limpio != "Por asignar": historial_asig_semana.append(presi_limpio)
     if ora_limpia != "Por asignar": historial_asig_semana.append(ora_limpia)
-
     for k in sorted(materias_dinamicas.keys(), key=lambda x: int(x) if x.isdigit() else 999):
         m = materias_dinamicas[k]
         tipo_seccion = m.get("seccion", "Tesoros")
         
-        # AJUSTE DE APRENDIZAJE: Sincronizamos de forma exacta la aptitud de "Lectura" para liberar el Punto 3
         if tipo_seccion == "Maestros":
             emoji, color_sub = "🌾", "Seamos Mejores Maestros"
         elif tipo_seccion == "Vida":
@@ -303,7 +350,8 @@ with pestana_programa:
             
         c1, c2 = st.columns(2)
         with c1:
-            titular = st.selectbox(f"Asignado punto {k}", nombres_materia, key=f"live_t_{k}")
+            st.selectbox(f"Asignado punto {k}", nombres_materia, key=f"live_t_{k}")
+            titular = st.session_state[f"live_t_{k}"]
             asignados_en_vivo[f"p{k}_t"] = titular if titular != "Por asignar" else "Por asignar"
             
             titular_limpio = re.sub(r"\s*\(Uso:\s*\d+\)", "", titular).strip()
@@ -317,7 +365,8 @@ with pestana_programa:
                 opciones_ayudante = reglas.filtrar_ayudantes_inteligente(titular_limpio, lista_hermanos, "Seamos Mejores Maestros", mes_seleccionado, historial_actual_para_conteo)
                 nombres_ayudante = [h.get("nombre", "").strip() for h in opciones_ayudante]
                 if "Por asignar" not in nombres_ayudante: nombres_ayudante.insert(0, "Por asignar")
-                ayudante = st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
+                st.selectbox(f"Ayudante punto {k}", nombres_ayudante, key=f"live_a_{k}")
+                ayudante = st.session_state[f"live_a_{k}"]
                 asignados_en_vivo[f"p{k}_a"] = ayudante if ayudante != "Por asignar" else "Por asignar"
                 
                 ayudante_limpio = re.sub(r"\s*\(Uso:\s*\d+\)", "", ayudante).strip()
@@ -340,9 +389,9 @@ with pestana_programa:
                 if mes_seleccionado not in historial_actual:
                     historial_actual[mes_seleccionado] = {}
                 
-                # REPARACIÓN DE RAÍZ: Sella de forma rígida la estructura de materias_dinamicas para que el visor no tenga que adivinar nada
+                # Sella de forma rígida la estructura de materias_dinamicas para que el visor móvil no falle jamás
                 historial_actual[mes_seleccionado][f_cab_clean] = {
-                    "coordinador": coordinator_activo,
+                    "coordinador": coordinador_activo,
                     "texto_cabecera_biblica": l_cab_clean,
                     "materias_guia_estructura": materias_dinamicas,
                     "asignados": asignados_en_vivo
@@ -351,7 +400,7 @@ with pestana_programa:
                 
                 try:
                     reglas.generar_pdf_estilo_oficial(l_cab_clean, f_cab_clean, materias_dinamicas, asignados_en_vivo)
-                    st.success(f"¡Semana y guía completa guardadas con éxito en el archivo permanente!")
+                    st.success(f"¡Semana y guía estructural guardadas con éxito de forma indestructible!")
                 except Exception as e:
                     st.error(f"Fallo al inyectar ReportLab: {e}")
 
@@ -377,7 +426,6 @@ with pestana_programa:
         )
     else:
         st.warning("⚠️ No se ha detectado el archivo guardado. Presione el botón azul para fijar los datos.")
-
 # --- 🚀 INTERFAZ REPARADA CON EL ALGORITMO DE CATEGORÍAS DE LUIS TORRES ---
 with pestana_visor:
     st.markdown("<h2 style='text-align: center; color: #1A365D;'>📖 PREVISUALIZACIÓN DE GALA</h2>", unsafe_allow_html=True)
@@ -431,7 +479,7 @@ with pestana_visor:
         else:
             lista_ordenada_claves = sorted(puntos_guardados_para_bucle.keys(), key=lambda x: int(x) if x.isdigit() else 999)
 
-            # PASO 1 INTERNO: Pre-calculamos las categorías de cada punto de forma exacta para ubicar la frontera real
+            # Pre-calculamos las categorías de cada punto de forma exacta para ubicar la frontera real
             categorias_calculadas = {}
             for n_p in lista_ordenada_claves:
                 ayudante_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get(f"p{n_p}_a", "")).strip()
@@ -445,13 +493,11 @@ with pestana_visor:
                     elif n_p in ["4", "5", "6", "7"]: categorias_calculadas[n_p] = "Maestros"
                     else: categorias_calculadas[n_p] = "Tesoros"
 
-            # ALGORITMO DE LUIS: Buscamos con precisión cuál es el último punto real clasificado como Maestros en la lista
             ultimo_punto_maestros = None
             for n_p in lista_ordenada_claves:
                 if categorias_calculadas[n_p] == "Maestros":
                     ultimo_punto_maestros = n_p
 
-            # Dibujamos las tarjetas en base al mapeo de categorías verificado
             for k in lista_ordenada_claves:
                 titular_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get(f"p{k}_t", "Por asignar")).strip()
                 ayudante_p = re.sub(r"\s*\(Uso:\s*\d+\)", "", asig_render.get(f"p{k}_a", "")).strip()
@@ -479,11 +525,9 @@ with pestana_visor:
                 with st.container():
                     st.markdown(f"<div style='background-color: {bg_color}; padding: 10px; border-radius: 5px; border-left: 5px solid {border_col}; color: #2D3748; margin-bottom: 8px;'>""<b>" + franja_estilo + "</b><br/>""📢 <b>Tema aproximado:</b> " + tit_clean + "<br/>""🎙️ <b>Asignado:</b> " + titular_p + (" &nbsp;|&nbsp; 👥 <b>Ayudante:</b> " + ayudante_p if (ayudante_p and ayudante_p != "Por asignar") else "") + "</div>", unsafe_allow_html=True)
 
-                # INYECCIÓN MAESTRA: Colocamos la canción intermedia exactamente en la frontera entre ambas categorías
                 if ultimo_punto_maestros and k == ultimo_punto_maestros:
                     st.warning(f"🎵 **CANCIÓN INTERMEDIA:** {c_int} &nbsp;|&nbsp; 📋 Inicio de la Sección Vida Cristiana")
                 elif not ultimo_punto_maestros and k == "3":
-                    # Respaldo de seguridad por si una semana no viene con puntos de Maestros
                     st.warning(f"🎵 **CANCIÓN INTERMEDIA:** {c_int} &nbsp;|&nbsp; 📋 Inicio de la Sección Vida Cristiana")
 
         st.markdown("<br/>", unsafe_allow_html=True)
@@ -529,7 +573,7 @@ with pestana_visor:
     else:
         st.info("💡 Presione '💾 Guardar Semana e Inyectar Nombres' en la pestaña principal.")
 
-# --- PESTAÑA DEL HISTORIAL CON REYECTÓMETRO DE CARGA DIRECTA ---
+# --- PESTAÑA DEL HISTORIAL CON COPIAS RE-INYECTADAS DESDE GITHUB ---
 with pestana_historial:
     st.header("📋 Historial de Asignaciones Registradas en la Bitácora")
     historial_visual = cargar_historial()
@@ -547,7 +591,7 @@ with pestana_historial:
             else:
                 semana_a_borrar_sel = None
 
-        if ...:
+        if semana_a_borrar_sel:
             st.markdown("### 🛠️ Acciones Disponibles para esta Semana:")
             c_btn_mod, c_btn_del = st.columns(2)
             
@@ -563,14 +607,14 @@ with pestana_historial:
                     if not historial_visual[mes_a_borrar_sel]:
                         del historial_visual[mes_a_borrar_sel]
                     guardar_historial(historial_visual)
-                    st.success(f"💥 ¡La semana '{semana_a_borrar_sel}' ha sido eliminada de la bitácora!")
+                    st.success(f"💥 ¡La semana '{semana_a_borrar_sel}' ha sido eliminada de la bitácora física y de GitHub!")
                     st.rerun()
                     
         st.markdown("---")
         btn_borrar_todo_el_historial = st.button("🚨 COMODÍN: VACIAR COMPLETA TODA LA BITÁCORA DEL HISTORIAL", use_container_width=True, key="btn_vaciar_todo_hist_v3")
         if btn_borrar_todo_el_historial:
             guardar_historial({})
-            st.success("💥 ¡Bitácora de historial completamente vaciada con éxito!")
+            st.success("💥 ¡Bitácora de historial completamente vaciada de la nube con éxito!")
             st.rerun()
             
         st.markdown("---")
