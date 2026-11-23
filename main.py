@@ -129,9 +129,10 @@ def procesar_texto_plano_reunion(texto_usuario):
                 lectura_cab = l.strip()
                 break
     canciones_encontradas = re.findall(r"(?:CANCIÓN|CANCION)\s*([0-9]+)", texto_sano.upper())
-    c_apertura = canciones_encontradas if len(canciones_encontradas) > 0 else "1"
-    c_intermedia = canciones_encontradas if len(canciones_encontradas) > 1 else "121"
-    c_conclusion = canciones_encontradas if len(canciones_encontradas) > 2 else (canciones_encontradas[-1] if len(canciones_encontradas) > 0 else "28")
+    c_apertura = canciones_encontradas[0] if len(canciones_encontradas) > 0 else "1"
+    c_intermedia = canciones_encontradas[1] if len(canciones_encontradas) > 1 else "121"
+    c_conclusion = canciones_encontradas[2] if len(canciones_encontradas) > 2 else (canciones_encontradas[-1] if len(canciones_encontradas) > 0 else "28")
+
     seccion_actual_texto = "Tesoros"
     ultimo_punto = None
     puntos_crudos = {}
