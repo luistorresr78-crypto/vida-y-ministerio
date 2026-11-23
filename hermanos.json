@@ -37,6 +37,7 @@
     {"nombre": "Francisca", "apellido": "Lira", "sexo": "Mujer", "aptitudes": ["Seamos Mejores Maestros"]},
     {"nombre": "Francisca", "apellido": "Ocaranza", "sexo": "Mujer", "aptitudes": ["Seamos Mejores Maestros"]},
     {"nombre": "Gabriel", "apellido": "Valenzuela", "sexo": "Varón", "aptitudes": ["Tesoros", "Oración", "Vida Cristiana", "Seamos Mejores Maestros"]},
+    {"nombre": "Gabriela", "apellido": "González", "sexo": "Mujer", "aptitudes": ["Seamos Mejores Maestros"]},
     {"nombre": "Génesis", "apellido": "Landaeta", "sexo": "Mujer", "aptitudes": ["Seamos Mejores Maestros"]},
     {"nombre": "Gliceida", "apellido": "Parra", "sexo": "Mujer", "aptitudes": ["Seamos Mejores Maestros"]},
     {"nombre": "Gustavo", "apellido": "Lira", "sexo": "Varón", "aptitudes": ["Lectura", "Seamos Mejores Maestros"]},
