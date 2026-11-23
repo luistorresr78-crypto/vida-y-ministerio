@@ -359,6 +359,8 @@ with pestana_visor:
                 elif t_sec_real == "Vida": bg_color, border_col, emj, secc_nom = "#EBF8FF", "#2B6CB0", "🐑", "Nuestra Vida Cristiana"
                 elif t_sec_real == "Lectura": bg_color, border_col, emj, secc_nom = "#E6FFFA", "#319795", "📖", "Lectura Bíblica"
                 else: bg_color, border_col, emj, secc_nom = "#EDF2F7", "#4A5568", "💎", "Tesoros de la Biblia"
+                franja_estilo = f"{emj} Intervención N° {k} ({secc_nom})"
+
                 st.markdown(f"<div style='background-color: {bg_color}; padding: 10px; border-radius: 5px; border-left: 5px solid {border_col}; color: #2D3748; margin-bottom: 8px;'><b>{franja_estilo}</b><br/>📢 <b>Tema real:</b> {tit_clean}<br/>🎙️ <b>Asignado:</b> {titular_p}" + (f" &nbsp;|&nbsp; 👥 <b>Ayudante:</b> {ayudante_p}" if (ayudante_p and ayudante_p != "Por asignar") else "") + "</div>", unsafe_allow_html=True)
                 if ultimo_punto_maestros and k == ultimo_punto_maestros: st.warning(f"🎵 **CANCIÓN INTERMEDIA:** {c_int} &nbsp;|&nbsp; 📋 Inicio de la Sección Vida Cristiana")
                 elif not ultimo_punto_maestros and k == "3": st.warning(f"🎵 **CANCIÓN INTERMEDIA:** {c_int} &nbsp;|&nbsp; 📋 Inicio de la Sección Vida Cristiana")
